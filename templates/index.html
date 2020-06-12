@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
+</head>
+
+<body>
+
+<h1>Query frontend</h1>
+
+<form action="/" method="POST">
+
+    <div>
+        <h3>CURRENT QUERY</h3>
+        <textarea name="existing_query" rows="{{num_q_lines}}" cols="50" readonly>{{existing_query}}</textarea>
+    </div>
+
+    <div>
+
+        <span>
+            <h3>field:</h3>
+            <select id="query_field" name="query_field">
+                <option value="grouping">grouping</option>
+                <option value="sample.name">sample.name</option>
+                <option value="sample.description">sample.description</option>
+                <option value="sample.source">sample.source</option>
+                <option value="sample.id">sample.id</option>
+                <option value="sample.owner.name">sample.owner.name</option>
+                <option value="sample.owner.contact">sample.owner.contact</option>
+                <option value="measurements.results.isotope">measurements.results.isotope</option>
+                <option value="measurements.results.symbol">measurements.results.symbol</option>
+                <option value="measurements.results.unit">measurements.results.unit</option>
+                <option value="measurements.results.value">measurements.results.value</option>
+                <option value="measurements.practitioner.name">measurements.practitioner-name</option>
+                <option value="measurements.practitioner.contact">measurements.practitioner.contact</option>
+                <option value="measurements.technique">measurements.technique</option>
+                <option value="measurements.institution">measurements.institution</option>
+                <option value="measurements.date">measurements.date</option>
+                <option value="measurements.description">measurements.description</option>
+                <option value="source.reference">source.reference</option>
+                <option value="source.input.name">source.input.name</option>
+                <option value="source.input.contact">source.input.contact</option>
+                <option value="source.input.date">source.input.date</option>
+                <option value="source.input.notes">source.input.notes</option>
+            </select>
+        </span>
+
+        <span>
+            <h3>comparison:</h3>
+            <select id="comparison_operator" name="comparison_operator">
+                <option value="contains">contains</option>
+                <option value="notcontains">does not contain</option>
+                <option value="eq">equals</option>
+                <option value="lt">less than</option>
+                <option value="lte">less than or equal to</option>
+                <option value="gt">greater than</option>
+                <option value="gte">greater than or equal to</option>
+            </select>
+        </span>
+
+        <span>
+            <h3>value:</h3>
+            <textarea name="query_value" rows="1" cols="15"></textarea>
+        </span>
+
+    </div>
+
+    <div>
+        <span>
+            <button type="submit" formaction="/append_and">AND</button>
+        </span>
+        <span>
+            <button type="submit" formaction="/append_or">OR</button/>
+        </span>
+    </div>
+
+    <div>
+        <input type="submit">
+    </div>
+</form>
+
+
+
+</body>
+</html>
+
