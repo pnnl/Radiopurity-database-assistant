@@ -28,7 +28,7 @@ def get_from_assembled_query():
     print('FINAL_Q:',curr_q)
 
     # QUERY FOR RESULTS
-    results = ['this would be one result. Helo it is elise and i am here to speak to you aboutsomething vrty important. chris is watching a thing about seth rogana nd nathan for you. funny guys!', 'looks like joseph gordon levitt is also in there. and another guy, i actually dont know who he is which is too bad. its some sort of scene where nathan is fiving them group therapy. it is called nathan for you gets awkward with the night begore featuring seth rogan. hmm. i dont knwo what that would be like.', 'every time youre near baby i get kinda crazyin my head for yo i dont know what to do and oh baby i get kinda shaky when they mention you i just lose my cool my friends tell me something has come over me and i think i know what it is i think im imn love boy i think that im in love with you', 'laefjd asijjsdghdk jlo    jaliwej lkasdjflkasjelawihighlaugmrsnkamfndbajhviubrhakljjfhthifjieaegnighdihtransifweoair;ljgrneluvd s aefhjfhsslieine fjsalaeibuyatrjnihafd iaen aidjaie d']
+    results = ['one', 'two', 'three', 'four']
 
     return render_template('index.html', existing_query='', num_q_lines=1, final_q=q_lines, results=results)
 
