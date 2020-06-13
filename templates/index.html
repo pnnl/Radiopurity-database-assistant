@@ -10,14 +10,12 @@
 <h1>Query frontend</h1>
 
 <form action="/" method="POST">
-
     <div>
         <h3>CURRENT QUERY</h3>
         <textarea name="existing_query" rows="{{num_q_lines}}" cols="50" readonly>{{existing_query}}</textarea>
     </div>
 
     <div>
-
         <span>
             <h3>field:</h3>
             <select id="query_field" name="query_field">
@@ -32,7 +30,7 @@
                 <option value="measurements.results.symbol">measurements.results.symbol</option>
                 <option value="measurements.results.unit">measurements.results.unit</option>
                 <option value="measurements.results.value">measurements.results.value</option>
-                <option value="measurements.practitioner.name">measurements.practitioner-name</option>
+                <option value="measurements.practitioner.name">measurements.practitioner.name</option>
                 <option value="measurements.practitioner.contact">measurements.practitioner.contact</option>
                 <option value="measurements.technique">measurements.technique</option>
                 <option value="measurements.institution">measurements.institution</option>
@@ -80,7 +78,41 @@
     </div>
 </form>
 
+{% if final_q|length %}
+    <h3>FINAL QUERY</h3>
+    {% for final_q_line in final_q %}
+        <p>{{final_q_line}}</p>
+    {% endfor %}
+{% endif %}
 
+{% if results|length %}
+    <h3>RESULTS</h3>
+    {% for result in results %}
+        <button type="button" class="collapsible">{{result|truncate(100, True)}}</button>
+        <div class="collapsible_content">
+            <p>{{result}}</p>
+        </div>
+    {% endfor %}
+{% endif %}
+
+
+
+<script>
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+
+    for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.display === "block") {
+                content.style.display = "none";
+            } else {
+                content.style.display = "block";
+            }
+        });
+    }
+</script>
 
 </body>
 </html>
