@@ -1,4 +1,3 @@
-import sys
 import argparse
 import json
 import re
@@ -21,8 +20,10 @@ def search(query):
         print("Error: the query argument must be a dictionary.")
         return None
 
-    resp = coll.find(query)
-    resp = list(resp)
+#    resp = coll.find(query)
+#    resp = list(resp)
+    resp = ['response 1!!!', 'This is response 2.', 'response 3', 'and finally, response 4.', 'just kidding! A fifth response']
+
     return resp
 
 # append to existing query
@@ -103,52 +104,52 @@ def insert(sample_name, sample_description, datasource_reference, datasource_inp
     results_keys = ["isotope", "type", "unit", "value"]
     if type(measurement_results) is not list:
         print('Error: the measurement_results argument must be a list containing dictionary objects')
-        sys.exit()
+        return None
     for i, results_element in enumerate(measurement_results):
         if type(results_element) is not dict:
             print('Error: the measurement_results argument must be dictionaries')
-            sys.exit()
+            return None
         for results_key in results_keys:
             if results_key not in list(results_element.keys()):
                 print('Error: at least one of the required keys ('+', '.join(results_keys)+') is missing from at least one of the dictionaries in the measurement_results argument')
-                sys.exit()
+                return None
             if results_key == 'type':
                 if measurement_results[i][results_key] not in ['measurement', 'range', 'limit']:
                     print('Error: "type" field of the measurement_results dictionaries must be one of: "measurement", "range", "limit"')
-                    sys.exit()
+                    return None
             elif results_key == 'value':
                 if type(measurement_results[i][results_key]) is not list:
                     print('Error: the "value" field of the dictionaries in the measurement_results list must be a list')
-                    sys.exit()
+                    return None
                 for j in range(len(measurement_results[i][results_key])):
                     try:
                         measurement_results[i][results_key][j] = float(measurement_results[i][results_key][j])
                     except:
                         print('Error: at least one of the elements in the "value" list of at least one of the dictionaries in the measurement_results list cannot be parsed into a number')
-                        sys.exit()
+                        return None
 
     # verify and convert datasource_input_date arg
     if type(datasource_input_date) is not list:
         print('Error: the datasource_input_date argument must be a list of date strings.')
-        sys.exit()
+        return None
     for d, date_str in enumerate(datasource_input_date):
         new_date_obj = convert_date(date_str)
         if new_date_obj is None:
             print("Error: at least one of the datasource_input_date strings is not in one of the accepted formats")
-            sys.exit()
+            return None
         else:
             datasource_input_date[d] = new_date_obj
 
     # verify and convert measurement_date arg
     if type(measurement_date) is not list:
         print('Error: the measurement_date argument must be a list of date strings.')
-        sys.exit()
+        return None
     if len(measurement_date) > 0:
         for d, date_str in enumerate(measurement_date):
             new_date_obj = convert_date(date_str)
             if new_date_obj is None:
                 print("Error: at least one of the measurement_date strings is not in one of the accepted formats")
-                sys.exit()
+                return None
             else:
                 measurement_date[d] = new_date_obj
 
@@ -193,6 +194,8 @@ def insert(sample_name, sample_description, datasource_reference, datasource_inp
 
     # perform doc insert
 #    mongo_id = coll.insert_one(doc).inserted_id
+    mongo_id = "this_w0u1d_B3_4_n3w_d0c_1D"
+
     try:
         print("Successfully inserted doc with id:",mongo_id)
     except:
