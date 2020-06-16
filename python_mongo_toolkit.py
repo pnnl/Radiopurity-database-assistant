@@ -3,16 +3,80 @@ import json
 import re
 from datetime import datetime
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 
 numeric_fields = ["measurement.results.value"]
 date_fields = ["measurement.date", "data_source.input.date"]
-valid_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.results.isotope", "measurement.results.symbol", "measurement.results.type", "measurement.results.unit", "measurement.results.value", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
+valid_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.results.isotope", "measurement.results.type", "measurement.results.unit", "measurement.results.value", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
 valid_str_comparisons = ["contains", "notcontains", "eq"]
 valid_num_comparisons = ["eq", "lt", "lte", "gt", "gte"]
 valid_appendmodes = ["AND", "OR"]
 
 client = MongoClient('130.20.47.128', 27017)
 coll = client.radiopurity_data.example_data
+
+# search on ID
+def search_by_id(doc_id):
+    '''
+    try:
+        id_obj = ObjectId(doc_id)
+    except:
+        print("Error: you did not enter a valid MongoDB ObjectId string.")
+        return None
+    q = {'_id':id_obj}
+    resp = coll.find(q)
+    resp = list(resp)
+
+    if len(resp) > 1:
+        print('Warning: multiple documents with ObjectId:',doc_id)
+        ret_doc = resp[0]
+    elif len(resp) < 1:
+        print('Error: no documents with ObjectId:',doc_id)
+        ret_doc = None
+    else:
+        ret_doc = resp[0]
+    '''
+    #TODO: this is a placeholder
+    ret_doc = { "_id" : ObjectId("5ee26d5c90a2c4ae142cb97b"), "grouping" : "ILIAS UKDM", "specification" : "v3.00", "type" : "assay", "sample" : { "name" : "", "description" : "Copper C103, Outokumpu", "source" : "", "id" : "ILIAS UKDM #74", "owner" : {"name":"", "contact":""  } }, "measurement" : {"requestor":{"name":"", "contact":""}, "results" : [ { "isotope" : "U-238", "type" : "measurement", "unit" : "ppb", "value" : [ 1 ] }, { "isotope" : "Th-232", "type" : "limit", "unit" : "ppb", "value" : [ 3, 1 ] }, { "isotope" : "Rb-85", "type" : "measurement", "unit" : "ppb", "value" : [ 16, 3 ] }, { "isotope" : "Rb-87", "type" : "range", "unit" : "ppb", "value" : [ 17, 6 ] }, { "isotope" : "Lu", "type" : "measurement", "unit" : "ppb", "value" : [ 1 ] }, { "isotope" : "K-40", "type" : "measurement", "unit" : "ppm", "value" : [ 0.018, 0.001 ] } ], "practitioner" : {"name":"Loughborough", "contact":""}, "technique" : "GD-MS", "institution" : "", "date" : [ ], "description" : "85Rb 16(3) ppb, 87Rb 17(6) ppb, La, Lu < 1 ppb" }, "data_source" : { "reference" : "ILIAS Database http://radiopurity.in2p3.fr/", "input" : { "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "date" : [ "2013-07-22" ], "notes" : "" } } }
+
+    return ret_doc
+
+#update doc
+def update(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
+    id_q = {'_id':ObjectId(doc_id)}
+    print("UPDATE PAIRS:    ",update_pairs)
+    print("NEW MEAS OBJ:    ",new_meas_objects)
+    print("MEAS REMOVE IDX: ",meas_remove_indices)
+    '''
+    # https://stackoverflow.com/questions/7227890/how-to-delete-n-th-element-of-array-in-mongodb
+    # https://docs.mongodb.com/manual/reference/operator/update/addToSet/
+    # https://docs.mongodb.com/manual/reference/operator/update/each/
+
+    # add updates, null out measurement results objects to be removed
+    update_values = {}
+
+    update_values["$set"] = update_pairs
+
+    update_values["$unset"] = {}
+    for remove_idx in meas_remove_indices:
+        update_values["$unset"]["measurement.results."+str(remove_idx)] = 1
+
+    # execute update in DB
+    update_resp = coll.update(id_q, update_values)
+    num_updated = update_resp.nModified
+
+    # add new measurement results objects, remove nulled-out measurement results objects
+    new_values = {}
+
+    new_values["$addToSet"] = {"meas.res":{"$each":new_meas_objects}}
+    new_values["$pull"] = {"measurement.results": None}
+
+    # execute update in DB
+    remove_resp = coll.upate(id_q, new_values)
+    num_removed = remove_resp.nModified
+    '''
+    return True
+    
 
 # search
 def search(query):

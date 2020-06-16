@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
+</head>
+
+<body>
+
+<h1>Document Update Assistant</h1>
+
+
+{% if doc_data == False %}
+    {% if message|length %}
+        <h3>{{message}}</h3>
+    {% endif %}
+    
+    <form action="/update" method="POST">
+        <div class="section-container">
+            <h3>document ID: <input type="text" name="doc_id"></h3>
+        </div>
+        <button class="normal-button" type="submit" name="submit_button" value="find_doc">find doc</button>
+    </form>
+{% endif %}
+
+
+{% if doc_data %}
+    <form action="/update" method="POST">
+        <div class="section-container">
+            <div id="input-section">
+                <div class="section-container">
+                    <p class="normal-text">doc id:
+                        <textarea class="false-textarea" name="current_doc_id" rows="1" cols="50" readonly>{{doc_id}}</textarea>
+                    </p>
+                </div>
+                
+                <div>
+                    <span>
+                        <p class="normal-text">grouping: <input type="text" name="grouping"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{grouping}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.grouping" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+
+                <h3>sample:</h3>
+                <div>
+                    <span>
+                        <p class="normal-text">sample name: <input type="text" name="sample.name"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{sample_name}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.sample.name" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">sample description: <input type="text" name="sample.description"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{sample_description}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.sample.description" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">sample source: <input type="text" name="sample.source"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{sample_source}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.sample.source" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">sample id: <input type="text" name="sample.id"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{sample_id}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.sample.id" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">sample owner name: <input type="text" name="sample.owner.name"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{sample_owner_name}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.sample.owner.name" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">sample owner contact: <input type="text" name="sample.owner.contact"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{sample_owner_contact}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.sample.owner.description" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+
+                <h3>data source</h3>
+                <div>
+                    <span>
+                        <p class="normal-text">datasource reference: <input type="text" name="datasource.reference"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{datasource_reference}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.datasource.reference" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">datasource input name: <input type="text" name="datasource.input.name"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{datasource_input_name}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.datasource.input.name" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">datasource input contact: <input type="text" name="datasource.input.contact"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{datasource_input_contact}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.datasource.input.contact" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">datasource input date: <input type="text" name="datasource.input.date"></p>
+                    </span>
+                    <span>
+                        <p class="info">NOTE: if entering a date range, separate date strings with a space. current value: {{datasource_input_date}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.datasource.input.date" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove all dates</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">datasource input notes: <input type="text" name="datasource.input.notes"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{datasource_input_notes}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.datasource.input.notes" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+
+                <h3>measurement</h3>
+                <div>
+                    <span>
+                        <p class="normal-text">measurement practitioner name: <input type="text" name="measurement.practitioner.name"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{measurement_practitioner_name}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.practitioner.name" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">measurement practitioner contact: <input type="text" name="measurement.practitioner.contact"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{measurement_practitioner_contact}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.practitioner.contact" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">measurement technique: <input type="text" name="measurement.technique"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{measurement_technique}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.technique" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">measurement institution: <input type="text" name="measurement.institution"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{measurement_institution}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.institution" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">measurement date: <input type="text" name="measurement.date"></p>
+                    </span>
+                    <span>
+                        <p class="info">NOTE: if entering a date range, separate date strings with a space. current value: {{measurement_date}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.date" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove all dates</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">measurement description: <input type="text" name="measurement.description"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{measurement_description}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.description" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">measurement requestor name: <input type="text" name="measurement.requestor.name"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{measurement_requestor_name}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.requestor.name" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+                <div>
+                    <span>
+                        <p class="normal-text">measurement requestor contact: <input type="text" name="measurement.requestor.contact"></p>
+                    </span>
+                    <span>
+                        <p class="info">current value: {{measurement_requestor_contact}}</p>
+                    </span>
+                    <span>
+                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.requestor.contact" value="remove">
+                    </span>
+                    <span>
+                        <p class="info">remove</p>
+                    </span>
+                </div>
+
+                <h3>measurement results</h3>
+                {% for i in range(measurement_results|length) %}
+                    <h5>result</h5>
+                    <div>
+                        <span>
+                            <p class="normal-text">isotope: <input type="text" name="measurement.results.isotope{{i+1}}"></p>
+                        </span>
+                        <span>
+                            <p class="info">current value: <textarea class="false-textarea" name="current.measurement.results.isotope{{i+1}}" rows="1" cols="50" readonly>{{measurement_results[i]["isotope"]}}</textarea></p>
+                        </span>
+                        <span>
+                            <input class="remove-checkbox" type="checkbox" name="remove.measurement.results.isotope{{i+1}}" value="remove">
+                        </span>
+                        <span>
+                            <p class="info">remove</p>
+                        </span>
+                    </div>
+                    <div>
+                        <span>
+                            <p class="normal-text">measurement type: 
+                                <select name="measurement.results.type{{i+1}}">
+                                    <option value="measurement" {% if measurement_results[i]["type"] == "measurement" %} selected="selected"{% endif %}>measurement</option>
+                                    <option value="limit" {% if measurement_results[i]["type"] == "limit" %} selected="selected"{% endif %}>limit</option>
+                                    <option value="range" {% if measurement_results[i]["type"] == "range" %} selected="selected"{% endif %}>range</option>
+                                </select>
+                            </p>
+                        </span>
+                        <span>
+                            <p class="info">current value: <textarea class="false-textarea" name="current.measurement.results.type{{i+1}}" rows="1" cols="50" readonly>{{measurement_results[i]["type"]}}</textarea></p>
+                        </span>
+                        <span>
+                            <input class="remove-checkbox" type="checkbox" name="remove.measurement.results.type{{i+1}}" value="remove">
+                        </span>
+                        <span>
+                            <p class="info">remove</p>
+                        </span>
+                    </div>
+                    <div>
+                        <span>
+                            <p class="normal-text">units: 
+                                <select name="measurement.results.unit{{i+1}}">
+                                    <option value="pct" {% if measurement_results[i]["unit"] == "pct" %} selected="selected"{% endif %}>percent by mass</option>
+                                    <option value="g/g" {% if measurement_results[i]["unit"] == "g/g" %} selected="selected"{% endif %}>g/g</option>
+                                    <option value="ppm" {% if measurement_results[i]["unit"] == "ppm" %} selected="selected"{% endif %}>ppm</option>
+                                    <option value="ppb" {% if measurement_results[i]["unit"] == "ppb" %} selected="selected"{% endif %}>ppb</option>
+                                    <option value="ppt" {% if measurement_results[i]["unit"] == "ppt" %} selected="selected"{% endif %}>ppt</option>
+                                    <option value="ppq" {% if measurement_results[i]["unit"] == "ppq" %} selected="selected"{% endif %}>ppq (quadrillion)</option>
+                                    <option value="g" {% if measurement_results[i]["unit"] == "g" %} selected="selected"{% endif %}>g</option>
+                                    <option value="mg" {% if measurement_results[i]["unit"] == "mg" %} selected="selected"{% endif %}>mg</option>
+                                    <option value="ug" {% if measurement_results[i]["unit"] == "ug" %} selected="selected"{% endif %}>ug (micrograms)</option>
+                                    <option value="ng" {% if measurement_results[i]["unit"] == "ng" %} selected="selected"{% endif %}>ng</option>
+                                    <option value="pg" {% if measurement_results[i]["unit"] == "pg" %} selected="selected"{% endif %}>pg</option>
+                                    <option value="Bq" {% if measurement_results[i]["unit"] == "Bq" %} selected="selected"{% endif %}>Bq</option>
+                                    <option value="mBq" {% if measurement_results[i]["unit"] == "mBq" %} selected="selected"{% endif %}>mBq</option>
+                                    <option value="uBq" {% if measurement_results[i]["unit"] == "uBq" %} selected="selected"{% endif %}>uBq</option>
+                                    <option value="nBq" {% if measurement_results[i]["unit"] == "nBq" %} selected="selected"{% endif %}>nBq</option>
+                                    <option value="pBq" {% if measurement_results[i]["unit"] == "pBq" %} selected="selected"{% endif %}>pBq</option>
+
+                                    <option value="g/kg" {% if measurement_results[i]["unit"] == "g/kg" %} selected="selected"{% endif %}>g/kg</option>
+                                    <option value="g/cm" {% if measurement_results[i]["unit"] == "g/cm" %} selected="selected"{% endif %}>g/cm</option>
+                                    <option value="g/m" {% if measurement_results[i]["unit"] == "g/m" %} selected="selected"{% endif %}>g/m</option>
+                                    <option value="g/cm2" {% if measurement_results[i]["unit"] == "g/cm2" %} selected="selected"{% endif %}>g/cm2 (squared)</option>
+                                    <option value="g/m2" {% if measurement_results[i]["unit"] == "g/m2" %} selected="selected"{% endif %}>g/m2</option>
+                                    <option value="g/cm3" {% if measurement_results[i]["unit"] == "g/cm3" %} selected="selected"{% endif %}>g/cm3 (cubed)</option>
+                                    <option value="g/m3" {% if measurement_results[i]["unit"] == "g/m3" %} selected="selected"{% endif %}>g/m3</option>
+
+                                    <option value="mg/kg" {% if measurement_results[i]["unit"] == "mg/kg" %} selected="selected"{% endif %}>mg/kg</option>
+                                    <option value="mg/cm" {% if measurement_results[i]["unit"] == "mg/cm" %} selected="selected"{% endif %}>mg/cm</option>
+                                    <option value="mg/m" {% if measurement_results[i]["unit"] == "mg/m" %} selected="selected"{% endif %}>mg/m</option>
+                                    <option value="mg/cm2" {% if measurement_results[i]["unit"] == "mg/cm2" %} selected="selected"{% endif %}>mg/cm2 (squared)</option>
+                                    <option value="mg/m2" {% if measurement_results[i]["unit"] == "mg/m2" %} selected="selected"{% endif %}>mg/m2</option>
+                                    <option value="mg/cm3" {% if measurement_results[i]["unit"] == "mg/cm3" %} selected="selected"{% endif %}>mg/cm3 (cubed)</option>
+                                    <option value="mg/m3" {% if measurement_results[i]["unit"] == "mg/m3" %} selected="selected"{% endif %}>mg/m3</option>
+
+                                    <option value="ug/kg" {% if measurement_results[i]["unit"] == "ug/kg" %} selected="selected"{% endif %}>ug/kg</option>
+                                    <option value="ug/cm" {% if measurement_results[i]["unit"] == "ug/cm" %} selected="selected"{% endif %}>ug/cm</option>
+                                    <option value="ug/m" {% if measurement_results[i]["unit"] == "ug/m" %} selected="selected"{% endif %}>ug/m</option>
+                                    <option value="ug/cm2" {% if measurement_results[i]["unit"] == "ug/cm2" %} selected="selected"{% endif %}>ug/cm2 (squared)</option>
+                                    <option value="ug/m2" {% if measurement_results[i]["unit"] == "ug/m2" %} selected="selected"{% endif %}>ug/m2</option>
+                                    <option value="ug/cm3" {% if measurement_results[i]["unit"] == "ug/cm3" %} selected="selected"{% endif %}>ug/cm3 (cubed)</option>
+                                    <option value="ug/m3" {% if measurement_results[i]["unit"] == "ug/m3" %} selected="selected"{% endif %}>ug/m3</option>
+
+                                    <option value="ng/kg" {% if measurement_results[i]["unit"] == "ng/kg" %} selected="selected"{% endif %}>ng/kg</option>
+                                    <option value="ng/cm" {% if measurement_results[i]["unit"] == "ng/cm" %} selected="selected"{% endif %}>ng/cm</option>
+                                    <option value="ng/m" {% if measurement_results[i]["unit"] == "ng/m" %} selected="selected"{% endif %}>ng/m</option>
+                                    <option value="ng/cm2" {% if measurement_results[i]["unit"] == "ng/cm2" %} selected="selected"{% endif %}>ng/cm2 (squared)</option>
+                                    <option value="ng/m2" {% if measurement_results[i]["unit"] == "ng/m2" %} selected="selected"{% endif %}>ng/m2</option>
+                                    <option value="ng/cm3" {% if measurement_results[i]["unit"] == "ng/cm3" %} selected="selected"{% endif %}>ng/cm3 (cubed)</option>
+                                    <option value="ng/m3" {% if measurement_results[i]["unit"] == "ng/m3" %} selected="selected"{% endif %}>ng/m3</option>
+
+                                    <option value="pg/kg" {% if measurement_results[i]["unit"] == "pg/kg" %} selected="selected"{% endif %}>pg/kg</option>
+                                    <option value="pg/cm" {% if measurement_results[i]["unit"] == "pg/cm" %} selected="selected"{% endif %}>pg/cm</option>
+                                    <option value="pg/m" {% if measurement_results[i]["unit"] == "pg/m" %} selected="selected"{% endif %}>pg/m</option>
+                                    <option value="pg/cm2" {% if measurement_results[i]["unit"] == "pg/cm2" %} selected="selected"{% endif %}>pg/cm2 (squared)</option>
+                                    <option value="pg/m2" {% if measurement_results[i]["unit"] == "pg/m2" %} selected="selected"{% endif %}>pg/m2</option>
+                                    <option value="pg/cm3" {% if measurement_results[i]["unit"] == "pg/cm3" %} selected="selected"{% endif %}>pg/cm3 (cubed)</option>
+                                    <option value="pg/m3" {% if measurement_results[i]["unit"] == "pg/m3" %} selected="selected"{% endif %}>pg/m3</option>
+
+                                    <option value="Bq/kg" {% if measurement_results[i]["unit"] == "Bq/kg" %} selected="selected"{% endif %}>Bq/kg</option>
+                                    <option value="Bq/cm" {% if measurement_results[i]["unit"] == "Bq/cm" %} selected="selected"{% endif %}>Bq/cm</option>
+                                    <option value="Bq/m" {% if measurement_results[i]["unit"] == "Bq/m" %} selected="selected"{% endif %}>Bq/m</option>
+                                    <option value="Bq/cm2" {% if measurement_results[i]["unit"] == "Bq/cm2" %} selected="selected"{% endif %}>Bq/cm2 (squared)</option>
+                                    <option value="Bq/m2" {% if measurement_results[i]["unit"] == "Bq/m2" %} selected="selected"{% endif %}>Bq/m2</option>
+                                    <option value="Bq/cm3" {% if measurement_results[i]["unit"] == "Bq/cm3" %} selected="selected"{% endif %}>Bq/cm3 (cubed)</option>
+                                    <option value="Bq/m3" {% if measurement_results[i]["unit"] == "Bq/m3" %} selected="selected"{% endif %}>Bq/m3</option>
+
+                                    <option value="mBq/kg" {% if measurement_results[i]["unit"] == "mBq/kg" %} selected="selected"{% endif %}>mBq/kg</option>
+                                    <option value="mBq/cm" {% if measurement_results[i]["unit"] == "mBq/cm" %} selected="selected"{% endif %}>mBq/cm</option>
+                                    <option value="mBq/m" {% if measurement_results[i]["unit"] == "mBq/m" %} selected="selected"{% endif %}>mBq/m</option>
+                                    <option value="mBq/cm2" {% if measurement_results[i]["unit"] == "mBq/cm2" %} selected="selected"{% endif %}>mBq/cm2 (squared)</option>
+                                    <option value="mBq/m2" {% if measurement_results[i]["unit"] == "mBq/m2" %} selected="selected"{% endif %}>mBq/m2</option>
+                                    <option value="mBq/cm3" {% if measurement_results[i]["unit"] == "mBq/cm3" %} selected="selected"{% endif %}>mBq/cm3 (cubed)</option>
+                                    <option value="mBq/m3" {% if measurement_results[i]["unit"] == "mBq/m3" %} selected="selected"{% endif %}>mBq/m3</option>
+
+                                    <option value="uBq/kg" {% if measurement_results[i]["unit"] == "uBq/kg" %} selected="selected"{% endif %}>uBq/kg</option>
+                                    <option value="uBq/cm" {% if measurement_results[i]["unit"] == "uBq/cm" %} selected="selected"{% endif %}>uBq/cm</option>
+                                    <option value="uBq/m" {% if measurement_results[i]["unit"] == "uBq/m" %} selected="selected"{% endif %}>uBq/m</option>
+                                    <option value="uBq/cm2" {% if measurement_results[i]["unit"] == "uBq/cm2" %} selected="selected"{% endif %}>uBq/cm2 (squared)</option>
+                                    <option value="uBq/m2" {% if measurement_results[i]["unit"] == "uBq/m2" %} selected="selected"{% endif %}>uBq/m2</option>
+                                    <option value="uBq/cm3" {% if measurement_results[i]["unit"] == "uBq/cm3" %} selected="selected"{% endif %}>uBq/cm3 (cubed)</option>
+                                    <option value="uBq/m3" {% if measurement_results[i]["unit"] == "uBq/m3" %} selected="selected"{% endif %}>uBq/m3</option>
+
+                                    <option value="nBq/kg" {% if measurement_results[i]["unit"] == "nBq/kg" %} selected="selected"{% endif %}>nBq/kg</option>
+                                    <option value="nBq/cm" {% if measurement_results[i]["unit"] == "nBq/cm" %} selected="selected"{% endif %}>nBq/cm</option>
+                                    <option value="nBq/m" {% if measurement_results[i]["unit"] == "nBq/m" %} selected="selected"{% endif %}>nBq/m</option>
+                                    <option value="nBq/cm2" {% if measurement_results[i]["unit"] == "nBq/cm2" %} selected="selected"{% endif %}>nBq/cm2 (squared)</option>
+                                    <option value="nBq/m2" {% if measurement_results[i]["unit"] == "nBq/m2" %} selected="selected"{% endif %}>nBq/m2</option>
+                                    <option value="nBq/cm3" {% if measurement_results[i]["unit"] == "nBq/cm3" %} selected="selected"{% endif %}>nBq/cm3 (cubed)</option>
+                                    <option value="nBq/m3" {% if measurement_results[i]["unit"] == "nBq/m3" %} selected="selected"{% endif %}>nBq/m3</option>
+
+                                    <option value="pBq/kg" {% if measurement_results[i]["unit"] == "pBq/kg" %} selected="selected"{% endif %}>pBq/kg</option>
+                                    <option value="pBq/cm" {% if measurement_results[i]["unit"] == "pBq/cm" %} selected="selected"{% endif %}>pBq/cm</option>
+                                    <option value="pBq/m" {% if measurement_results[i]["unit"] == "pBq/m" %} selected="selected"{% endif %}>pBq/m</option>
+                                    <option value="pBq/cm2" {% if measurement_results[i]["unit"] == "pBq/cm2" %} selected="selected"{% endif %}>pBq/cm2 (squared)</option>
+                                    <option value="pBq/m2" {% if measurement_results[i]["unit"] == "pBq/m2" %} selected="selected"{% endif %}>pBq/m2</option>
+                                    <option value="pBq/cm3" {% if measurement_results[i]["unit"] == "pBq/cm3" %} selected="selected"{% endif %}>pBq/cm3 (cubed)</option>
+                                    <option value="pBq/m3" {% if measurement_results[i]["unit"] == "pBq/m3" %} selected="selected"{% endif %}>pBq/m3</option>
+                                </select>
+                            </p>
+                        </span>
+                        <span>
+                            <p class="info">current value: <textarea class="false-textarea" name="current.measurement.results.unit{{i+1}}" rows="1" cols="50" readonly>{{measurement_results[i]["unit"]}}</textarea></p>
+                        </span>
+                        <span>
+                            <input class="remove-checkbox" type="checkbox" name="remove.measurement.results.unit{{i+1}}" value="remove">
+                        </span>
+                        <span>
+                            <p class="info">remove</p>
+                        </span>
+                    </div>
+                    <div>
+                        <span>
+                            <span class="fourths-container">
+                                <p class="normal-text">value(s):</p> 
+                            </span>
+                            <span class="fourths-container">
+                                <div>
+                                    <input type="text" name="measurement.results.valueA{{i+1}}">
+                                    <p class="info">if type is "measurement" this is the central value. If type is "limit" this is the upper limit. If type is "range" this is the lower bound.</p>
+                                    <p class="info">current value: <textarea class="false-textarea" name="current.measurement.results.valueA{{i+1}}" rows="1" cols="10" readonly>{{measurement_results[i]["value"][0]}}</textarea></p>
+                                    <span>
+                                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.results.valueA{{i+1}}" value="remove">
+                                    </span>
+                                    <span>
+                                        <p class="info">remove</p>
+                                    </span>
+                                </div>
+                            </span>
+                            <span class="fourths-container">
+                                <div>
+                                    <input type="text" name="measurement.results.valueB{{i+1}}">
+                                    <p class="info">if type is "measurement" this is the symmetric error. If type is "limit" this is the confidence level. If type is "range" this is the upper bound.</p>
+                                    <p class="info">current value: <textarea class="false-textarea" name="current.measurement.results.valueB{{i+1}}" rows="1" cols="10" readonly>{{measurement_results[i]["value"][1]}}</textarea></p>
+                                    <span>
+                                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.results.valueB{{i+1}}" value="remove">
+                                    </span>
+                                    <span>
+                                        <p class="info">remove</p>
+                                    </span>
+                                </div>
+                            </span>
+                            <span class="fourths-container">
+                                <div>
+                                    <input type="text" name="measurement.results.valueC{{i+1}}">
+                                    <p class="info">if type is "measurement" this is the asymmetric error. If type is "limit" no value is required. If type is "range" this is the confidence level.</p>
+                                    <p class="info">current value: <textarea class="false-textarea" name="current.measurement.results.valueC{{i+1}}" rows="1" cols="10" readonly>{{measurement_results[i]["value"][2]}}</textarea></p>
+                                    <span>
+                                        <input class="remove-checkbox" type="checkbox" name="remove.measurement.results.valueC{{i+1}}" value="remove">
+                                    </span>
+                                    <span>
+                                        <p class="info">remove</p>
+                                    </span>
+                                </div>
+                            </span>
+                        </span>
+                    </div>
+                    <div>
+                        <span>
+                            <input class="remove-checkbox" type="checkbox" name="remove.measurement.results{{i+1}}" value="remove">
+                        </span>
+                        <span>
+                            <p class="info">remove entire measurement result</p>
+                        </span>
+                    </div>
+                {% endfor %}
+            </div> <!-- END OF div id "input-section"  -->
+            <div>
+                <span>
+                    <button id="add-meas-button" class="normal-button" type="button">add measurement result</button>
+                </span>
+            </div>
+        </div>
+
+        <div class="section-container">
+            <button class="submit-button" type="submit" name="submit_button" value="update_doc">update doc</button>
+        <div class="section-container">
+        
+    </form>
+{% endif %}
+
+
+
+<script>
+    var counter = 1;
+    var button = document.getElementById("add-meas-button");
+    button.addEventListener('click', function () {
+        var measStr = '<h5>new result</h5><div><span><p class="normal-text">isotope: <input type="text" name="new.measurement.results.isotope' + counter + '"></p></span></div><div><span><p class="normal-text">measurement type:<select name="new.measurement.results.type' + counter + '"><option value="measurement">measurement</option><option value="limit">limit</option><option value="range">range</option></select></p></span></div><div><span><p class="normal-text">units:<select name="new.measurement.results.unit' + counter + '"><option value="pct">percent by mass</option><option value="g/g">g/g</option><option value="ppm">ppm</option><option value="ppb">ppb</option><option value="ppt">ppt</option><option value="ppq">ppq (quadrillion)</option><option value="g">g</option><option value="mg">mg</option><option value="ug">ug (micrograms)</option><option value="ng">ng</option><option value="pg">pg</option><option value="Bq">Bq</option><option value="mBq">mBq</option><option value="uBq">uBq</option><option value="nBq">nBq</option><option value="pBq">pBq</option><option value="g/kg">g/kg</option><option value="g/cm">g/cm</option><option value="g/m">g/m</option><option value="g/cm2">g/cm2 (squared)</option><option value="g/m2">g/m2</option><option value="g/cm3">g/cm3 (cubed)</option><option value="g/m3">g/m3</option><option value="mg/kg">mg/kg</option><option value="mg/cm">mg/cm</option><option value="mg/m">mg/m</option><option value="mg/cm2">mg/cm2 (squared)</option><option value="mg/m2">mg/m2</option><option value="mg/cm3">mg/cm3 (cubed)</option><option value="mg/m3">mg/m3</option><option value="ug/kg">ug/kg</option><option value="ug/cm">ug/cm</option><option value="ug/m">ug/m</option><option value="ug/cm2">ug/cm2 (squared)</option><option value="ug/m2">ug/m2</option><option value="ug/cm3">ug/cm3 (cubed)</option><option value="ug/m3">ug/m3</option><option value="ng/kg">ng/kg</option><option value="ng/cm">ng/cm</option><option value="ng/m">ng/m</option><option value="ng/cm2">ng/cm2 (squared)</option><option value="ng/m2">ng/m2</option><option value="ng/cm3">ng/cm3 (cubed)</option><option value="ng/m3">ng/m3</option><option value="pg/kg">pg/kg</option><option value="pg/cm">pg/cm</option><option value="pg/m">pg/m</option><option value="pg/cm2">pg/cm2 (squared)</option><option value="pg/m2">pg/m2</option><option value="pg/cm3">pg/cm3 (cubed)</option><option value="pg/m3">pg/m3</option><option value="Bq/kg">Bq/kg</option><option value="Bq/cm">Bq/cm</option><option value="Bq/m">Bq/m</option><option value="Bq/cm2">Bq/cm2 (squared)</option><option value="Bq/m2">Bq/m2</option><option value="Bq/cm3">Bq/cm3 (cubed)</option><option value="Bq/m3">Bq/m3</option><option value="mBq/kg">mBq/kg</option><option value="mBq/cm">mBq/cm</option><option value="mBq/m">mBq/m</option><option value="mBq/cm2">mBq/cm2 (squared)</option><option value="mBq/m2">mBq/m2</option><option value="mBq/cm3">mBq/cm3 (cubed)</option><option value="mBq/m3">mBq/m3</option><option value="uBq/kg">uBq/kg</option><option value="uBq/cm">uBq/cm</option><option value="uBq/m">uBq/m</option><option value="uBq/cm2">uBq/cm2 (squared)</option><option value="uBq/m2">uBq/m2</option><option value="uBq/cm3">uBq/cm3 (cubed)</option><option value="uBq/m3">uBq/m3</option><option value="nBq/kg">nBq/kg</option><option value="nBq/cm">nBq/cm</option><option value="nBq/m">nBq/m</option><option value="nBq/cm2">nBq/cm2 (squared)</option><option value="nBq/m2">nBq/m2</option><option value="nBq/cm3">nBq/cm3 (cubed)</option><option value="nBq/m3">nBq/m3</option><option value="pBq/kg">pBq/kg</option><option value="pBq/cm">pBq/cm</option><option value="pBq/m">pBq/m</option><option value="pBq/cm2">pBq/cm2 (squared)</option><option value="pBq/m2">pBq/m2</option><option value="pBq/cm3">pBq/cm3 (cubed)</option><option value="pBq/m3">pBq/m3</option></select></p></span></div><div><span><span class="fourths-container"><p class="normal-text">value(s):</p></span><span class="fourths-container"><div><input type="text" name="new.measurement.results.valueA' + counter + '"><p class="info">if type is "measurement" this is the central value. If type is "limit" this is the upper limit. If type is "range" this is the lower bound. </p></div></span><span class="fourths-container"><div><input type="text" name="new.measurement.results.valueB' + counter + '"><p class="info">if type is "measurement" this is the symmetric error. If type is "limit" this is the confidence level. If type is "range" this is the upper bound. </p></div></span><span class="fourths-container"><div><input type="text" name="new.measurement.results.valueC' + counter + '"><p class="info">if type is "measurement" this is the asymmetric error. If type is "limit" no value is required. If type is "range" this is the confidence level. </p></div></span></span></div>'
+        
+        var newMeas = document.createElement('div');
+        newMeas.innerHTML = measStr;
+
+        var input_section = document.getElementById("input-section");
+        input_section.appendChild(newMeas);
+
+        counter++;
+    });
+</script>
+
+</body>
+</html>
+

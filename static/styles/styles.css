@@ -1,3 +1,8 @@
+/* dark blue:   #28487a */
+/* light blue:  #7aa5eb */
+/* dark gray:   #6c6d70 */
+/* light gray:  #abaeb3 */
+
 h1 {
   text-align: center;
   font-family: Arial, Helvetica, sans-serif;
@@ -6,12 +11,12 @@ h1 {
 
 h3 {
   font-family: Arial, Helvetica, sans-serif;
-  color: #6c6d70;
+  color: #28487a;
 }
 
 h5 {
   font-family: Arial, Helvetica, sans-serif;
-  color: #6c6d70;
+  color: #28487a;
   font-size: 12pt;
 }
 
@@ -23,6 +28,7 @@ span {
 
 textarea {
   padding: 2px;
+  resize: none;
   font-size: 12pt;
   font-family: Arial, Helvetica, sans-serif; 
 }
@@ -41,36 +47,32 @@ select {
   margin: 0;
 }
 
+.normal-text {
+  margin: 0;
+  margin-left: 15px;
+  color: #6c6d70;
+  font-size: 12pt;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
 .section-container {
   margin-top: 35px;
   margin-bottom: 35px;
 }
 
-.collapsible-text{
-  margin-left: 25px;
-  font-family: "Lucida Console", Courier, monospace;
-}
-
-.final-query-text {
-  margin: 0;
-  margin-left: 15px;
-  color: #abaeb3;
-}
-
-#query-text {
+.false-textarea {
   border: none;
-  resize: none;
   margin: 0;
-  color: #abaeb3;
   margin-left: 15px;
+  color: #6c6d70;
 }
 
-.val-container {
-  max-width: 30%;
+.fourths-container {
+  max-width: 25%;
 }
 
 /* button styling to make them not look like rectangles */
-.append-button {
+.normal-button {
   background-color: #c4c7cc;
   font-size: 12pt;
 }
@@ -78,7 +80,7 @@ select {
   background-color: #7aa5eb;
   font-size: 14pt;
 }
-.append-button, .submit-button {
+.normal-button, .submit-button {
   border: none;
   font-family: Arial, Helvetica, sans-serif;
   padding: 5px;
@@ -102,6 +104,12 @@ select {
   padding: 0 18px;
   display: none;
   overflow: hidden;
-  background-color: #c4c7cc;
+  background-color: #abaeb3;
+}
+.collapsible-text{
+  margin-left: 25px;
+  font-family: "Lucida Console", Courier, monospace;
   color: black;
 }
+
+
