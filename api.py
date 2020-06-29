@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template
 from python_mongo_toolkit import search, add_to_query, insert, search_by_id, update
+import pprint
 
 app = Flask(__name__)
 
@@ -7,9 +8,11 @@ app = Flask(__name__)
 def search_endpoint():
     if request.form.get("append_button") == "do_and":
         existing_q_str, num_q_lines, final_q_lines_list, results = do_q_append(request.form, "AND")
+        results_str = [ str(r) for r in results ]
 
     elif request.form.get("append_button") == "do_or":
         existing_q_str, num_q_lines, final_q_lines_list, results = do_q_append(request.form, "OR")
+        results_str = [ str(r) for r in results ]
 
     elif request.method == "POST":
         final_q_str = parse_existing_q(request.form)
@@ -17,6 +20,8 @@ def search_endpoint():
         if final_q_str != '':
             final_q_lines_list = final_q_str.split('\n')
         results = perform_search(final_q_lines_list)
+        results_str = [ str(r) for r in results ]
+        #results = [ pprint.pformat(r).split('\n') for r in results ]
         existing_q_str = ''
         num_q_lines = 0
 
@@ -25,8 +30,9 @@ def search_endpoint():
         num_q_lines = 0
         final_q_lines_list = []
         results = []
+        results_str = []
 
-    return render_template('search.html', existing_query=existing_q_str, num_q_lines=num_q_lines, final_q=final_q_lines_list, results=results)
+    return render_template('search.html', existing_query=existing_q_str, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
 def insert_endpoint():
@@ -55,7 +61,7 @@ def update_endpoint():
         for i in range(len(doc['measurement']['results'])):
             num_vals = len(doc['measurement']['results'][i]['value'])
             if num_vals == 0:
-                doc['measurement']['results'][i]['value'][0] = ['']
+                doc['measurement']['results'][i]['value'] = []
             if num_vals < 2:
                 doc['measurement']['results'][i]['value'].append('')
             if num_vals < 3:
@@ -97,6 +103,76 @@ def update_endpoint():
     return None
 
 
+@app.route('/', methods=['GET', 'POST'])
+def reference_page():
+    '''
+    example_data_dict = {
+        "grouping" : "<string> experiment name or similar", 
+        "specification" : "<string> MADF specification version (current is 3)", 
+        "type" : "<string> document type (always assay)", 
+        "sample" : { 
+            "name" : "<string> concise description", 
+            "description" : "<string> detailed description", 
+            "source" : "<string> where the sample came from", 
+            "id" : "<string> identification number", 
+            "owner" : {
+                "name" : "<string> name of who owns the sample", 
+                "contact" : "<string> email or telephone of who owns the sample"
+            } 
+        }, 
+        "measurement" : {
+            "description" : "<string> detailed description",
+            "technique" : "<string> technique name",
+            "institution" : "<string> institution name",
+            "requestor" : {
+                "name" : "<string> name of who coordinated the measurement",
+                "contact" : "<string> email or telephone of who coordinated the measurement"
+            },
+            "practitioner" : {
+                "name" : "<string> name of who did the measurement",
+                "contact" : "<string> email or telephone of who did the measurement"
+            },
+            "results" : [
+                {
+                    "isotope" : "<string> isotope name, usually in the format symbol-mass number",
+                    "type" : "<string> the type of measurement (one of 'measurement' 'limit' or 'range')",
+                    "unit" : "<string> unit for measurement (one of 'pct', 'g/g', 'ppm', 'ppb', 'ppt', 'ppq', 'g', 'mg', 'ug','ng', 'pg', 'Bq','mBq','uBq','nBq', 'pBq', 'g/kg','g/cm','g/m', 'g/cm2', 'g/m2', 'g/cm3', 'g/m3', 'mg/kg', 'mg/cm', 'mg/m', 'mg/cm2', 'mg/m2', 'mg/cm3', 'mg/m3', 'ug/kg', 'ug/cm', 'ug/m', 'ug/cm2', 'ug/m2', 'ug/cm3', 'ug/m3', 'ng/kg', 'ng/cm', 'ng/m', 'ng/cm2', 'ng/m2', 'ng/cm3', 'ng/m3', 'pg/kg', 'pg/cm', 'pg/m', 'pg/cm2',  'pg/m2', 'pg/cm3', 'pg/m3', 'Bq/kg', 'Bq/cm', 'Bq/m',  'Bq/cm2', 'Bq/m2', 'Bq/cm3', 'Bq/m3',  'mBq/kg', 'mBq/cm', 'mBq/m', 'mBq/cm2', 'mBq/m2', 'mBq/cm3', 'mBq/m3', 'uBq/kg', 'uBq/cm', 'uBq/m', 'uBq/cm2', 'uBq/m2', 'uBq/cm3', 'uBq/m3', 'nBq/kg', 'nBq/cm', 'nBq/m', 'nBq/cm2', 'nBq/m2', 'nBq/cm3', 'nBq/m3', 'pBq/kg', 'pBq/cm', 'pBq/m', 'pBq/cm2', 'pBq/m2', 'pBq/cm3', 'pBq/m3')",
+                    "value" : [
+                        "<float> if type is 'measurement' this is the central value. If type is 'limit' this is the upper limit. If type is 'range' this is the lower bound",
+                        "<float> if type is 'measurement' this is the symmetric error. If type is 'limit' this is the confidence level. If type is 'range' this is upper bound",
+                        "<float> if type is 'measurement' this is the asymmetric error. If type is 'limit' no value necessary. If type is 'range' this is the confidence level"
+                    ]
+                }
+            ],
+            "date" : [
+                "<string> if only one date string, this is the date of measurement. If two date strings, this is the start of the date range for the measurement",
+                "<string> if present, this is the end of the date range for the measurement"
+            ]
+        },
+        "data_source" : {
+            "reference" : "<string> where the data came from",
+            "input" : {
+                "name" : "<string> name of who entered the data",
+                "contact" : "<string> email or telephone of who entered the data",
+                "notes" : "<string> input simplifications, assumptions",
+                "date" : [
+                    "<string> if only one date string, this is the date of data input. If two date strings, this is the start of the date range for the data input",
+                    "<string> if present, this is the end of the date range for the measurement"
+                ]
+            }
+        }
+    }
+    #dict_lines = pprint.pformat(example_data_dict).split('\n')
+    num_indents = 1
+    for d_ch in json.dumps(example_data_dict):
+        if d_ch in ['{', '[']:
+            
+
+    for a in dict_lines:
+        print(a)
+    '''
+    return render_template('test.html')    
+
 
 def do_q_append(form, append_mode):
     existing_q = parse_existing_q(form)
@@ -136,7 +212,7 @@ def perform_search(q_lines):
 
 
 def perform_insert(form):
-    print('\nFORM:::::', form)
+#    print('\nFORM:::::', form)
     meas_results = []
     i = 1
     form_keys = list(form.to_dict().keys())
@@ -190,7 +266,7 @@ def perform_insert(form):
 
 
 def parse_update(form):
-    print(form)
+#    print(form)
 
     remove_meas_indices = []
     update_pairs = {}
@@ -216,16 +292,16 @@ def parse_update(form):
             val = form.get('measurement.results.'+field+str(num_measurement_results), '')
             do_remove = form.get('remove.measurement.results.'+field+str(num_measurement_results), '') != ''
 
-            # remove field's value by updating it with an empty string value
+            # remove field's value by updating it with an empty string value. Use mongodb list indices, not html element numbers
             if do_remove:
                 # add field to the "update values" list with an empty field (we don't want to completely delete the field)
-                update_pairs['measurement.results.'+str(num_measurement_results)+'.'+field] = ''
+                update_pairs['measurement.results.'+str(num_measurement_results-1)+'.'+field] = ''
 
             # val not empty means perform some update
             elif val != '':
                 if val != curr_val: # dropdowns are pre-selected with the curr_val by default, so same value means no change
                     # add field to the "update values" list
-                    update_pairs['measurement.results.'+str(num_measurement_results)+'.'+field] = val
+                    update_pairs['measurement.results.'+str(num_measurement_results-1)+'.'+field] = val
 
         # handle the measurement results values
         curr_A = form.get('current.measurement.results.valueA'+str(num_measurement_results), '')
@@ -251,18 +327,18 @@ def parse_update(form):
             # no update
             pass
         else:
-            if vals[2] is None:
+            if vals[2] is None or vals[2] == '':
                 update = [vals[0], vals[1]]
             else:
                 update = [vals[0], vals[1], vals[2]]
 
-            if vals[1] is None:
+            if vals[1] is None or vals[1] == '':
                 update = [vals[0]]
 
-            if vals[0] is None:
+            if vals[0] is None or vals[0] == '':
                 update = []
-            
-            update_pairs['measurement.results.'+str(num_measurement_results)+'.value'] = update
+
+            update_pairs['measurement.results.'+str(num_measurement_results-1)+'.value'] = update
 
     # assemble newly-added measurement results
     num_new_measurement_results = 0
@@ -276,11 +352,19 @@ def parse_update(form):
         new_meas_element = {}
         for meas_field in ["measurement.results.isotope", "measurement.results.type", "measurement.results.unit"]:
             new_val = form.get('new.'+meas_field+str(num_new_measurement_results), '')
-            new_meas_element[meas_field] = new_val
+            new_meas_element[meas_field.split('.')[-1]] = new_val
         new_meas_element["value"] = [form.get('new.measurement.results.valueA'+str(num_new_measurement_results), ''), \
             form.get('new.measurement.results.valueB'+str(num_new_measurement_results), ''), \
             form.get('new.measurement.results.valueC'+str(num_new_measurement_results), '')
         ]
+        if new_meas_element["value"][2] == '':
+            new_meas_element["value"] = [new_meas_element["value"][0], new_meas_element["value"][1]]
+        else:
+            new_meas_element["value"] = [new_meas_element["value"][0], new_meas_element["value"][1], new_meas_element["value"][2]]
+        if new_meas_element["value"][1] == '':
+            new_meas_element["value"] = [new_meas_element["value"][0]]
+        if new_meas_element["value"][0] == '':
+            new_meas_element["value"] = []
 
         # add new object to the "new additions" list
         add_eles.append(new_meas_element)

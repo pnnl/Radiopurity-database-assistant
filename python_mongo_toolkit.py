@@ -12,12 +12,20 @@ valid_str_comparisons = ["contains", "notcontains", "eq"]
 valid_num_comparisons = ["eq", "lt", "lte", "gt", "gte"]
 valid_appendmodes = ["AND", "OR"]
 
-client = MongoClient('130.20.47.128', 27017)
-coll = client.radiopurity_data.example_data
+valid_isotopes = open('isotopes.csv', 'r').read().strip().split(',')
+valid_units = open('units.csv', 'r').read().strip().split(',')
+
+##########################################
+# IN ORDER TO CONNECT TO DB:
+# ssh -L 27017:localhost:27017 bgtest01
+##########################################
+#client = MongoClient('130.20.47.128', 27017)
+#coll = client.radiopurity_data.example_data
+client = MongoClient('localhost', 27017)
+coll = client.radiopurity_data.throwaway
 
 # search on ID
 def search_by_id(doc_id):
-    '''
     try:
         id_obj = ObjectId(doc_id)
     except:
@@ -35,9 +43,6 @@ def search_by_id(doc_id):
         ret_doc = None
     else:
         ret_doc = resp[0]
-    '''
-    #TODO: this is a placeholder
-    ret_doc = { "_id" : ObjectId("5ee26d5c90a2c4ae142cb97b"), "grouping" : "ILIAS UKDM", "specification" : "v3.00", "type" : "assay", "sample" : { "name" : "", "description" : "Copper C103, Outokumpu", "source" : "", "id" : "ILIAS UKDM #74", "owner" : {"name":"", "contact":""  } }, "measurement" : {"requestor":{"name":"", "contact":""}, "results" : [ { "isotope" : "U-238", "type" : "measurement", "unit" : "ppb", "value" : [ 1 ] }, { "isotope" : "Th-232", "type" : "limit", "unit" : "ppb", "value" : [ 3, 1 ] }, { "isotope" : "Rb-85", "type" : "measurement", "unit" : "ppb", "value" : [ 16, 3 ] }, { "isotope" : "Rb-87", "type" : "range", "unit" : "ppb", "value" : [ 17, 6 ] }, { "isotope" : "Lu", "type" : "measurement", "unit" : "ppb", "value" : [ 1 ] }, { "isotope" : "K-40", "type" : "measurement", "unit" : "ppm", "value" : [ 0.018, 0.001 ] } ], "practitioner" : {"name":"Loughborough", "contact":""}, "technique" : "GD-MS", "institution" : "", "date" : [ ], "description" : "85Rb 16(3) ppb, 87Rb 17(6) ppb, La, Lu < 1 ppb" }, "data_source" : { "reference" : "ILIAS Database http://radiopurity.in2p3.fr/", "input" : { "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "date" : [ "2013-07-22" ], "notes" : "" } } }
 
     return ret_doc
 
@@ -47,35 +52,51 @@ def update(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
     print("UPDATE PAIRS:    ",update_pairs)
     print("NEW MEAS OBJ:    ",new_meas_objects)
     print("MEAS REMOVE IDX: ",meas_remove_indices)
-    '''
+    
     # https://stackoverflow.com/questions/7227890/how-to-delete-n-th-element-of-array-in-mongodb
     # https://docs.mongodb.com/manual/reference/operator/update/addToSet/
     # https://docs.mongodb.com/manual/reference/operator/update/each/
 
+    did_update = True
+
     # add updates, null out measurement results objects to be removed
-    update_values = {}
+    if len(update_pairs.keys()) > 0 or len(meas_remove_indices) > 0:
+        update_values = {}
 
-    update_values["$set"] = update_pairs
+        if len(update_pairs.keys()) > 0:
+            update_values["$set"] = update_pairs
 
-    update_values["$unset"] = {}
-    for remove_idx in meas_remove_indices:
-        update_values["$unset"]["measurement.results."+str(remove_idx)] = 1
+        if len(meas_remove_indices) > 0:
+            update_values["$unset"] = {}
+            for remove_idx in meas_remove_indices:
+                update_values["$unset"]["measurement.results."+str(remove_idx)] = 1
 
-    # execute update in DB
-    update_resp = coll.update(id_q, update_values)
-    num_updated = update_resp.nModified
+        print('UPDATE VALUES:::',update_values)
+        # execute update in DB
+        update_resp = coll.update(id_q, update_values)
+        num_updated = update_resp['nModified']
+        did_update = num_updated>0
 
     # add new measurement results objects, remove nulled-out measurement results objects
-    new_values = {}
+    if len(new_meas_objects) > 0 or len(meas_remove_indices) > 0:
+        new_values = {}
 
-    new_values["$addToSet"] = {"meas.res":{"$each":new_meas_objects}}
-    new_values["$pull"] = {"measurement.results": None}
+        #TODO: validate measurement update
 
-    # execute update in DB
-    remove_resp = coll.upate(id_q, new_values)
-    num_removed = remove_resp.nModified
-    '''
-    return True
+        if len(new_meas_objects) > 0:
+            #new_values["$push"] = {"measurement.results":new_meas_objects[0]}
+            new_values["$push"] = {"measurement.results":{"$each":new_meas_objects}}
+            #new_values["$addToSet"] = {"measurement.results":{"$each":new_meas_objects}}
+        if len(meas_remove_indices) > 0:
+            new_values["$pull"] = {"measurement.results": None}
+
+        print('NEW VALUES:::',new_values)
+        # execute update in DB
+        add_remove_resp = coll.update(id_q, new_values)
+        num_removed_or_added = add_remove_resp['nModified']
+        did_update = did_update is True and num_removed_or_added>0
+
+    return did_update
     
 
 # search
@@ -83,11 +104,11 @@ def search(query):
     if type(query) is not dict:
         print("Error: the query argument must be a dictionary.")
         return None
-
-#    resp = coll.find(query)
-#    resp = list(resp)
-    resp = ['response 1!!!', 'This is response 2.', 'response 3', 'and finally, response 4.', 'just kidding! A fifth response']
-
+    resp = coll.find(query)
+    resp = list(resp)
+    for i, ele in enumerate(resp):
+        ele['_id'] = str(ele['_id'])
+        resp[i] = ele
     return resp
 
 # append to existing query
@@ -133,7 +154,6 @@ def add_to_query(field, comparison, value, existing_q={}, append_mode="ADD"):
         new_term = {field:{comparison:value}}
 
     # add new term to existing_q
-    #TODO: decide how to go about $or and $and functionality
     existing_keys = list(existing_q.keys())
     if append_mode == 'OR':
         if '$or' in existing_keys:
@@ -150,14 +170,13 @@ def add_to_query(field, comparison, value, existing_q={}, append_mode="ADD"):
             print('B. adding to existing $and')
             existing_q['$and'].append(new_term)
         else:
-            print('C. new element')
+            print('C. new q element')
             existing_q[field] = new_term[field]
 
     return existing_q
 
 
 # insert
-#TODO: how to impose MADF format? --> refer to... https://www.sciencedirect.com/science/article/pii/S0168900216309639
 def insert(sample_name, sample_description, datasource_reference, datasource_input_name, datasource_input_contact, datasource_input_date, \
     grouping="", sample_source="", sample_id="", sample_owner_name="", sample_owner_contact="", \
     measurement_results=[], measurement_practitioner_name="", measurement_practitioner_contact="", \
@@ -165,32 +184,8 @@ def insert(sample_name, sample_description, datasource_reference, datasource_inp
     measurement_requestor_name="", measurement_requestor_contact="", datasource_input_notes=""):
 
     # verify and convert measurement_results arg
-    results_keys = ["isotope", "type", "unit", "value"]
-    if type(measurement_results) is not list:
-        print('Error: the measurement_results argument must be a list containing dictionary objects')
+    if not validate_measurement_results_data(measurement_results):
         return None
-    for i, results_element in enumerate(measurement_results):
-        if type(results_element) is not dict:
-            print('Error: the measurement_results argument must be dictionaries')
-            return None
-        for results_key in results_keys:
-            if results_key not in list(results_element.keys()):
-                print('Error: at least one of the required keys ('+', '.join(results_keys)+') is missing from at least one of the dictionaries in the measurement_results argument')
-                return None
-            if results_key == 'type':
-                if measurement_results[i][results_key] not in ['measurement', 'range', 'limit']:
-                    print('Error: "type" field of the measurement_results dictionaries must be one of: "measurement", "range", "limit"')
-                    return None
-            elif results_key == 'value':
-                if type(measurement_results[i][results_key]) is not list:
-                    print('Error: the "value" field of the dictionaries in the measurement_results list must be a list')
-                    return None
-                for j in range(len(measurement_results[i][results_key])):
-                    try:
-                        measurement_results[i][results_key][j] = float(measurement_results[i][results_key][j])
-                    except:
-                        print('Error: at least one of the elements in the "value" list of at least one of the dictionaries in the measurement_results list cannot be parsed into a number')
-                        return None
 
     # verify and convert datasource_input_date arg
     if type(datasource_input_date) is not list:
@@ -218,7 +213,7 @@ def insert(sample_name, sample_description, datasource_reference, datasource_inp
                 measurement_date[d] = new_date_obj
 
     # assemble insertion object
-    doc = {"specification":3.0, "grouping":grouping, "type":"assay", 
+    doc = {"specification":"3.00", "grouping":grouping, "type":"assay", 
         "sample": {
             "name":sample_name,
             "description":sample_description,
@@ -279,6 +274,41 @@ def convert_date(date_str):
             pass
     return new_date_obj
 
+def validate_measurement_results_data(measurement_results):
+    if type(measurement_results) is not list:
+        print('Error: the measurement_results argument must be a list containing dictionary objects')
+        return False
+    for i, results_element in enumerate(measurement_results):
+        if type(results_element) is not dict:
+            print('Error: the measurement_results argument must be dictionaries')
+            return False
+        for results_key in ["isotope", "type", "unit", "value"]:
+            if results_key not in list(results_element.keys()):
+                print('Error: at least one of the required keys '+["isotope", "type", "unit", "value"]+' is missing from at least one of the dictionaries in the measurement_results argument')
+                return False
+            if results_key == 'isotope':
+                if measurement_results[i][results_key] not in valid_isotopes:
+                    print('Error: the isotope '+measurement_results[i][results_key]+' is not a valid isotope. Note: Isotopes must be in the following format: <ELEMENT SYMBOL>-<MASS NUMBER>')
+                    return False
+            if results_key == 'type':
+                if measurement_results[i][results_key] not in ['measurement', 'range', 'limit']:
+                    print('Error: "type" field of the measurement_results dictionaries must be one of: "measurement", "range", "limit"')
+                    return False
+            if results_key == 'unit':
+                if measurement_results[i][results_key] not in valid_units:
+                    print('Error: the unit '+measurement_results[i][results_key]+' is not a valid measurement unit.\nValid units are: '+valid_units)
+                    return False
+            elif results_key == 'value':
+                if type(measurement_results[i][results_key]) is not list:
+                    print('Error: the "value" field of the dictionaries in the measurement_results list must be a list')
+                    return False
+                for j in range(len(measurement_results[i][results_key])):
+                    try:
+                        measurement_results[i][results_key][j] = float(measurement_results[i][results_key][j])
+                    except:
+                        print('Error: at least one of the elements in the "value" list of at least one of the dictionaries in the measurement_results list cannot be parsed into a number')
+                        return False
+    return True
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='A python toolkit for interfacing with the radiopurity_example MongoDB.')
