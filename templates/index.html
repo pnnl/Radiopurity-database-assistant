@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
+</head>
+
+<body>
+
+<h1>Assay MongoDB Assistant</h1>
+
+<h3>example data:</h3>
+
+{% for data_line in example_data %}
+    <pre>{{data_line}}</pre>
+{% endfor %}
+
+</body>
+</html>
+
