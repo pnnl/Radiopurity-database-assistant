@@ -30,7 +30,6 @@
                     <option value="sample.owner.name">sample.owner.name</option>
                     <option value="sample.owner.contact">sample.owner.contact</option>
                     <option value="measurement.results.isotope">measurement.results.isotope</option>
-                    <option value="measurement.results.symbol">measurement.results.symbol</option>
                     <option value="measurement.results.type">measurement.results.type</option>
                     <option value="measurement.results.unit">measurement.results.unit</option>
                     <option value="measurement.results.value">measurement.results.value</option>
@@ -99,13 +98,13 @@
 {% endif %}
 
 <div class="section-container">
-    {% if results|length %}
+    {% if results_str|length %}
         <h3>RESULTS</h3>
-        <p class="info">num records: {{results|length}}</p>
-        {% for result in results %}
-            <button type="button" class="collapsible">{{result|truncate(100, True)}}</button>
+        <p class="info">num records: {{results_str|length}}</p>
+        {% for result in results_str %}
+            <button type="button" class="collapsible">{{result|truncate(100, True, leeway=0)}}</button>
             <div class="collapsible-content">
-                <p class="collapsible-text">{{result}}</p>
+                <p class="collapsible-text">{{results_dict[loop.index-1]}}</p>
             </div>
         {% endfor %}
     {% endif %}

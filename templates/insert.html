@@ -2,7 +2,8 @@
 <html>
 
 <head>
-<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='javascript_funcs.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
 </head>
 
 <body>
@@ -15,96 +16,66 @@
     </div>
 {% endif %}
 
-<form action="/insert" method="POST">
+<form name="new_record_vals" action="/insert" method="POST">
     <div class="section-container">
         <div id="input-section">
             <div>
                 <span>
-                    <p class="normal-text">grouping: <input type="text" name="grouping"></p>
-                </span>
-                <span>
-                    <p class="info">help: experiment name or similar</p>
+                    <p class="normal-text">experiment name or similar: <input type="text" name="grouping"></p>
                 </span>
             </div>
 
             <h3>sample:</h3>
             <div>
                 <span>
-                    <p class="normal-text">sample name: <input type="text" name="sample.name"></p>
-                </span>
-                <span>
-                    <p class="info">help: concise sample description</p>
+                    <p class="normal-text">concise sample description: <input type="text" name="sample.name"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">sample description: <input type="text" name="sample.description"></p>
-                </span>
-                <span>
-                    <p class="info">help: detailed sample description</p>
+                    <p class="normal-text">detailed sample description: <input type="text" name="sample.description"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">sample source: <input type="text" name="sample.source"></p>
-                </span>
-                <span>
-                    <p class="info">help: where the sample came from</p>
+                    <p class="normal-text">where the sample came from: <input type="text" name="sample.source"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">sample id: <input type="text" name="sample.id"></p>
-                </span>
-                <span>
-                    <p class="info">help: identification number</p>
+                    <p class="normal-text">sample identification number: <input type="text" name="sample.id"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">sample owner name: <input type="text" name="sample.owner.name"></p>
-                </span>
-                <span>
-                    <p class="info">help: name of who owns the sample</p>
+                    <p class="normal-text">name of who owns the sample: <input type="text" name="sample.owner.name"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">sample owner contact: <input type="text" name="sample.owner.contact"></p>
-                </span>
-                <span>
-                    <p class="info">help: email or telephone of who owns the sample</p>
+                    <p class="normal-text">email or telephone of who owns the sample: <input type="text" name="sample.owner.contact"></p>
                 </span>
             </div>
 
             <h3>data source</h3>
             <div>
                 <span>
-                    <p class="normal-text">datasource reference: <input type="text" name="datasource.reference"></p>
-                </span>
-                <span>
-                    <p class="info">help: where the data came from</p>
+                    <p class="normal-text">reference for where the data came from: <input type="text" name="datasource.reference"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">datasource input name: <input type="text" name="datasource.input.name"></p>
-                </span>
-                <span>
-                    <p class="info">help: name of the person/people who performed data input</p>
+                    <p class="normal-text">name of the person/people who performed data input: <input type="text" name="datasource.input.name"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">datasource input contact: <input type="text" name="datasource.input.contact"></p>
-                </span>
-                <span>
-                    <p class="info">help: email or telephone of the person/people who performed data input</p>
+                    <p class="normal-text">email or telephone of the person/people who performed data input: <input type="text" name="datasource.input.contact"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">datasource input date: <input type="text" name="datasource.input.date"></p>
+                    <p class="normal-text">data input date(s): <input type="text" name="datasource.input.date"></p>
                 </span>
                 <span>
                     <p class="info">help: strings for dates of input (can be a range or a single date). NOTE: if entering a date range, separate date strings with a space.</p>
@@ -112,49 +83,34 @@
             </div>
             <div>
                 <span>
-                    <p class="normal-text">datasource input notes: <input type="text" name="datasource.input.notes"></p>
-                </span>
-                <span>
-                    <p class="info">help: input simplifications, assumptions</p>
+                    <p class="normal-text">data input notes (simplifications, assumptions): <input type="text" name="datasource.input.notes"></p>
                 </span>
             </div>
 
             <h3>measurement</h3>
             <div>
                 <span>
-                    <p class="normal-text">measurement practitioner name: <input type="text" name="measurement.practitioner.name"></p>
-                </span>
-                <span>
-                    <p class="info">help: name of who did the measurement</p>
+                    <p class="normal-text">name of who did the measurement: <input type="text" name="measurement.practitioner.name"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">measurement practitioner contact: <input type="text" name="measurement.practitioner.contact"></p>
-                </span>
-                <span>
-                    <p class="info">help: email or telephone of who did the measurement</p>
+                    <p class="normal-text">email or telephone of who did the measurement: <input type="text" name="measurement.practitioner.contact"></p>
                 </span>
             </div>
             <div>
                 <span>
                     <p class="normal-text">measurement technique: <input type="text" name="measurement.technique"></p>
                 </span>
+            </div>
+            <div>
                 <span>
-                    <p class="info">help: technique name</p>
+                    <p class="normal-text">institution name: <input type="text" name="measurement.institution"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">measurement institution: <input type="text" name="measurement.institution"></p>
-                </span>
-                <span>
-                    <p class="info">help: institution name</p>
-                </span>
-            </div>
-            <div>
-                <span>
-                    <p class="normal-text">measurement date: <input type="text" name="measurement.date"></p>
+                    <p class="normal-text">measurement date(s): <input type="text" name="measurement.date"></p>
                 </span>
                 <span>
                     <p class="info">help: strings for dates of measurement (can be a range or a single date). NOTE: if entering a date range, separate date strings with a space.</p>
@@ -162,26 +118,17 @@
             </div>
             <div>
                 <span>
-                    <p class="normal-text">measurement description: <input type="text" name="measurement.description"></p>
-                </span>
-                <span>
-                    <p class="info">help: detailed description</p>
+                    <p class="normal-text">detailed measurement description: <input type="text" name="measurement.description"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">measurement requestor name: <input type="text" name="measurement.requestor.name"></p>
-                </span>
-                <span>
-                    <p class="info">help: name of who coordinated the measurement</p>
+                    <p class="normal-text">name of who coordinated the measurement: <input type="text" name="measurement.requestor.name"></p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">measurement requestor contact: <input type="text" name="measurement.requestor.contact"></p>
-                </span>
-                <span>
-                    <p class="info">help: email or telephone of who coordinated the measurement</p>
+                    <p class="normal-text">email or telephone of who coordinated the measurement: <input type="text" name="measurement.requestor.contact"></p>
                 </span>
             </div>
 
@@ -189,7 +136,7 @@
             <h5>result</h5>
             <div>
                 <span>
-                    <p class="normal-text">isotope: <input type="text" name="measurement.results.isotope1"></p>
+                    <p class="normal-text">isotope: <input type="text" name="measurement.results.isotope1" onKeyup="validateForm()"></p>
                 </span>
             </div>
             <div>
@@ -343,7 +290,7 @@
 
         <div>
             <span>
-                <input class="submit-button" type="submit" value="insert">
+                <input id="submit-record-button" class="submit-button" type="submit" value="insert" disabled="disabled">
             </span>
         </div>
     </div>
@@ -355,7 +302,7 @@
     var counter = 2;
     var button = document.getElementById("add-meas-button")
     button.addEventListener('click', function () {
-        var measStr = '<h5>additional result</h5><div><span><p class="normal-text">isotope: <input type="text" name="measurement.results.isotope' + counter + '"></p></span></div><div><span><p class="normal-text">measurement type: <select name="measurement.results.type' + counter + '"><option value="measurement">measurement</option><option value="limit">limit</option><option value="range">range</option></select></p></span></div><div><span><p class="normal-text">units: <select name="measurement.results.unit' + counter + '"><option value="pct">percent by mass</option><option value="g/g">g/g</option><option value="ppm">ppm</option><option value="ppb">ppb</option><option value="ppt">ppt</option><option value="ppq">ppq (quadrillion)</option><option value="g">g</option><option value="mg">mg</option><option value="ug">ug (micrograms)</option><option value="ng">ng</option><option value="pg">pg</option><option value="Bq">Bq</option><option value="mBq">mBq</option><option value="uBq">uBq</option><option value="nBq">nBq</option><option value="pBq">pBq</option><option value="g/kg">g/kg</option><option value="g/cm">g/cm</option><option value="g/m">g/m</option><option value="g/cm2">g/cm2 (squared)</option><option value="g/m2">g/m2</option><option value="g/cm3">g/cm3 (cubed)</option><option value="g/m3">g/m3</option><option value="mg/kg">mg/kg</option><option value="mg/cm">mg/cm</option><option value="mg/m">mg/m</option><option value="mg/cm2">mg/cm2 (squared)</option><option value="mg/m2">mg/m2</option><option value="mg/cm3">mg/cm3 (cubed)</option><option value="mg/m3">mg/m3</option><option value="ug/kg">ug/kg</option><option value="ug/cm">ug/cm</option><option value="ug/m">ug/m</option><option value="ug/cm2">ug/cm2 (squared)</option><option value="ug/m2">ug/m2</option><option value="ug/cm3">ug/cm3 (cubed)</option><option value="ug/m3">ug/m3</option><option value="ng/kg">ng/kg</option><option value="ng/cm">ng/cm</option><option value="ng/m">ng/m</option><option value="ng/cm2">ng/cm2 (squared)</option><option value="ng/m2">ng/m2</option><option value="ng/cm3">ng/cm3 (cubed)</option><option value="ng/m3">ng/m3</option><option value="pg/kg">pg/kg</option><option value="pg/cm">pg/cm</option><option value="pg/m">pg/m</option><option value="pg/cm2">pg/cm2 (squared)</option><option value="pg/m2">pg/m2</option><option value="pg/cm3">pg/cm3 (cubed)</option><option value="pg/m3">pg/m3</option><option value="Bq/kg">Bq/kg</option><option value="Bq/cm">Bq/cm</option><option value="Bq/m">Bq/m</option><option value="Bq/cm2">Bq/cm2 (squared)</option><option value="Bq/m2">Bq/m2</option><option value="Bq/cm3">Bq/cm3 (cubed)</option><option value="Bq/m3">Bq/m3</option><option value="mBq/kg">mBq/kg</option><option value="mBq/cm">mBq/cm</option><option value="mBq/m">mBq/m</option><option value="mBq/cm2">mBq/cm2 (squared)</option><option value="mBq/m2">mBq/m2</option><option value="mBq/cm3">mBq/cm3 (cubed)</option><option value="mBq/m3">mBq/m3</option><option value="uBq/kg">uBq/kg</option><option value="uBq/cm">uBq/cm</option><option value="uBq/m">uBq/m</option><option value="uBq/cm2">uBq/cm2 (squared)</option><option value="uBq/m2">uBq/m2</option><option value="uBq/cm3">uBq/cm3 (cubed)</option><option value="uBq/m3">uBq/m3</option><option value="nBq/kg">nBq/kg</option><option value="nBq/cm">nBq/cm</option><option value="nBq/m">nBq/m</option><option value="nBq/cm2">nBq/cm2 (squared)</option><option value="nBq/m2">nBq/m2</option><option value="nBq/cm3">nBq/cm3 (cubed)</option><option value="nBq/m3">nBq/m3</option><option value="pBq/kg">pBq/kg</option><option value="pBq/cm">pBq/cm</option><option value="pBq/m">pBq/m</option><option value="pBq/cm2">pBq/cm2 (squared)</option><option value="pBq/m2">pBq/m2</option><option value="pBq/cm3">pBq/cm3 (cubed)</option><option value="pBq/m3">pBq/m3</option></select></p></span></div><div><span><span class="fourths-container"><p class="normal-text">value(s):</p></span><span class="fourths-container"><div><input type="text" name="measurement.results.valueA' + counter + '"><p class="info">if type is "measurement" this is the central value. If type is "limit" this is the upper limit. If type is "range" this is the lower bound. </p></div></span><span class="fourths-container"><div><input type="text" name="measurement.results.valueB' + counter + '"><p class="info">if type is "measurement" this is the symmetric error. If type is "limit" this is the confidence level. If type is "range" this is the upper bound. </p></div></span><span class="fourths-container"><div><input type="text" name="measurement.results.valueC' + counter + '"><p class="info">if type is "measurement" this is the asymmetric error. If type is "limit" no value is required. If type is "range" this is the confidence level. </p></div></span></span></div>'
+        var measStr = '<h5>additional result</h5><div><span><p class="normal-text">isotope: <input type="text" name="measurement.results.isotope' + counter + '" onKeyup="validateForm()"></p></span></div><div><span><p class="normal-text">measurement type: <select name="measurement.results.type' + counter + '"><option value="measurement">measurement</option><option value="limit">limit</option><option value="range">range</option></select></p></span></div><div><span><p class="normal-text">units: <select name="measurement.results.unit' + counter + '"><option value="pct">percent by mass</option><option value="g/g">g/g</option><option value="ppm">ppm</option><option value="ppb">ppb</option><option value="ppt">ppt</option><option value="ppq">ppq (quadrillion)</option><option value="g">g</option><option value="mg">mg</option><option value="ug">ug (micrograms)</option><option value="ng">ng</option><option value="pg">pg</option><option value="Bq">Bq</option><option value="mBq">mBq</option><option value="uBq">uBq</option><option value="nBq">nBq</option><option value="pBq">pBq</option><option value="g/kg">g/kg</option><option value="g/cm">g/cm</option><option value="g/m">g/m</option><option value="g/cm2">g/cm2 (squared)</option><option value="g/m2">g/m2</option><option value="g/cm3">g/cm3 (cubed)</option><option value="g/m3">g/m3</option><option value="mg/kg">mg/kg</option><option value="mg/cm">mg/cm</option><option value="mg/m">mg/m</option><option value="mg/cm2">mg/cm2 (squared)</option><option value="mg/m2">mg/m2</option><option value="mg/cm3">mg/cm3 (cubed)</option><option value="mg/m3">mg/m3</option><option value="ug/kg">ug/kg</option><option value="ug/cm">ug/cm</option><option value="ug/m">ug/m</option><option value="ug/cm2">ug/cm2 (squared)</option><option value="ug/m2">ug/m2</option><option value="ug/cm3">ug/cm3 (cubed)</option><option value="ug/m3">ug/m3</option><option value="ng/kg">ng/kg</option><option value="ng/cm">ng/cm</option><option value="ng/m">ng/m</option><option value="ng/cm2">ng/cm2 (squared)</option><option value="ng/m2">ng/m2</option><option value="ng/cm3">ng/cm3 (cubed)</option><option value="ng/m3">ng/m3</option><option value="pg/kg">pg/kg</option><option value="pg/cm">pg/cm</option><option value="pg/m">pg/m</option><option value="pg/cm2">pg/cm2 (squared)</option><option value="pg/m2">pg/m2</option><option value="pg/cm3">pg/cm3 (cubed)</option><option value="pg/m3">pg/m3</option><option value="Bq/kg">Bq/kg</option><option value="Bq/cm">Bq/cm</option><option value="Bq/m">Bq/m</option><option value="Bq/cm2">Bq/cm2 (squared)</option><option value="Bq/m2">Bq/m2</option><option value="Bq/cm3">Bq/cm3 (cubed)</option><option value="Bq/m3">Bq/m3</option><option value="mBq/kg">mBq/kg</option><option value="mBq/cm">mBq/cm</option><option value="mBq/m">mBq/m</option><option value="mBq/cm2">mBq/cm2 (squared)</option><option value="mBq/m2">mBq/m2</option><option value="mBq/cm3">mBq/cm3 (cubed)</option><option value="mBq/m3">mBq/m3</option><option value="uBq/kg">uBq/kg</option><option value="uBq/cm">uBq/cm</option><option value="uBq/m">uBq/m</option><option value="uBq/cm2">uBq/cm2 (squared)</option><option value="uBq/m2">uBq/m2</option><option value="uBq/cm3">uBq/cm3 (cubed)</option><option value="uBq/m3">uBq/m3</option><option value="nBq/kg">nBq/kg</option><option value="nBq/cm">nBq/cm</option><option value="nBq/m">nBq/m</option><option value="nBq/cm2">nBq/cm2 (squared)</option><option value="nBq/m2">nBq/m2</option><option value="nBq/cm3">nBq/cm3 (cubed)</option><option value="nBq/m3">nBq/m3</option><option value="pBq/kg">pBq/kg</option><option value="pBq/cm">pBq/cm</option><option value="pBq/m">pBq/m</option><option value="pBq/cm2">pBq/cm2 (squared)</option><option value="pBq/m2">pBq/m2</option><option value="pBq/cm3">pBq/cm3 (cubed)</option><option value="pBq/m3">pBq/m3</option></select></p></span></div><div><span><span class="fourths-container"><p class="normal-text">value(s):</p></span><span class="fourths-container"><div><input type="text" name="measurement.results.valueA' + counter + '"><p class="info">if type is "measurement" this is the central value. If type is "limit" this is the upper limit. If type is "range" this is the lower bound. </p></div></span><span class="fourths-container"><div><input type="text" name="measurement.results.valueB' + counter + '"><p class="info">if type is "measurement" this is the symmetric error. If type is "limit" this is the confidence level. If type is "range" this is the upper bound. </p></div></span><span class="fourths-container"><div><input type="text" name="measurement.results.valueC' + counter + '"><p class="info">if type is "measurement" this is the asymmetric error. If type is "limit" no value is required. If type is "range" this is the confidence level. </p></div></span></span></div>'
 
         var newMeas = document.createElement('div');
         newMeas.innerHTML = measStr;
