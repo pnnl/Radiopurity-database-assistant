@@ -21,8 +21,12 @@ valid_units = open('units.csv', 'r').read().strip().split(',')
 ##########################################
 #client = MongoClient('130.20.47.128', 27017)
 #coll = client.radiopurity_data.example_data
+#old_versions_coll = client.radiopurity_data.example_data_oldversions
 client = MongoClient('localhost', 27017)
-coll = client.radiopurity_data.throwaway
+#coll = client.radiopurity_data.throwaway
+#old_versions_coll = client.radiopurity_data.throwaway_oldversions
+coll = client.radiopurity_data.testing
+old_versions_coll = client.radiopurity_data.testing_oldversions
 
 # search on ID
 def search_by_id(doc_id):
@@ -36,27 +40,29 @@ def search_by_id(doc_id):
     resp = list(resp)
 
     if len(resp) > 1:
-        print('Warning: multiple documents with ObjectId:',doc_id)
+        #print('Multiple documents with ObjectId:',doc_id)
         ret_doc = resp[0]
     elif len(resp) < 1:
-        print('Error: no documents with ObjectId:',doc_id)
+        #print('No documents with ObjectId:',doc_id)
         ret_doc = None
     else:
         ret_doc = resp[0]
 
     return ret_doc
 
-'''
-def update_with_versions(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
+def update_with_versions(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[]):
     parent_q = {'_id':ObjectId(doc_id)}
     parent_resp = coll.find(parent_q)
     parent_doc = list(parent_resp)[0]
     parent_version = parent_doc['_version']
     parent_id = doc_id
-    print("UPDATE PAIRS:    ",update_pairs)
-    print("NEW MEAS OBJ:    ",new_meas_objects)
-    print("MEAS REMOVE IDX: ",meas_remove_indices)
 
+    print('REMOVE DOC:::::',remove_doc)
+    print('UPDATE PAIRS:::',update_pairs)
+    print('NEW MEAS:::::::',new_meas_objects)
+    print('MEAS REMOVE::::',meas_remove_indices)
+
+    # create child (new record)
     new_doc = {}
     for key in parent_doc:
         if key != '_id':
@@ -72,33 +78,64 @@ def update_with_versions(doc_id, update_pairs, new_meas_objects=[], meas_remove_
     for new_meas_obj in new_meas_objects:
         new_doc['measurement']['results'].append(new_meas_obj)
 
-    # update existing
+    # update existing non-meas_result values
     for update_key in update_pairs:
         update_val = update_pairs[update_key]
         update_keys = update_key.split('.')
+        
         if len(update_keys) == 1:
             new_doc[update_keys[0]] = update_val
         elif len(update_keys) == 2:
             new_doc[update_keys[0]][update_keys[1]] = update_val
-        elif len(update_keys) == 3:
-            new_doc[update_keys[0]][update_keys[1]][update_keys[2]] = update_val
-        elif len(update_keys) == 4:
-            new_doc[update_keys[0]][update_keys[1]][update_keys[2]][update_keys[3]] = update_val
-        else:
-            print('not enough')
+        elif len(update_keys) > 2:
+            try:
+                update_key_2 = int(update_keys[2])
+            except:
+                update_key_2 = update_keys[2]
+            
+            if len(update_keys) == 3:
+                new_doc[update_keys[0]][update_keys[1]][update_key_2] = update_val
+            elif len(update_keys) == 4:
+                new_doc[update_keys[0]][update_keys[1]][update_key_2][update_keys[3]] = update_val
 
-    # insert new doc
-    coll.insert(new_doc)
+    did_update =True
+    update_ok = True
+    if not remove_doc:
+        # insert new doc into current versions collection
+        try:
+            coll.insert(new_doc)
+            update_ok = True
+        except:
+            update_ok = False
 
-    # remove old doc
-    coll.remove(parent_q)
+    # clean up database if there is an issue inserting the new doc
+    if not remove_doc and not update_ok:
+        coll.remove(new_doc)
+        did_update = False
 
-    # move old doc into old versions db WITH exisitng _id
-    old_versions_coll.insert(parent_doc)
+    if update_ok:
+        try:
+            # add old doc to old versions collection
+            old_versions_coll.insert(parent_doc)
+            update_ok = True
+        except:
+            did_update = False
+            update_ok = False
+
+        if update_ok:
+            # remove old doc from current versions collection
+            removeold_resp = coll.remove(parent_q)
+            if removeold_resp['ok'] == 1:
+                did_update = True
+            else:
+                did_update = False
+
+    print('did update:',did_update)
+    return did_update
+
 '''
-
 #update doc
-def update(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
+def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[]):
     id_q = {'_id':ObjectId(doc_id)}
     print("UPDATE PAIRS:    ",update_pairs)
     print("NEW MEAS OBJ:    ",new_meas_objects)
@@ -146,7 +183,7 @@ def update(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
         did_update = did_update is True and add_remove_resp['ok']==1
 
     return did_update
-    
+ '''
 
 # search
 def search(query):
@@ -303,8 +340,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     print(doc)
 
     # perform doc insert
-#    mongo_id = coll.insert_one(doc).inserted_id
-    mongo_id = "this_w0u1d_B3_4_n3w_d0c_1D"
+    mongo_id = coll.insert_one(doc).inserted_id
 
     try:
         print("Successfully inserted doc with id:",mongo_id)
@@ -368,13 +404,13 @@ if __name__ == '__main__':
     search_parser = subparsers.add_parser('search', help='execute search function')
     search_parser.add_argument('--q', type=json.loads, required=True, help='query to execute. *must be surrounded with single quotes, and use double quotes within dict*')
 
-    append_parser = subparsers.add_parser('add', help='execute append function (add new query term to query)')
-    append_parser.add_argument('--field', type=str, required=True, choices=valid_fields, help='the field to compare the value of')
-    append_parser.add_argument('--compare', type=str, required=True, choices=list(set(valid_str_comparisons+valid_num_comparisons)), \
+    query_append_parser = subparsers.add_parser('add_query_term', help='execute append function (add new query term to query)')
+    query_append_parser.add_argument('--field', type=str, required=True, choices=valid_fields, help='the field to compare the value of')
+    query_append_parser.add_argument('--compare', type=str, required=True, choices=list(set(valid_str_comparisons+valid_num_comparisons)), \
         help='comparison operator to use to compare actual field value to given value')
-    append_parser.add_argument('--val', type=str, required=True, help='the value to compare against. Can be a string or numeric')
-    append_parser.add_argument('--mode', type=str, choices=["OR", "AND"], default="AND", help='optional argument to define append mode. If not present, defaults to "AND"')
-    append_parser.add_argument('--q', type=json.loads, default={}, \
+    query_append_parser.add_argument('--val', type=str, required=True, help='the value to compare against. Can be a string or numeric')
+    query_append_parser.add_argument('--mode', type=str, choices=["OR", "AND"], default="AND", help='optional argument to define append mode. If not present, defaults to "AND"')
+    query_append_parser.add_argument('--q', type=json.loads, default={}, \
         help='*must be surrounded with single quotes, and use double quotes within dict* existing query dictionary to add a new term to. If not present, creates a new query')
 
     insert_parser = subparsers.add_parser('insert', help='execute document insert function')
@@ -400,12 +436,18 @@ if __name__ == '__main__':
     insert_parser.add_argument('--measurement_requestor_name', type=str, default='', help='name of who coordinated the measurement')
     insert_parser.add_argument('--measurement_requestor_contact', type=str, default='', help='email or telephone of who coordinated the measurement')
 
+    update_parser = subparsers.add_parser('update', help='execute document update function')
+    update_parser.add_argument('--doc_id', type=str, required=True, help='the id of the document in the database to update')
+    update_parser.add_argument('--remove_doc', action='store_true', default=False, help='Remove the entire document from the database')
+    update_parser.add_argument('--update_pairs', nargs='*', default=[], help='list of keys to update and the new values to use')
+    update_parser.add_argument('--new_meas_objects', nargs='*', default=[], help='list of measurement results dictionaries to add to the document')
+    update_parser.add_argument('--meas_remove_indices', nargs='*', default=[], help='list of indices (zero-indexed) corresponding to the document measurement result object to remove')
+
     args = vars(parser.parse_args())
-    print(args['data_input_date'])
 
     if args['subparser_name'] == 'search':
         result = search(args['q'])
-    elif args['subparser_name'] == 'add':
+    elif args['subparser_name'] == 'add_query_term':
         result = add_to_query(args['field'], args['compare'], args['val'], existing_q=args['q'], append_mode=args['mode'])
     elif args['subparser_name'] == 'insert':
         for i in range(len(args['measurement_results'])):
@@ -431,6 +473,19 @@ if __name__ == '__main__':
             measurement_description=args['measurement_description'], \
             measurement_requestor_name=args['measurement_requestor_name'], \
             measurement_requestor_contact=args['measurement_requestor_contact']
+        )
+    elif args['subparser_name'] == 'update':
+        update_keyval_pairs = {}
+        for i in range(len(args['update_pairs'])):
+            if i%2 == 0:
+                update_key = args['update_pairs'][i]
+                update_val = args['update_pairs'][i+1]
+                update_keyval_pairs[update_key] = update_val
+        result = update_with_versions(args['doc_id'], \
+            remove_doc=args['remove_doc'], \
+            update_pairs=update_keyval_pairs, \
+            new_meas_objects=args['new_meas_objects'], \
+            meas_remove_indices=args['meas_remove_indices']
         )
 
     print(result)

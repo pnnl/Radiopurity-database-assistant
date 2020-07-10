@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template
-from python_mongo_toolkit import search, add_to_query, insert, search_by_id, update
+from python_mongo_toolkit import search, add_to_query, insert, search_by_id, update_with_versions
 import pprint
 
 app = Flask(__name__)
@@ -93,8 +93,8 @@ def update_endpoint():
             ) 
 
     elif request.form.get("submit_button") == "update_doc":
-        doc_id, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form)
-        update_success = perform_update(doc_id, update_pairs, meas_remove_indices, meas_add_eles)
+        doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form)
+        update_success = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles)
         if update_success:
             message = "update success"
         else:
@@ -207,6 +207,7 @@ def parse_update(form):
     add_eles = []
 
     doc_id = form.get('current_doc_id')
+    remove_doc = form.get("remove.doc", "") == "remove"
 
     # gather updates for current measurement results objects
     num_measurement_results = 0
@@ -319,11 +320,11 @@ def parse_update(form):
                 val = val.split(' ')
             update_pairs[field] = val
 
-    return doc_id, update_pairs, remove_meas_indices, add_eles
+    return doc_id, remove_doc, update_pairs, remove_meas_indices, add_eles
 
 
-def perform_update(doc_id, update_pairs, meas_remove_indices, meas_add_eles):
-    successful_update = update(doc_id, update_pairs, meas_add_eles, meas_remove_indices)
+def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles):
+    successful_update = update_with_versions(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices)
     return successful_update
 
 if __name__ == '__main__':
