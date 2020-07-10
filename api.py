@@ -76,11 +76,11 @@ def update_endpoint():
                 sample_id=doc['sample']['id'], \
                 sample_owner_name=doc['sample']['owner']['name'], \
                 sample_owner_contact=doc['sample']['owner']['contact'], \
-                datasource_reference=doc['data_source']['reference'], \
-                datasource_input_name=doc['data_source']['input']['name'], \
-                datasource_input_contact=doc['data_source']['input']['contact'], \
-                datasource_input_date=' '.join(doc['data_source']['input']['date']), \
-                datasource_input_notes=doc['data_source']['input']['notes'], \
+                data_reference=doc['data_source']['reference'], \
+                data_input_name=doc['data_source']['input']['name'], \
+                data_input_contact=doc['data_source']['input']['contact'], \
+                data_input_date=' '.join(doc['data_source']['input']['date']), \
+                data_input_notes=doc['data_source']['input']['notes'], \
                 measurement_practitioner_name=doc['measurement']['practitioner']['name'], \
                 measurement_practitioner_contact=doc['measurement']['practitioner']['contact'], \
                 measurement_technique=doc['measurement']['technique'], \
@@ -96,7 +96,7 @@ def update_endpoint():
         doc_id, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form)
         update_success = perform_update(doc_id, update_pairs, meas_remove_indices, meas_add_eles)
         if update_success:
-            message = "success...?"
+            message = "update success"
         else:
             message = "Encountered an error while trying to update doc."
         return render_template('update.html', doc_data=False, message=message)
@@ -105,73 +105,7 @@ def update_endpoint():
 
 @app.route('/', methods=['GET', 'POST'])
 def reference_page():
-    '''
-    example_data_dict = {
-        "grouping" : "<string> experiment name or similar", 
-        "specification" : "<string> MADF specification version (current is 3)", 
-        "type" : "<string> document type (always assay)", 
-        "sample" : { 
-            "name" : "<string> concise description", 
-            "description" : "<string> detailed description", 
-            "source" : "<string> where the sample came from", 
-            "id" : "<string> identification number", 
-            "owner" : {
-                "name" : "<string> name of who owns the sample", 
-                "contact" : "<string> email or telephone of who owns the sample"
-            } 
-        }, 
-        "measurement" : {
-            "description" : "<string> detailed description",
-            "technique" : "<string> technique name",
-            "institution" : "<string> institution name",
-            "requestor" : {
-                "name" : "<string> name of who coordinated the measurement",
-                "contact" : "<string> email or telephone of who coordinated the measurement"
-            },
-            "practitioner" : {
-                "name" : "<string> name of who did the measurement",
-                "contact" : "<string> email or telephone of who did the measurement"
-            },
-            "results" : [
-                {
-                    "isotope" : "<string> isotope name, usually in the format symbol-mass number",
-                    "type" : "<string> the type of measurement (one of 'measurement' 'limit' or 'range')",
-                    "unit" : "<string> unit for measurement (one of 'pct', 'g/g', 'ppm', 'ppb', 'ppt', 'ppq', 'g', 'mg', 'ug','ng', 'pg', 'Bq','mBq','uBq','nBq', 'pBq', 'g/kg','g/cm','g/m', 'g/cm2', 'g/m2', 'g/cm3', 'g/m3', 'mg/kg', 'mg/cm', 'mg/m', 'mg/cm2', 'mg/m2', 'mg/cm3', 'mg/m3', 'ug/kg', 'ug/cm', 'ug/m', 'ug/cm2', 'ug/m2', 'ug/cm3', 'ug/m3', 'ng/kg', 'ng/cm', 'ng/m', 'ng/cm2', 'ng/m2', 'ng/cm3', 'ng/m3', 'pg/kg', 'pg/cm', 'pg/m', 'pg/cm2',  'pg/m2', 'pg/cm3', 'pg/m3', 'Bq/kg', 'Bq/cm', 'Bq/m',  'Bq/cm2', 'Bq/m2', 'Bq/cm3', 'Bq/m3',  'mBq/kg', 'mBq/cm', 'mBq/m', 'mBq/cm2', 'mBq/m2', 'mBq/cm3', 'mBq/m3', 'uBq/kg', 'uBq/cm', 'uBq/m', 'uBq/cm2', 'uBq/m2', 'uBq/cm3', 'uBq/m3', 'nBq/kg', 'nBq/cm', 'nBq/m', 'nBq/cm2', 'nBq/m2', 'nBq/cm3', 'nBq/m3', 'pBq/kg', 'pBq/cm', 'pBq/m', 'pBq/cm2', 'pBq/m2', 'pBq/cm3', 'pBq/m3')",
-                    "value" : [
-                        "<float> if type is 'measurement' this is the central value. If type is 'limit' this is the upper limit. If type is 'range' this is the lower bound",
-                        "<float> if type is 'measurement' this is the symmetric error. If type is 'limit' this is the confidence level. If type is 'range' this is upper bound",
-                        "<float> if type is 'measurement' this is the asymmetric error. If type is 'limit' no value necessary. If type is 'range' this is the confidence level"
-                    ]
-                }
-            ],
-            "date" : [
-                "<string> if only one date string, this is the date of measurement. If two date strings, this is the start of the date range for the measurement",
-                "<string> if present, this is the end of the date range for the measurement"
-            ]
-        },
-        "data_source" : {
-            "reference" : "<string> where the data came from",
-            "input" : {
-                "name" : "<string> name of who entered the data",
-                "contact" : "<string> email or telephone of who entered the data",
-                "notes" : "<string> input simplifications, assumptions",
-                "date" : [
-                    "<string> if only one date string, this is the date of data input. If two date strings, this is the start of the date range for the data input",
-                    "<string> if present, this is the end of the date range for the measurement"
-                ]
-            }
-        }
-    }
-    #dict_lines = pprint.pformat(example_data_dict).split('\n')
-    num_indents = 1
-    for d_ch in json.dumps(example_data_dict):
-        if d_ch in ['{', '[']:
-            
-
-    for a in dict_lines:
-        print(a)
-    '''
-    return render_template('test.html')    
+    return render_template('index.html')    
 
 
 def do_q_append(form, append_mode):
@@ -241,10 +175,10 @@ def perform_insert(form):
 
     new_doc_id = insert(sample_name=form.get('sample.name',''), \
         sample_description=form.get('sample.description',''), \
-        datasource_reference=form.get('datasource.reference',''), \
-        datasource_input_name=form.get('datasource.input.name',''), \
-        datasource_input_contact=form.get('datasource.input.contact',''), \
-        datasource_input_date=form.get('datasource.input.date','').split(' '), \
+        data_reference=form.get('data_source.reference',''), \
+        data_input_name=form.get('data_source.input.name',''), \
+        data_input_contact=form.get('data_source.input.contact',''), \
+        data_input_date=form.get('data_source.input.date','').split(' '), \
         grouping=form.get('grouping',''), \
         sample_source=form.get('sample.source',''), \
         sample_id=form.get('sample.id',''), \
@@ -259,7 +193,7 @@ def perform_insert(form):
         measurement_description=form.get('measurement.description',''), \
         measurement_requestor_name=form.get('measurement.requestor.name',''), \
         measurement_requestor_contact=form.get('measurement.requestor.contact',''), \
-        datasource_input_notes=form.get('datasource.input.notes','')
+        data_input_notes=form.get('data_source.input.notes','')
     )
     
     return new_doc_id
@@ -370,7 +304,7 @@ def parse_update(form):
         add_eles.append(new_meas_element)
 
     # go over non-measurement_result fields looking for updates
-    non_meas_result_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "datasource.reference", "datasource.input.name", "datasource.input.contact", "datasource.input.date", "datasource.input.notes"]
+    non_meas_result_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
     for field in non_meas_result_fields:
         val = form.get(field, '')
         do_remove = form.get('remove.'+field, '') != ''

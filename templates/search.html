@@ -102,10 +102,21 @@
         <h3>RESULTS</h3>
         <p class="info">num records: {{results_str|length}}</p>
         {% for result in results_str %}
-            <button type="button" class="collapsible">{{result|truncate(100, True)}}</button>
-            <!--<button type="button" class="collapsible">{{result}}</button>-->
+            <!--<button type="button" class="collapsible">{{result|truncate(100, True)}}</button> -->
+            
             {% set result_dict = results_dict[loop.index-1] %}
             {% set meas_results = result_dict["measurement"]["results"] %}
+            
+            <button type="button" class="collapsible">
+                <span class="collapsiblebutton-name"><b>name:</b> {{result_dict["sample"]["name"]}}</span>
+                <span class="collapsiblebutton-name"><b>grouping:</b> {{result_dict["grouping"]}}</span>
+                <span class="collapsiblebutton-vals">
+                    {% for meas_ele in meas_results %}
+                        <b>{{meas_ele["isotope"]}}</b>: {{meas_ele["value"][0]}}{{meas_ele["unit"]}}
+                    {% endfor %}
+                </span>
+            </button>
+            
             <div class="collapsible-content">
                 <div class="collapsible-line">
                     <p class="collapsible-field">database id:</p>

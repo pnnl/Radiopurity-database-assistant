@@ -46,6 +46,57 @@ def search_by_id(doc_id):
 
     return ret_doc
 
+'''
+def update_with_versions(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
+    parent_q = {'_id':ObjectId(doc_id)}
+    parent_resp = coll.find(parent_q)
+    parent_doc = list(parent_resp)[0]
+    parent_version = parent_doc['_version']
+    parent_id = doc_id
+    print("UPDATE PAIRS:    ",update_pairs)
+    print("NEW MEAS OBJ:    ",new_meas_objects)
+    print("MEAS REMOVE IDX: ",meas_remove_indices)
+
+    new_doc = {}
+    for key in parent_doc:
+        if key != '_id':
+            new_doc[key] = parent_doc[key]
+    new_doc['_version'] += 1
+    new_doc['_parent_id'] = doc_id
+
+    # remove meas
+    for rm_idx in meas_remove_indices:
+        new_doc['measurement']['results'].pop(rm_idx)
+
+    # add new meas
+    for new_meas_obj in new_meas_objects:
+        new_doc['measurement']['results'].append(new_meas_obj)
+
+    # update existing
+    for update_key in update_pairs:
+        update_val = update_pairs[update_key]
+        update_keys = update_key.split('.')
+        if len(update_keys) == 1:
+            new_doc[update_keys[0]] = update_val
+        elif len(update_keys) == 2:
+            new_doc[update_keys[0]][update_keys[1]] = update_val
+        elif len(update_keys) == 3:
+            new_doc[update_keys[0]][update_keys[1]][update_keys[2]] = update_val
+        elif len(update_keys) == 4:
+            new_doc[update_keys[0]][update_keys[1]][update_keys[2]][update_keys[3]] = update_val
+        else:
+            print('not enough')
+
+    # insert new doc
+    coll.insert(new_doc)
+
+    # remove old doc
+    coll.remove(parent_q)
+
+    # move old doc into old versions db WITH exisitng _id
+    old_versions_coll.insert(parent_doc)
+'''
+
 #update doc
 def update(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
     id_q = {'_id':ObjectId(doc_id)}
@@ -74,8 +125,7 @@ def update(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
         print('UPDATE VALUES:::',update_values)
         # execute update in DB
         update_resp = coll.update(id_q, update_values)
-        num_updated = update_resp['nModified']
-        did_update = num_updated>0
+        did_update = update_resp['ok'] == 1
 
     # add new measurement results objects, remove nulled-out measurement results objects
     if len(new_meas_objects) > 0 or len(meas_remove_indices) > 0:
@@ -93,8 +143,7 @@ def update(doc_id, update_pairs, new_meas_objects=[], meas_remove_indices=[]):
         print('NEW VALUES:::',new_values)
         # execute update in DB
         add_remove_resp = coll.update(id_q, new_values)
-        num_removed_or_added = add_remove_resp['nModified']
-        did_update = did_update is True and num_removed_or_added>0
+        did_update = did_update is True and add_remove_resp['ok']==1
 
     return did_update
     
@@ -177,27 +226,27 @@ def add_to_query(field, comparison, value, existing_q={}, append_mode="ADD"):
 
 
 # insert
-def insert(sample_name, sample_description, datasource_reference, datasource_input_name, datasource_input_contact, datasource_input_date, \
+def insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
     grouping="", sample_source="", sample_id="", sample_owner_name="", sample_owner_contact="", \
     measurement_results=[], measurement_practitioner_name="", measurement_practitioner_contact="", \
     measurement_technique="", measurement_institution="", measurement_date=[], measurement_description="", \
-    measurement_requestor_name="", measurement_requestor_contact="", datasource_input_notes=""):
+    measurement_requestor_name="", measurement_requestor_contact="", data_input_notes=""):
 
     # verify and convert measurement_results arg
     if not validate_measurement_results_data(measurement_results):
         return None
 
-    # verify and convert datasource_input_date arg
-    if type(datasource_input_date) is not list:
-        print('Error: the datasource_input_date argument must be a list of date strings.')
+    # verify and convert data_input_date arg
+    if type(data_input_date) is not list:
+        print('Error: the data_input_date argument must be a list of date strings.')
         return None
-    for d, date_str in enumerate(datasource_input_date):
+    for d, date_str in enumerate(data_input_date):
         new_date_obj = convert_date(date_str)
         if new_date_obj is None:
-            print("Error: at least one of the datasource_input_date strings is not in one of the accepted formats")
+            print("Error: at least one of the data_input_date strings is not in one of the accepted formats")
             return None
         else:
-            datasource_input_date[d] = new_date_obj
+            data_input_date[d] = new_date_obj
 
     # verify and convert measurement_date arg
     if type(measurement_date) is not list:
@@ -240,14 +289,16 @@ def insert(sample_name, sample_description, datasource_reference, datasource_inp
             "results":measurement_results
         },
         "data_source": {
-            "reference":datasource_reference,
+            "reference":data_reference,
             "input": {
-                "notes":datasource_input_notes,
-                "date":datasource_input_date,
-                "name":datasource_input_name,
-                "contact":datasource_input_contact
+                "notes":data_input_notes,
+                "date":data_input_date,
+                "name":data_input_name,
+                "contact":data_input_contact
             }
-        }
+        },
+        "_parent_id":"",
+        "_version":1
     }
     print(doc)
 
@@ -329,11 +380,11 @@ if __name__ == '__main__':
     insert_parser = subparsers.add_parser('insert', help='execute document insert function')
     insert_parser.add_argument('--sample_name', type=str, required=True, help='concise sample description')
     insert_parser.add_argument('--sample_description', type=str, required=True, help='detailed sample description')
-    insert_parser.add_argument('--datasource_reference', type=str, required=True, help='where the data came from')
-    insert_parser.add_argument('--datasource_input_name', type=str, required=True, help='name of the person/people who performed data input')
-    insert_parser.add_argument('--datasource_input_contact', type=str, required=True, help='email or telephone of the person/people who performed data input')
-    insert_parser.add_argument('--datasource_input_date', nargs='*', required=True, help='list of date strings for dates of input')
-    insert_parser.add_argument('--datasource_input_notes', type=str, default='', help='input simplifications, assumptions')
+    insert_parser.add_argument('--data_reference', type=str, required=True, help='where the data came from')
+    insert_parser.add_argument('--data_input_name', type=str, required=True, help='name of the person/people who performed data input')
+    insert_parser.add_argument('--data_input_contact', type=str, required=True, help='email or telephone of the person/people who performed data input')
+    insert_parser.add_argument('--data_input_date', nargs='*', required=True, help='list of date strings for dates of input')
+    insert_parser.add_argument('--data_input_notes', type=str, default='', help='input simplifications, assumptions')
     insert_parser.add_argument('--grouping', type=str, default='', help='experiment name or similar')
     insert_parser.add_argument('--sample_source', type=str, default='', help='where the sample came from')
     insert_parser.add_argument('--sample_id', type=str, default='', help='identification number')
@@ -350,7 +401,7 @@ if __name__ == '__main__':
     insert_parser.add_argument('--measurement_requestor_contact', type=str, default='', help='email or telephone of who coordinated the measurement')
 
     args = vars(parser.parse_args())
-    print(args['datasource_input_date'])
+    print(args['data_input_date'])
 
     if args['subparser_name'] == 'search':
         result = search(args['q'])
@@ -361,11 +412,11 @@ if __name__ == '__main__':
             args['measurement_results'][i] = json.loads(args['measurement_results'][i])
         result = insert(args['sample_name'], \
             args['sample_description'], \
-            args['datasource_reference'], \
-            args['datasource_input_name'], \
-            args['datasource_input_contact'], \
-            args['datasource_input_date'], \
-            datasource_input_notes=args['datasource_input_notes'], \
+            args['data_reference'], \
+            args['data_input_name'], \
+            args['data_input_contact'], \
+            args['data_input_date'], \
+            datas_input_notes=args['data_input_notes'], \
             grouping=args['grouping'], \
             sample_source=args['sample_source'], \
             sample_id=args['sample_id'], \
