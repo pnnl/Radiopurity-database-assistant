@@ -9,7 +9,7 @@ app = Flask(__name__)
 def reference_endpoint():
     ui_url_parts = request.host.split(':')
     ui_ip = ui_url_parts[0]
-    ui_ip = ui_url_parts[1]
+    ui_port = ui_url_parts[1]
     return render_template('index.html', ip=ui_ip, port=ui_port)
 
 @app.route('/search', methods=['GET','POST'])
