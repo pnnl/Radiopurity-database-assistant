@@ -326,6 +326,7 @@ def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_a
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='API code for the DUNE project.')
+    parser.add_argument('--port', type=int, default=5000, help='the port number to run the UI on.')
     parser.add_argument('--db', type=str, choices=['radiopurity', 'dune'], required=False, \
         help='the type of data to use with the UI. The "radiopurity" option uses the database \
         containing data extracted from the radiopurity site. The "dune" option uses the database \
@@ -334,22 +335,19 @@ if __name__ == '__main__':
 
     if args.db == 'dune':
         print('Using dune database')
-        port_num = 8001
         db_name = 'dune'
         collection_name = 'dune_data'
     elif args.db == 'radiopurity':
         print('Using radiopurity database')
-        port_num = 8002
         db_name = 'radiopurity_data'
         collection_name = 'example_data'
     else:
         print('No database specified as argument; using default radiopurity testing database (radiopurity_data.testing).')
-        port_num = 5000
         db_name = 'radiopurity_data'
         collection_name = 'testing'
-
+    
     set_ui_db(db_name, collection_name)
 
-    app.run(host='127.0.0.1', port=port_num)
+    app.run(host='127.0.0.1', port=args.port)
 
 
