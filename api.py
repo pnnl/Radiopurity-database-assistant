@@ -1,8 +1,13 @@
+import argparse
 from flask import Flask, request, render_template
-from python_mongo_toolkit import search, add_to_query, insert, search_by_id, update_with_versions
-import pprint
+from python_mongo_toolkit import set_ui_db, search, add_to_query, insert, search_by_id, update_with_versions
 
 app = Flask(__name__)
+
+
+@app.route('/', methods=['GET', 'POST'])
+def reference_endpoint():
+    return render_template('index.html')
 
 @app.route('/search', methods=['GET','POST'])
 def search_endpoint():
@@ -21,7 +26,6 @@ def search_endpoint():
             final_q_lines_list = final_q_str.split('\n')
         results = perform_search(final_q_lines_list)
         results_str = [ str(r) for r in results ]
-        #results = [ pprint.pformat(r).split('\n') for r in results ]
         existing_q_str = ''
         num_q_lines = 0
 
@@ -44,7 +48,6 @@ def insert_endpoint():
         new_doc_id = ""
     return render_template('insert.html', new_doc_id=new_doc_id)
 
-#TODO: create insert front-end
 @app.route('/update', methods=['GET','POST'])
 def update_endpoint():
     if request.method == "GET":
@@ -66,7 +69,6 @@ def update_endpoint():
                 doc['measurement']['results'][i]['value'].append('')
             if num_vals < 3:
                 doc['measurement']['results'][i]['value'].append('')
-            
 
         return render_template('update.html', doc_data=True, doc_id=doc['_id'], \
                 grouping=doc['grouping'], \
@@ -94,18 +96,13 @@ def update_endpoint():
 
     elif request.form.get("submit_button") == "update_doc":
         doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form)
-        update_success = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles)
-        if update_success:
-            message = "update success"
+        new_doc_id = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles)
+        if new_doc_id != '':
+            message = "update success. New doc version ID: "+new_doc_id
         else:
             message = "Encountered an error while trying to update doc."
         return render_template('update.html', doc_data=False, message=message)
     return None
-
-
-@app.route('/', methods=['GET', 'POST'])
-def reference_page():
-    return render_template('index.html')    
 
 
 def do_q_append(form, append_mode):
@@ -324,11 +321,33 @@ def parse_update(form):
 
 
 def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles):
-    successful_update = update_with_versions(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices)
-    return successful_update
+    new_doc_id = update_with_versions(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices)
+    return str(new_doc_id)
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000)
+    parser = argparse.ArgumentParser(description='API code for the DUNE project.')
+    parser.add_argument('--db', type=str, choices=['radiopurity', 'dune'], required=False, \
+        help='the type of data to use with the UI. The "radiopurity" option uses the database \
+        containing data extracted from the radiopurity site. The "dune" option uses the database \
+        for data from the DUNE project.')
+    args = parser.parse_args()
 
+    if args.db == 'dune':
+        port_num = 8001
+        db_name = 'dune'
+        collection_name = 'dune_data'
+    elif args.db == 'radiopurity':
+        port_num = 8002
+        db_name = 'radiopurity_data'
+        collection_name = 'example_data'
+    else:
+        print('No port number specified as argument; using default port 5000.')
+        port_num = 5000
+        db_name = 'radiopurity_data'
+        collection_name = 'testing'
+
+    set_ui_db(db_name, collection_name)
+
+    app.run(host='127.0.0.1', port=port_num)
 
 

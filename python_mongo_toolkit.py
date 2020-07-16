@@ -15,18 +15,21 @@ valid_appendmodes = ["AND", "OR"]
 valid_isotopes = open('isotopes.csv', 'r').read().strip().split(',')
 valid_units = open('units.csv', 'r').read().strip().split(',')
 
+
 ##########################################
 # IN ORDER TO CONNECT TO DB:
 # ssh -L 27017:localhost:27017 bgtest01
 ##########################################
-#client = MongoClient('130.20.47.128', 27017)
-#coll = client.radiopurity_data.example_data
-#old_versions_coll = client.radiopurity_data.example_data_oldversions
 client = MongoClient('localhost', 27017)
-#coll = client.radiopurity_data.throwaway
-#old_versions_coll = client.radiopurity_data.throwaway_oldversions
 coll = client.radiopurity_data.testing
 old_versions_coll = client.radiopurity_data.testing_oldversions
+
+def set_ui_db(db_name, coll_name):
+    global coll
+    global old_versions_coll
+    old_versions_coll_name = coll_name + '_oldversions'
+    coll = client[db_name][coll_name]
+    old_versions_coll = client[db_name][old_versions_coll_name]
 
 # search on ID
 def search_by_id(doc_id):
@@ -40,10 +43,8 @@ def search_by_id(doc_id):
     resp = list(resp)
 
     if len(resp) > 1:
-        #print('Multiple documents with ObjectId:',doc_id)
         ret_doc = resp[0]
     elif len(resp) < 1:
-        #print('No documents with ObjectId:',doc_id)
         ret_doc = None
     else:
         ret_doc = resp[0]
@@ -98,12 +99,12 @@ def update_with_versions(doc_id, remove_doc=False, update_pairs={}, new_meas_obj
             elif len(update_keys) == 4:
                 new_doc[update_keys[0]][update_keys[1]][update_key_2][update_keys[3]] = update_val
 
-    did_update =True
+    new_doc_id = ''
     update_ok = True
     if not remove_doc:
         # insert new doc into current versions collection
         try:
-            coll.insert(new_doc)
+            new_doc_id = coll.insert(new_doc)
             update_ok = True
         except:
             update_ok = False
@@ -111,7 +112,6 @@ def update_with_versions(doc_id, remove_doc=False, update_pairs={}, new_meas_obj
     # clean up database if there is an issue inserting the new doc
     if not remove_doc and not update_ok:
         coll.remove(new_doc)
-        did_update = False
 
     if update_ok:
         try:
@@ -119,19 +119,13 @@ def update_with_versions(doc_id, remove_doc=False, update_pairs={}, new_meas_obj
             old_versions_coll.insert(parent_doc)
             update_ok = True
         except:
-            did_update = False
             update_ok = False
 
         if update_ok:
             # remove old doc from current versions collection
             removeold_resp = coll.remove(parent_q)
-            if removeold_resp['ok'] == 1:
-                did_update = True
-            else:
-                did_update = False
 
-    print('did update:',did_update)
-    return did_update
+    return new_doc_id
 
 '''
 #update doc
@@ -225,6 +219,16 @@ def add_to_query(field, comparison, value, existing_q={}, append_mode="ADD"):
     # define new term
     if field in date_fields:
         #TODO: implement date comparisons
+        '''
+        comparison = '$' + comparison
+        if comparison == '$eq':
+            # len is 1, str is value
+            #
+        elif comparison.startswith('$lt'):
+            # len is 1, str lt/lte value -OR- len is 2, str2 is lt/lte value
+        elif comparison.startswith('$gt'):
+            # len is 1, str gt/gte value -OR- len is 2, str2 is gt/gte value
+        '''
         pass
     if type(value) is str:
         if comparison == 'contains':
