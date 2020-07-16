@@ -333,15 +333,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.db == 'dune':
+        print('Using dune database')
         port_num = 8001
         db_name = 'dune'
         collection_name = 'dune_data'
     elif args.db == 'radiopurity':
+        print('Using radiopurity database')
         port_num = 8002
         db_name = 'radiopurity_data'
         collection_name = 'example_data'
     else:
-        print('No port number specified as argument; using default port 5000.')
+        print('No database specified as argument; using default radiopurity testing database (radiopurity_data.testing).')
         port_num = 5000
         db_name = 'radiopurity_data'
         collection_name = 'testing'
