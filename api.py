@@ -10,7 +10,7 @@ def reference_endpoint():
     ui_url_parts = request.host.split(':')
     ui_ip = ui_url_parts[0]
     ui_port = ui_url_parts[1]
-    return render_template('index.html', ip=ui_ip, port=ui_port)
+    return render_template('index.html', db_name=database_type, ip=ui_ip, port=ui_port)
 
 @app.route('/search', methods=['GET','POST'])
 def search_endpoint():
@@ -39,7 +39,7 @@ def search_endpoint():
         results = []
         results_str = []
 
-    return render_template('search.html', existing_query=existing_q_str, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
+    return render_template('search.html', db_name=database_type, existing_query=existing_q_str, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
 def insert_endpoint():
@@ -49,12 +49,12 @@ def insert_endpoint():
             new_doc_id = "ERROR: record not inserted because of an incorrect formatting issue"
     else:
         new_doc_id = ""
-    return render_template('insert.html', new_doc_id=new_doc_id)
+    return render_template('insert.html', db_name=database_type, new_doc_id=new_doc_id)
 
 @app.route('/update', methods=['GET','POST'])
 def update_endpoint():
     if request.method == "GET":
-        return render_template('update.html', doc_data=False, message="")
+        return render_template('update.html', db_name=database_type, doc_data=False, message="")
 
     elif request.form.get("submit_button") == "find_doc":
         doc_id = request.form.get('doc_id', '')
@@ -62,7 +62,7 @@ def update_endpoint():
         print('DOC:::',doc)
 
         if doc is None:
-            return render_template('update.html', doc_data=False, message="No document was found with the ID you provided.")
+            return render_template('update.html', db_name=database_type, doc_data=False, message="No document was found with the ID you provided.")
         
         for i in range(len(doc['measurement']['results'])):
             num_vals = len(doc['measurement']['results'][i]['value'])
@@ -73,7 +73,7 @@ def update_endpoint():
             if num_vals < 3:
                 doc['measurement']['results'][i]['value'].append('')
 
-        return render_template('update.html', doc_data=True, doc_id=doc['_id'], \
+        return render_template('update.html', db_name=database_type, doc_data=True, doc_id=doc['_id'], \
                 grouping=doc['grouping'], \
                 sample_name=doc['sample']['name'], \
                 sample_description=doc['sample']['description'], \
@@ -104,7 +104,7 @@ def update_endpoint():
             message = "update success. New doc version ID: "+new_doc_id
         else:
             message = "Encountered an error while trying to update doc."
-        return render_template('update.html', doc_data=False, message=message)
+        return render_template('update.html', db_name=database_type, doc_data=False, message=message)
     return None
 
 
@@ -328,6 +328,7 @@ def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_a
     return str(new_doc_id)
 
 if __name__ == '__main__':
+    global database_type
     parser = argparse.ArgumentParser(description='API code for the DUNE project.')
     parser.add_argument('--port', type=int, default=5000, help='the port number to run the UI on.')
     parser.add_argument('--db', type=str, choices=['radiopurity', 'dune'], required=False, \
@@ -340,14 +341,17 @@ if __name__ == '__main__':
         print('Using dune database')
         db_name = 'dune'
         collection_name = 'dune_data'
+        database_type = 'dune'
     elif args.db == 'radiopurity':
         print('Using radiopurity database')
         db_name = 'radiopurity_data'
         collection_name = 'example_data'
+        database_type = 'radiopurity'
     else:
         print('No database specified as argument; using default radiopurity testing database (radiopurity_data.testing).')
         db_name = 'radiopurity_data'
         collection_name = 'testing'
+        database_type = 'radiopurity testing'
     
     set_ui_db(db_name, collection_name)
 
