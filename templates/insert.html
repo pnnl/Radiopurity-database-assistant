@@ -8,6 +8,17 @@
 
 <body>
 
+<!-- display logos for dune, pnnl, and radiopurity -->
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/dune_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
+</div>
+
 <h1>Insertion Assistant</h1>
 
 {% if new_doc_id|length > 0 %}

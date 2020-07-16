@@ -8,6 +8,17 @@
 
 <body>
 
+<!-- display logos for dune, pnnl, and radiopurity -->
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/dune_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
+</div>
+
 <h1>Document Update Assistant</h1>
 
 
@@ -151,7 +162,7 @@
                         <p class="normal-text">data reference: <input type="text" name="datas_source.reference"></p>
                     </span>
                     <span>
-                        <p class="info">current value: {{datasource_reference}}</p>
+                        <p class="info">current value: {{data_reference}}</p>
                     </span>
                     <span>
                         <input class="remove-checkbox" type="checkbox" name="remove.data_source.reference" value="remove">
@@ -165,7 +176,7 @@
                         <p class="normal-text">data input name: <input type="text" name="data_source.input.name"></p>
                     </span>
                     <span>
-                        <p class="info">current value: {{datasource_input_name}}</p>
+                        <p class="info">current value: {{data_input_name}}</p>
                     </span>
                     <span>
                         <input class="remove-checkbox" type="checkbox" name="remove.data_source.input.name" value="remove">
@@ -179,7 +190,7 @@
                         <p class="normal-text">data input contact: <input type="text" name="data_source.input.contact"></p>
                     </span>
                     <span>
-                        <p class="info">current value: {{datasource_input_contact}}</p>
+                        <p class="info">current value: {{data_input_contact}}</p>
                     </span>
                     <span>
                         <input class="remove-checkbox" type="checkbox" name="remove.data_source.input.contact" value="remove">
@@ -193,7 +204,7 @@
                         <p class="normal-text">data input date: <input type="text" name="data_source.input.date"></p>
                     </span>
                     <span>
-                        <p class="info">NOTE: if entering a date range, separate date strings with a space. current value: {{datasource_input_date}}</p>
+                        <p class="info">NOTE: if entering a date range, separate date strings with a space. current value: {{data_input_date}}</p>
                     </span>
                     <span>
                         <input class="remove-checkbox" type="checkbox" name="remove.data_source.input.date" value="remove">
@@ -207,7 +218,7 @@
                         <p class="normal-text">data input notes: <input type="text" name="data_source.input.notes"></p>
                     </span>
                     <span>
-                        <p class="info">current value: {{datasource_input_notes}}</p>
+                        <p class="info">current value: {{data_input_notes}}</p>
                     </span>
                     <span>
                         <input class="remove-checkbox" type="checkbox" name="remove.data_source.input.notes" value="remove">
