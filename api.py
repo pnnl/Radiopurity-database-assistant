@@ -1,6 +1,7 @@
+import sys
 import argparse
 from flask import Flask, request, render_template
-from python_mongo_toolkit import set_ui_db, search, add_to_query, insert, search_by_id, update_with_versions
+from python_mongo_toolkit import set_ui_db, search, add_to_query, insert, search_by_id, update_with_versions, convert_date_to_str
 
 app = Flask(__name__)
 
@@ -17,17 +18,20 @@ def search_endpoint():
     if request.form.get("append_button") == "do_and":
         existing_q_str, num_q_lines, final_q_lines_list, results = do_q_append(request.form, "AND")
         results_str = [ str(r) for r in results ]
+        search_msg = ''
 
     elif request.form.get("append_button") == "do_or":
         existing_q_str, num_q_lines, final_q_lines_list, results = do_q_append(request.form, "OR")
         results_str = [ str(r) for r in results ]
+        search_msg = ''
 
     elif request.method == "POST":
         final_q_str = parse_existing_q(request.form)
         final_q_lines_list = []
         if final_q_str != '':
             final_q_lines_list = final_q_str.split('\n')
-        results = perform_search(final_q_lines_list)
+        
+        results, search_msg = perform_search(final_q_lines_list)
         results_str = [ str(r) for r in results ]
         existing_q_str = ''
         num_q_lines = 0
@@ -38,18 +42,20 @@ def search_endpoint():
         final_q_lines_list = []
         results = []
         results_str = []
+        search_msg = ''
 
-    return render_template('search.html', db_name=database_type, existing_query=existing_q_str, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
+    return render_template('search.html', db_name=database_type, existing_query=existing_q_str, search_msg=search_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
 def insert_endpoint():
     if request.method == "POST":
-        new_doc_id = perform_insert(request.form)
+        new_doc_id, error_msg = perform_insert(request.form)
+        new_doc_msg = 'new doc id: '+str(new_doc_id)
         if new_doc_id is None:
-            new_doc_id = "ERROR: record not inserted because of an incorrect formatting issue"
+            new_doc_msg = "ERROR: record not inserted because "+error_msg
     else:
-        new_doc_id = ""
-    return render_template('insert.html', db_name=database_type, new_doc_id=new_doc_id)
+        new_doc_msg = ""
+    return render_template('insert.html', db_name=database_type, new_doc_msg=new_doc_msg)
 
 @app.route('/update', methods=['GET','POST'])
 def update_endpoint():
@@ -84,13 +90,13 @@ def update_endpoint():
                 data_reference=doc['data_source']['reference'], \
                 data_input_name=doc['data_source']['input']['name'], \
                 data_input_contact=doc['data_source']['input']['contact'], \
-                data_input_date=' '.join(doc['data_source']['input']['date']), \
+                data_input_date=' '.join([convert_date_to_str(date_ele) for date_ele in doc['data_source']['input']['date']]), \
                 data_input_notes=doc['data_source']['input']['notes'], \
                 measurement_practitioner_name=doc['measurement']['practitioner']['name'], \
                 measurement_practitioner_contact=doc['measurement']['practitioner']['contact'], \
                 measurement_technique=doc['measurement']['technique'], \
                 measurement_institution=doc['measurement']['institution'], \
-                measurement_date=' '.join(doc['measurement']['date']), \
+                measurement_date=' '.join([convert_date_to_str(date_ele) for date_ele in doc['measurement']['date']]), \
                 measurement_description=doc['measurement']['description'], \
                 measurement_requestor_name=doc['measurement']['requestor']['name'], \
                 measurement_requestor_contact=doc['measurement']['requestor']['contact'], \
@@ -99,11 +105,11 @@ def update_endpoint():
 
     elif request.form.get("submit_button") == "update_doc":
         doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form)
-        new_doc_id = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles)
-        if new_doc_id != '':
-            message = "update success. New doc version ID: "+new_doc_id
+        new_doc_id, error_msg = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles)
+        if new_doc_id != None:
+            message = "update success. New doc version ID: "+str(new_doc_id)
         else:
-            message = "Encountered an error while trying to update doc."
+            message = 'error: '+error_msg
         return render_template('update.html', db_name=database_type, doc_data=False, message=message)
     return None
 
@@ -137,16 +143,26 @@ def perform_search(q_lines):
             field = line_eles[0]
             comparison = line_eles[1]
             value = ' '.join(line_eles[2:])
-            curr_q = add_to_query(field, comparison, value, existing_q=curr_q, append_mode=append_mode)
+            curr_q, error_msg = add_to_query(field, comparison, value, existing_q=curr_q, append_mode=append_mode)
+            if error_msg != '':
+                return [], error_msg
+
+    print('QUERY:::::',curr_q)
 
     # query for results
     results = search(curr_q)
 
-    return results
+    # convert datetime objects to strings for UI display
+    for i in range(len(results)):
+        for j in range(len(results[i]['measurement']['date'])):
+            results[i]['measurement']['date'][j] = convert_date_to_str(results[i]['measurement']['date'][j])
+        for j in range(len(results[i]['data_source']['input']['date'])):
+            results[i]['data_source']['input']['date'][j] = convert_date_to_str(results[i]['data_source']['input']['date'][j])
+
+    return results, ''
 
 
 def perform_insert(form):
-#    print('\nFORM:::::', form)
     meas_results = []
     i = 1
     form_keys = list(form.to_dict().keys())
@@ -173,12 +189,28 @@ def perform_insert(form):
         meas_results.append(meas_ele)
         i += 1
 
-    new_doc_id = insert(sample_name=form.get('sample.name',''), \
+    # properly format dates
+    data_input_date = form.get('data_source.input.date','')
+    if data_input_date == '':
+        data_input_date = []
+    else:
+        data_input_date = data_input_date.split(' ')
+        for i in range(len(data_input_date)):
+            data_input_date[i] = data_input_date[i].strip()
+    measurement_date = form.get('measurement.date','')
+    if measurement_date == '':
+        measurement_date = []
+    else:
+        measurement_date = measurement_date.split(' ')
+        for i in range(len(measurement_date)):
+            measurement_date[i] = measurement_date[i].strip()
+
+    new_doc_id, error_msg = insert(sample_name=form.get('sample.name',''), \
         sample_description=form.get('sample.description',''), \
         data_reference=form.get('data_source.reference',''), \
         data_input_name=form.get('data_source.input.name',''), \
         data_input_contact=form.get('data_source.input.contact',''), \
-        data_input_date=form.get('data_source.input.date','').split(' '), \
+        data_input_date=data_input_date, \
         grouping=form.get('grouping',''), \
         sample_source=form.get('sample.source',''), \
         sample_id=form.get('sample.id',''), \
@@ -189,19 +221,17 @@ def perform_insert(form):
         measurement_practitioner_contact=form.get('measurement.practitioner.contact',''), \
         measurement_technique=form.get('measurement.technique',''), \
         measurement_institution=form.get('measurement.institution',''), \
-        measurement_date=form.get('measurement.date','').split(' '), \
+        measurement_date=measurement_date, \
         measurement_description=form.get('measurement.description',''), \
         measurement_requestor_name=form.get('measurement.requestor.name',''), \
         measurement_requestor_contact=form.get('measurement.requestor.contact',''), \
         data_input_notes=form.get('data_source.input.notes','')
     )
     
-    return new_doc_id
+    return new_doc_id, error_msg
 
 
 def parse_update(form):
-#    print(form)
-
     remove_meas_indices = []
     update_pairs = {}
     add_eles = []
@@ -324,8 +354,8 @@ def parse_update(form):
 
 
 def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles):
-    new_doc_id = update_with_versions(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices)
-    return str(new_doc_id)
+    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices)
+    return new_doc_id, error_msg
 
 if __name__ == '__main__':
     global database_type
@@ -353,7 +383,10 @@ if __name__ == '__main__':
         collection_name = 'testing'
         database_type = 'radiopurity testing'
     
-    set_ui_db(db_name, collection_name)
+    successful_change = set_ui_db(db_name, collection_name)
+    if not successful_change:
+        print('error: unable to change mongodb to database:',database_type,'and collection:',collection_name)
+        sys.exit()
 
     app.run(host='127.0.0.1', port=args.port)
 

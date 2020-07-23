@@ -101,6 +101,12 @@
     </div>
 </form>
 
+{% if search_msg|length %}
+    <div class="section-container">
+        <p class="normal-text">query error: {{search_msg}}</p>
+    </div>
+{% endif %}
+
 {% if final_q|length %}
     <div class="section-container">
         <h3>FINAL QUERY</h3>
