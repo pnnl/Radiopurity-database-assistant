@@ -267,12 +267,12 @@ def add_to_query(field, comparison, value, existing_q={}, append_mode="AND"):
         new_term = {field:{comparison:search_val}}
     elif type(value) is str:
         if comparison == 'contains':
-            search_val = {'$regex':'.*'+value+'.*'}
+            search_val = re.compile('.*'+value+'.*', re.IGNORECASE)
         elif comparison == 'notcontains':
-            match_pattern = re.compile(value)
+            match_pattern = re.compile(value, re.IGNORECASE)
             search_val = {"$not":match_pattern}
         else:
-            search_val = value
+            search_val = re.compile(value, re.IGNORECASE)
         new_term = {field.replace('measurement.results.', ''):search_val}
     else:
         comparison = '$' + comparison
