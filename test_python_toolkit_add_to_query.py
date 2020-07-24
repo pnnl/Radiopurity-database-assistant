@@ -2,6 +2,7 @@ import pytest
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import datetime
+import re
 
 from python_mongo_toolkit import set_ui_db
 from python_mongo_toolkit import search_by_id
@@ -30,28 +31,28 @@ def test_add_to_query_with_search_a():
     comp = 'contains'
     val = 'testing'
     existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q={})
-    assert existing_q == {'grouping':{'$regex':'.*testing.*'}}
+    assert existing_q == {'grouping':re.compile('^.*testing.*$',re.IGNORECASE)}
 
     field = 'measurement.results.isotope'
     comp = 'eq'
     val = 'U'
     append_mode = 'OR'
     existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q=existing_q, append_mode=append_mode)
-    assert existing_q == {'$or':[{'grouping':{'$regex':'.*testing.*'}}, {'measurement.results':{'$elemMatch':{'isotope':'U'}}}]}
+    assert existing_q == {'$or':[{'grouping':re.compile('^.*testing.*$',re.IGNORECASE)}, {'measurement.results':{'$elemMatch':{'isotope':re.compile('^U$',re.IGNORECASE)}}}]}
 
     field = 'measurement.results.value'
     comp = 'gte'
     val = 100.0
     append_mode = 'AND'
     existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q=existing_q, append_mode=append_mode)
-    assert existing_q == {'$or':[{'grouping':{'$regex':'.*testing.*'}}, {'measurement.results':{'$elemMatch':{'$and':[{'isotope':'U'}, {'value.0':{'$gte':100.0}}]}}}]}
+    assert existing_q == {'$or':[{'grouping':re.compile('^.*testing.*$',re.IGNORECASE)}, {'measurement.results':{'$elemMatch':{'$and':[{'isotope':re.compile('^U$',re.IGNORECASE)}, {'value.0':{'$gte':100.0}}]}}}]}
 
     field = 'measurement.results.unit'
     comp = 'eq'
     val = 'ppt'
     append_mode = 'AND'
     existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q=existing_q, append_mode=append_mode)
-    assert existing_q == {'$or':[{'grouping':{'$regex':'.*testing.*'}}, {'measurement.results':{'$elemMatch':{'$and':[{'isotope':'U'}, {'value.0':{'$gte':100.0}}, {'unit':'ppt'}]}}}]}
+    assert existing_q == {'$or':[{'grouping':re.compile('^.*testing.*$',re.IGNORECASE)}, {'measurement.results':{'$elemMatch':{'$and':[{'isotope':re.compile('^U$',re.IGNORECASE)}, {'value.0':{'$gte':100.0}}, {'unit':re.compile('^ppt$', re.IGNORECASE)}]}}}]}
 
 
     search_resp = search(existing_q)

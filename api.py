@@ -143,6 +143,18 @@ def perform_search(q_lines):
             field = line_eles[0]
             comparison = line_eles[1]
             value = ' '.join(line_eles[2:])
+
+            # implement search for "all" fields, aka the string fields that might have the same type of value in them
+            if field == 'all':
+                fields_for_all = ['grouping', 'sample.name', 'sample.description', 'sample.source', \
+                                  'sample.id', 'measurement.technique', 'measurement.description', \
+                                  'data_source.reference', 'data_source.input.notes']
+                for all_field in fields_for_all:
+                    curr_q, error_msg = add_to_query(all_field, comparison, value, existing_q=curr_q, append_mode='OR')
+                    if error_msg != '':
+                        return [], error_msg
+                continue
+
             curr_q, error_msg = add_to_query(field, comparison, value, existing_q=curr_q, append_mode=append_mode)
             if error_msg != '':
                 return [], error_msg

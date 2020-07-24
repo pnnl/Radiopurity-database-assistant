@@ -220,34 +220,34 @@ RETURNS: dict (new version of query)
 def add_to_query(field, comparison, value, existing_q={}, append_mode="AND"):
     # validate arguments
     if field not in valid_fields:
-        error_msg = 'the "field" argument must be one of: '+', '.join(valid_fields)
+        error_msg = 'the "field" argument must be one of: '+', '.join(valid_fields)+' and you entered: '+field
         print('Warning:',error_msg)
         return existing_q, error_msg
     if comparison not in set(valid_str_comparisons+valid_num_comparisons):
-        error_msg = 'the "comparison" argument must be one of: '+', '.join(set(valid_str_comparisons+valid_num_comparisons))
+        error_msg = 'the "comparison" argument must be one of: '+', '.join(set(valid_str_comparisons+valid_num_comparisons))+' and you entered: '+comparison
         print('Warning:', error_msg)
         return existing_q, error_msg
     if append_mode.upper() not in valid_appendmodes:
-        error_msg = 'the "append_mode" argument must be one of: '+', '.join(valid_appendmodes)
+        error_msg = 'the "append_mode" argument must be one of: '+', '.join(valid_appendmodes)+' and you entered: '+append_mode.upper()
         print('Warning:',error_msg)
         return existing_q, error_msg
     if field in numeric_fields and type(value) not in [int, float]:
         try:
             value = float(value)
         except:
-            error_msg = 'you must enter a numeric value when comparing fields in: '+ ', '.join(numeric_fields)
+            error_msg = 'you must enter a numeric value when comparing fields in: '+ ', '.join(numeric_fields)+' (you entered: '+value+')'
             print('Warning:',error_msg)
             return existing_q, error_msg
     if type(value) is str and field not in date_fields and comparison not in valid_str_comparisons:
-        error_msg = 'when comparing string values, the comparison operator must be one of: '+', '.join(valid_str_comparisons)
+        error_msg = 'when comparing string values, the comparison operator must be one of: '+', '.join(valid_str_comparisons)+' (you entered: '+comparison+')'
         print('Warning:',error_msg)
         return existing_q, error_msg
     if type(value) is not str and comparison not in valid_num_comparisons:
-        error_msg = 'when comparing numeric values, the comparison operator must be one of: '+', '.join(valid_num_comparisons)
+        error_msg = 'when comparing numeric values, the comparison operator must be one of: '+', '.join(valid_num_comparisons)+' (you entered: '+comparison+')'
         print('Warning:',error_msg)
         return existing_q, error_msg
-    if field in date_fields:
-        error_msg = 'when comparing date values, the comparison operator must be one of: '+', '.join(valid_num_comparisons)
+    if field in date_fields and comparison not in valid_num_comparisons:
+        error_msg = 'when comparing date values, the comparison operator must be one of: '+', '.join(valid_num_comparisons)+' (you entered: '+comparison+')'
         print('Warning:',error_msg)
         return existing_q, error_msg
 
@@ -267,12 +267,12 @@ def add_to_query(field, comparison, value, existing_q={}, append_mode="AND"):
         new_term = {field:{comparison:search_val}}
     elif type(value) is str:
         if comparison == 'contains':
-            search_val = re.compile('.*'+value+'.*', re.IGNORECASE)
+            search_val = re.compile('^.*'+value+'.*$', re.IGNORECASE)
         elif comparison == 'notcontains':
-            match_pattern = re.compile(value, re.IGNORECASE)
+            match_pattern = re.compile('^'+value+'$', re.IGNORECASE)
             search_val = {"$not":match_pattern}
         else:
-            search_val = re.compile(value, re.IGNORECASE)
+            search_val = re.compile('^'+value+'$', re.IGNORECASE)
         new_term = {field.replace('measurement.results.', ''):search_val}
     else:
         comparison = '$' + comparison
@@ -338,6 +338,8 @@ def add_to_query(field, comparison, value, existing_q={}, append_mode="AND"):
             if '$or' in existing_keys:
                 # add to other $or elements (this groups all $or terms together))
                 existing_q['$or'].append(new_term)
+            elif len(existing_keys) == 0:
+                existing_q[field] = new_term[field]
             else:
                 # creates an $or list out of this new term and the most recently added element (query dict --> "Python 3.6 onwards, the standard dict type maintains insertion order by default.")
                 existing_q['$or'] = [{existing_keys[-1]:existing_q.pop(existing_keys[-1])}, new_term]
