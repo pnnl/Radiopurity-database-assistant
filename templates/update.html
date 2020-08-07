@@ -19,6 +19,12 @@
     <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
 </div>
 
+<div>
+    <a href={{ url_for("logout") }}>
+        <p class="logout-link">logout</p>
+    </a>
+</div>
+
 <h1>Document Update Assistant</h1>
 
 <h3>documents are updated in the {{db_name}} database</h3>

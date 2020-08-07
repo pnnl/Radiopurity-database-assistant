@@ -623,6 +623,9 @@ if __name__ == '__main__':
             new_meas_objects=args['new_meas_objects'], \
             meas_remove_indices=args['meas_remove_indices']
         )
+    else:
+        print('You must enter an action to perform: search, insert, update, or add_query_term')
+        result = None
 
     print(result)
 

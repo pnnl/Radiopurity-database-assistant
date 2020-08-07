@@ -4,7 +4,6 @@
 <head>
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
 </head>
-
 <body>
 
 <!-- display logos for dune, pnnl, and radiopurity -->
@@ -18,28 +17,37 @@
     <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
 </div>
 
-<div>
-    <a href={{ url_for("logout") }}>
-        <p class="logout-link">logout</p>
-    </a>
-</div>
-
 <h1>Assay MongoDB Assistant</h1>
 
-<h3>this UI uses the {{db_name}} database</h3>
+<h3>Login</h3>
 
-<a href="http://{{ip}}:{{port}}/search">
-    <p class="normal-text">search endpoint</p>
-</a>
+<div>
+    <p class="info">{{msg}}</p>
+</div>
 
-<a href="http://{{ip}}:{{port}}/insert">
-    <p class="normal-text">insert endpoint</p>
-</a>
-
-<a href="http://{{ip}}:{{port}}/update">
-    <p class="normal-text">update endpoint</p>
-</a>
+<form action="/login" method="POST">
+    <div>
+        <span>
+            <p class="normal-text">email: </p>
+        </span>
+        <span>
+            <input type="email" name="email"required>
+        </span>
+    </div>
+    <div>
+        <span>
+            <p class="normal-text">password: </p>
+        </span>
+        <span>
+            <input type="password" name="password" required>
+        </span>
+    </div>
+    <div>
+        <input class="submit-button" type="submit" value="login">
+    </div>
+</form>
 
 </body>
 </html>
+
 
