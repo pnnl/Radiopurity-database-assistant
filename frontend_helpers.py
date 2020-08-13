@@ -1,11 +1,12 @@
 from pymongo import MongoClient
 from python_mongo_toolkit import add_to_query, search, insert, update_with_versions, convert_date_to_str
 
-def _find_user(email):
+def _get_user(user):
     client = MongoClient('localhost', 27017)
+    # CHANGE THE COLLECTION FOR PROD
     coll = client.radiopurity_data.users_test
 
-    find_user_q = {'email':{'$eq':email}}
+    find_user_q = {'user_mode':{'$eq':user}}
     find_user_resp = coll.find(find_user_q)
     find_user_resp = list(find_user_resp)
     if len(find_user_resp) <= 0:
@@ -14,11 +15,12 @@ def _find_user(email):
         user_obj = find_user_resp[0]
     return user_obj
 
-def _add_user(email, encrypted_pw, first_name, last_name):
+def _add_user(user, encrypted_pw):
     client = MongoClient('localhost', 27017)
+    # CHANGE THE COLLECTION FOR PROD
     coll = client.radiopurity_data.users_test
 
-    db_new_user = {'email':email, 'password_hashed':encrypted_pw, 'first_name':first_name, 'last_name':last_name, 'permissions_read':True, 'permissions_edit':False}
+    db_new_user = {'user_mode':user, 'password_hashed':encrypted_pw}
     insert_resp = coll.insert_one(db_new_user)
     return insert_resp
 

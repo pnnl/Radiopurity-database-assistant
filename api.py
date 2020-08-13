@@ -6,34 +6,36 @@ from flask_bcrypt import Bcrypt
 from flask import Flask, request, session, url_for, redirect, render_template
 from python_mongo_toolkit import set_ui_db, search_by_id, convert_date_to_str
 from frontend_helpers import do_q_append, parse_existing_q, perform_search, perform_insert, parse_update, perform_update
-from frontend_helpers import _find_user, _add_user
+from frontend_helpers import _get_user
 
 app = Flask(__name__)
+#app.config.from_object('config.DevConfig')
 app.config['SECRET_KEY'] = open('app_config.txt', 'r').readline().strip()
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
 bcrypt = Bcrypt(app)
+USER_MODES = ['READuser', 'EDITuser']
 
 '''
  define custom decorator
  used: https://blog.tecladocode.com/learn-python-defining-user-access-roles-in-flask/
 '''
-def requires_permissions(permissions_level):
+def requires_permissions(permissions_levels):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            email = session.get('email')
-            if email is None:
+            user_mode = session.get('user_mode')
+            if user_mode is None:
                 return redirect(url_for('login'))
 
-            user_obj = _find_user(email)
-            if not user_obj[permissions_level]:
-                return redirect(url_for('restricted_page'))
-            return f(*args, **kwargs)
+            for permissions_level in permissions_levels:
+                if user_mode == permissions_level:
+                    return f(*args, **kwargs)
+            return redirect(url_for('restricted_page'))
         return decorated_function
     return decorator
 
 @app.route('/', methods=['GET', 'POST'])
-@requires_permissions('permissions_read')
+@requires_permissions(['READuser', 'EDITuser', 'Admin'])
 def reference_endpoint():
     ui_url_parts = request.host.split(':')
     ui_ip = ui_url_parts[0]
@@ -41,19 +43,19 @@ def reference_endpoint():
     return render_template('index.html', db_name=database_type, ip=ui_ip, port=ui_port)
 
 @app.route('/register', methods=['GET', 'POST'])
+@requires_permissions(['Admin'])
 def register():
+    from frontend_helpers import _add_user
     if request.method == 'POST':
-        email = request.form.get('email')
-        user_obj = _find_user(email)
+        user = request.form.get('user')
+        user_obj = _get_user(user)
         if user_obj is not None:
             return render_template('register.html', msg='Your email already exists in the database.')
 
         password = request.form.get('password')
         encrypted_pw = bcrypt.generate_password_hash(password, 12)
-        first_name = request.form.get('firstname')
-        last_name = request.form.get('lastname')
 
-        insert_resp = _add_user(email, encrypted_pw, first_name, last_name)
+        insert_resp = _add_user(user, encrypted_pw)
         return redirect(url_for('login'))
 
     else:
@@ -62,10 +64,10 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
+        user = request.form.get('user')
         plaintext_password = request.form.get('password')
 
-        user_obj = _find_user(email)
+        user_obj = _get_user(user)
         if user_obj is None:
             return render_template('login.html', msg='User was not found in the database')
         else:
@@ -73,7 +75,7 @@ def login():
             is_correct_pw = bcrypt.check_password_hash(user_db_pw_hash, plaintext_password)
             if is_correct_pw:
                 session['permanent'] = True
-                session['email'] = user_obj['email']
+                session['user_mode'] = user_obj['user_mode']
                 return redirect(url_for('reference_endpoint'))
             else:
                 return render_template('login.html', msg="incorrect password")
@@ -81,7 +83,7 @@ def login():
         return render_template('login.html')
 
 @app.route('/logout', methods=['GET'])
-@requires_permissions('permissions_read')
+@requires_permissions(['READuser', 'EDITuser', 'Admin'])
 def logout():
     session.clear()
     return redirect(url_for('login'))
@@ -91,7 +93,7 @@ def restricted_page():
     return render_template('restricted_page.html')
 
 @app.route('/search', methods=['GET','POST'])
-@requires_permissions('permissions_read')
+@requires_permissions(['READuser', 'EDITuser', 'Admin'])
 def search_endpoint():
     if request.form.get("append_button") == "do_and":
         existing_q_str, num_q_lines, final_q_lines_list, results = do_q_append(request.form, "AND")
@@ -125,7 +127,7 @@ def search_endpoint():
     return render_template('search.html', db_name=database_type, existing_query=existing_q_str, search_msg=search_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
-@requires_permissions('permissions_edit')
+@requires_permissions(['EDITuser', 'Admin'])
 def insert_endpoint():
     if request.method == "POST":
         new_doc_id, error_msg = perform_insert(request.form)
@@ -137,7 +139,7 @@ def insert_endpoint():
     return render_template('insert.html', db_name=database_type, new_doc_msg=new_doc_msg)
 
 @app.route('/update', methods=['GET','POST'])
-@requires_permissions('permissions_edit')
+@requires_permissions(['EDITuser', 'Admin'])
 def update_endpoint():
     if request.method == "GET":
         return render_template('update.html', db_name=database_type, doc_data=False, message="")
