@@ -59,12 +59,6 @@ def perform_search(q_lines):
                 fields_for_all = ['grouping', 'sample.name', 'sample.description', 'sample.source', \
                                   'sample.id', 'measurement.technique', 'measurement.description', \
                                   'data_source.reference', 'data_source.input.notes']
-                '''
-                for all_field in fields_for_all:
-                    curr_q, error_msg = add_to_query(all_field, comparison, value, existing_q=curr_q, append_mode='OR')
-                    if error_msg != '':
-                        return [], error_msg
-                '''
                 curr_q, error_msg = add_to_query(fields_for_all[0], comparison, value, existing_q=curr_q, append_mode='AND')
                 if error_msg != '':
                     return [], error_msg

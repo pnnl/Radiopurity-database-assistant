@@ -251,6 +251,7 @@ def add_to_query(field, comparison, value, existing_q={}, append_mode="AND"):
         print('Warning:',error_msg)
         return existing_q, error_msg
 
+    # assemble field compared against value
     #TODO: implement date comparison taking second value into account (aka range)
     #TODO: implement measurement value comparison taking second and third values into account for range, measurement, and limit measurement types
     if field.startswith('measurement.results.value'):
