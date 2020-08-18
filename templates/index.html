@@ -19,7 +19,7 @@
 </div>
 
 <div>
-    <a href={{ url_for("logout") }}>
+    <a href="{{ url_for('logout') }}">
         <p class="logout-link">logout</p>
     </a>
 </div>
@@ -28,15 +28,15 @@
 
 <h3>this UI uses the {{db_name}} database</h3>
 
-<a href="http://{{ip}}:{{port}}/search">
+<a href="{{ url_for('search_endpoint') }}">
     <p class="normal-text">search endpoint</p>
 </a>
 
-<a href="http://{{ip}}:{{port}}/insert">
+<a href="{{ url_for('insert_endpoint') }}">
     <p class="normal-text">insert endpoint</p>
 </a>
 
-<a href="http://{{ip}}:{{port}}/update">
+<a href="{{ url_for('update_endpoint') }}">
     <p class="normal-text">update endpoint</p>
 </a>
 
