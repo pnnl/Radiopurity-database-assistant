@@ -2,17 +2,20 @@ import sys
 import argparse
 import datetime
 from functools import wraps
-from flask_bcrypt import Bcrypt
+import scrypt
 from flask import Flask, request, session, url_for, redirect, render_template
 from python_mongo_toolkit import set_ui_db, search_by_id, convert_date_to_str
 from frontend_helpers import do_q_append, parse_existing_q, perform_search, perform_insert, parse_update, perform_update
 from frontend_helpers import _get_user
 
 app = Flask(__name__)
-#app.config.from_object('config.DevConfig')
-app.config['SECRET_KEY'] = open('app_config.txt', 'r').readline().strip()
+sk = None
+salt = None
+with open('app_config.txt', 'r') as config:
+    sk = config.readline().strip()
+    salt = config.readline().strip()
+app.config['SECRET_KEY'] = sk
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
-bcrypt = Bcrypt(app)
 USER_MODES = ['READuser', 'EDITuser']
 
 '''
@@ -43,7 +46,7 @@ def reference_endpoint():
     return render_template('index.html', db_name=database_type, ip=ui_ip, port=ui_port)
 
 @app.route('/register', methods=['GET', 'POST'])
-@requires_permissions(['Admin'])
+#@requires_permissions(['Admin'])
 def register():
     from frontend_helpers import _add_user
     if request.method == 'POST':
@@ -53,7 +56,7 @@ def register():
             return render_template('register.html', msg='Your email already exists in the database.')
 
         password = request.form.get('password')
-        encrypted_pw = bcrypt.generate_password_hash(password, 12)
+        encrypted_pw = scrypt.hash(password, salt, N=16) #password, salt, N=(num_iterations), r=(block_size), p=(num_threads), bufflen=(num_output_bytes)
 
         insert_resp = _add_user(user, encrypted_pw)
         return redirect(url_for('login'))
@@ -72,7 +75,8 @@ def login():
             return render_template('login.html', msg='User was not found in the database')
         else:
             user_db_pw_hash = user_obj['password_hashed']
-            is_correct_pw = bcrypt.check_password_hash(user_db_pw_hash, plaintext_password)
+            is_correct_pw = (scrypt.hash(plaintext_password, salt, N=16) == user_db_pw_hash)
+
             if is_correct_pw:
                 session['permanent'] = True
                 session['user_mode'] = user_obj['user_mode']
