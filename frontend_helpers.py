@@ -1,10 +1,9 @@
 from pymongo import MongoClient
 from python_mongo_toolkit import add_to_query, search, insert, update_with_versions, convert_date_to_str
 
-def _get_user(user):
+def _get_user(user, db_name):
     client = MongoClient('localhost', 27017)
-    # CHANGE THE COLLECTION FOR PROD
-    coll = client.radiopurity_data.users_test
+    coll = client[db_name]['users']
 
     find_user_q = {'user_mode':{'$eq':user}}
     find_user_resp = coll.find(find_user_q)
@@ -15,10 +14,9 @@ def _get_user(user):
         user_obj = find_user_resp[0]
     return user_obj
 
-def _add_user(user, encrypted_pw):
+def _add_user(user, encrypted_pw, db_name):
     client = MongoClient('localhost', 27017)
-    # CHANGE THE COLLECTION FOR PROD
-    coll = client.radiopurity_data.users_test
+    coll = client[db_name]['users']
 
     db_new_user = {'user_mode':user, 'password_hashed':encrypted_pw}
     insert_resp = coll.insert_one(db_new_user)

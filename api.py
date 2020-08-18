@@ -43,22 +43,22 @@ def reference_endpoint():
     ui_url_parts = request.host.split(':')
     ui_ip = ui_url_parts[0]
     ui_port = ui_url_parts[1]
-    return render_template('index.html', db_name=database_type, ip=ui_ip, port=ui_port)
+    return render_template('index.html', db_name=database_name, ip=ui_ip, port=ui_port)
 
 @app.route('/register', methods=['GET', 'POST'])
-#@requires_permissions(['Admin'])
+@requires_permissions(['Admin'])
 def register():
     from frontend_helpers import _add_user
     if request.method == 'POST':
         user = request.form.get('user')
-        user_obj = _get_user(user)
+        user_obj = _get_user(user, database_name)
         if user_obj is not None:
             return render_template('register.html', msg='Your email already exists in the database.')
 
         password = request.form.get('password')
         encrypted_pw = scrypt.hash(password, salt, N=16) #password, salt, N=(num_iterations), r=(block_size), p=(num_threads), bufflen=(num_output_bytes)
 
-        insert_resp = _add_user(user, encrypted_pw)
+        insert_resp = _add_user(user, encrypted_pw, database_name)
         return redirect(url_for('login'))
 
     else:
@@ -70,7 +70,7 @@ def login():
         user = request.form.get('user')
         plaintext_password = request.form.get('password')
 
-        user_obj = _get_user(user)
+        user_obj = _get_user(user, database_name)
         if user_obj is None:
             return render_template('login.html', msg='User was not found in the database')
         else:
@@ -128,7 +128,7 @@ def search_endpoint():
         results_str = []
         search_msg = ''
 
-    return render_template('search.html', db_name=database_type, existing_query=existing_q_str, search_msg=search_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
+    return render_template('search.html', db_name=database_name, existing_query=existing_q_str, search_msg=search_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
 @requires_permissions(['EDITuser', 'Admin'])
@@ -140,13 +140,13 @@ def insert_endpoint():
             new_doc_msg = "ERROR: record not inserted because "+error_msg
     else:
         new_doc_msg = ""
-    return render_template('insert.html', db_name=database_type, new_doc_msg=new_doc_msg)
+    return render_template('insert.html', db_name=database_name, new_doc_msg=new_doc_msg)
 
 @app.route('/update', methods=['GET','POST'])
 @requires_permissions(['EDITuser', 'Admin'])
 def update_endpoint():
     if request.method == "GET":
-        return render_template('update.html', db_name=database_type, doc_data=False, message="")
+        return render_template('update.html', db_name=database_name, doc_data=False, message="")
 
     elif request.form.get("submit_button") == "find_doc":
         doc_id = request.form.get('doc_id', '')
@@ -154,7 +154,7 @@ def update_endpoint():
         print('DOC:::',doc)
 
         if doc is None:
-            return render_template('update.html', db_name=database_type, doc_data=False, message="No document was found with the ID you provided.")
+            return render_template('update.html', db_name=database_name, doc_data=False, message="No document was found with the ID you provided.")
         
         for i in range(len(doc['measurement']['results'])):
             num_vals = len(doc['measurement']['results'][i]['value'])
@@ -165,7 +165,7 @@ def update_endpoint():
             if num_vals < 3:
                 doc['measurement']['results'][i]['value'].append('')
 
-        return render_template('update.html', db_name=database_type, doc_data=True, doc_id=doc['_id'], \
+        return render_template('update.html', db_name=database_name, doc_data=True, doc_id=doc['_id'], \
                 grouping=doc['grouping'], \
                 sample_name=doc['sample']['name'], \
                 sample_description=doc['sample']['description'], \
@@ -196,12 +196,26 @@ def update_endpoint():
             message = "update success. New doc version ID: "+str(new_doc_id)
         else:
             message = 'error: '+error_msg
-        return render_template('update.html', db_name=database_type, doc_data=False, message=message)
+        return render_template('update.html', db_name=database_name, doc_data=False, message=message)
     return None
 
+@app.before_first_request
+def _setup_database():
+    global database_name
+    database_name = 'dune'
+    collection_name = 'dune_data'
+    port = 8001
+    successful_change = set_ui_db(database_name, collection_name)
+    if not successful_change:
+        print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
+        sys.exit()
+    else:
+        print('using mongo database:',database_name)
 
+"""
 if __name__ == '__main__':
-    global database_type
+    global database_name
+    '''
     parser = argparse.ArgumentParser(description='API code for the DUNE project.')
     parser.add_argument('--port', type=int, default=5000, help='the port number to run the UI on.')
     parser.add_argument('--db', type=str, choices=['radiopurity', 'dune'], required=False, \
@@ -212,25 +226,27 @@ if __name__ == '__main__':
 
     if args.db == 'dune':
         print('Using dune database')
-        db_name = 'dune'
+        database_name = 'dune'
         collection_name = 'dune_data'
-        database_type = 'dune'
     elif args.db == 'radiopurity':
         print('Using radiopurity database')
-        db_name = 'radiopurity_data'
+        database_name = 'radiopurity_data'
         collection_name = 'example_data'
-        database_type = 'radiopurity'
     else:
         print('No database specified as argument; using default radiopurity testing database (radiopurity_data.testing).')
-        db_name = 'radiopurity_data'
+        database_name = 'radiopurity_data'
         collection_name = 'testing'
-        database_type = 'radiopurity testing'
-    
-    successful_change = set_ui_db(db_name, collection_name)
+    '''
+    database_name = 'dune'
+    collection_name = 'dune_data'
+    port = 8001
+    successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
-        print('error: unable to change mongodb to database:',database_type,'and collection:',collection_name)
+        print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
         sys.exit()
+    else:
+        print('using mongo database:',database_name)
 
-    app.run(host='127.0.0.1', port=args.port)
-
+    app.run(host='127.0.0.1', port=port)
+"""
 
