@@ -21,7 +21,7 @@
 
 <p class="info">{{msg}}</p>
 
-<form action="/register" method="POST">
+<form action="{{ url_for('register') }}" method="POST">
     <div>
         <span>
             <p class="normal-text">user: </p>

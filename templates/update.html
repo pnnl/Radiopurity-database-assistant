@@ -20,7 +20,7 @@
 </div>
 
 <div>
-    <a href={{ url_for("logout") }}>
+    <a href="{{ url_for('logout') }}">
         <p class="logout-link">logout</p>
     </a>
 </div>
@@ -34,7 +34,7 @@
         <h3>{{message}}</h3>
     {% endif %}
     
-    <form action="/update" method="POST">
+    <form action="{{ url_for('update_endpoint') }}" method="POST">
         <div class="section-container">
             <h3>document ID: <input type="text" name="doc_id"></h3>
         </div>
@@ -44,7 +44,7 @@
 
 
 {% if doc_data %}
-    <form action="/update" method="POST">
+    <form action="{{ url_for('update_endpoint') }}" method="POST">
         <div class="section-container">
             <div id="input-section">
                 <div class="section-container">
