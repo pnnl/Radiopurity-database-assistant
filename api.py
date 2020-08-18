@@ -18,6 +18,7 @@ app.config['SECRET_KEY'] = sk
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
 USER_MODES = ['READuser', 'EDITuser']
 
+
 '''
  define custom decorator
  used: https://blog.tecladocode.com/learn-python-defining-user-access-roles-in-flask/
@@ -40,10 +41,8 @@ def requires_permissions(permissions_levels):
 @app.route('/', methods=['GET', 'POST'])
 @requires_permissions(['READuser', 'EDITuser', 'Admin'])
 def reference_endpoint():
-    ui_url_parts = request.host.split(':')
-    ui_ip = ui_url_parts[0]
-    ui_port = ui_url_parts[1]
-    return render_template('index.html', db_name=database_name, ip=ui_ip, port=ui_port)
+    return render_template('index.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 @requires_permissions(['Admin'])
@@ -128,7 +127,7 @@ def search_endpoint():
         results_str = []
         search_msg = ''
 
-    return render_template('search.html', db_name=database_name, existing_query=existing_q_str, search_msg=search_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
+    return render_template('search.html', existing_query=existing_q_str, search_msg=search_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
 @requires_permissions(['EDITuser', 'Admin'])
@@ -140,13 +139,13 @@ def insert_endpoint():
             new_doc_msg = "ERROR: record not inserted because "+error_msg
     else:
         new_doc_msg = ""
-    return render_template('insert.html', db_name=database_name, new_doc_msg=new_doc_msg)
+    return render_template('insert.html', new_doc_msg=new_doc_msg)
 
 @app.route('/update', methods=['GET','POST'])
 @requires_permissions(['EDITuser', 'Admin'])
 def update_endpoint():
     if request.method == "GET":
-        return render_template('update.html', db_name=database_name, doc_data=False, message="")
+        return render_template('update.html', doc_data=False, message="")
 
     elif request.form.get("submit_button") == "find_doc":
         doc_id = request.form.get('doc_id', '')
@@ -154,7 +153,7 @@ def update_endpoint():
         print('DOC:::',doc)
 
         if doc is None:
-            return render_template('update.html', db_name=database_name, doc_data=False, message="No document was found with the ID you provided.")
+            return render_template('update.html', doc_data=False, message="No document was found with the ID you provided.")
         
         for i in range(len(doc['measurement']['results'])):
             num_vals = len(doc['measurement']['results'][i]['value'])
@@ -165,7 +164,7 @@ def update_endpoint():
             if num_vals < 3:
                 doc['measurement']['results'][i]['value'].append('')
 
-        return render_template('update.html', db_name=database_name, doc_data=True, doc_id=doc['_id'], \
+        return render_template('update.html', doc_data=True, doc_id=doc['_id'], \
                 grouping=doc['grouping'], \
                 sample_name=doc['sample']['name'], \
                 sample_description=doc['sample']['description'], \
@@ -196,7 +195,7 @@ def update_endpoint():
             message = "update success. New doc version ID: "+str(new_doc_id)
         else:
             message = 'error: '+error_msg
-        return render_template('update.html', db_name=database_name, doc_data=False, message=message)
+        return render_template('update.html', doc_data=False, message=message)
     return None
 
 @app.before_first_request
