@@ -16,7 +16,7 @@ with open('app_config.txt', 'r') as config:
     salt = config.readline().strip()
 app.config['SECRET_KEY'] = sk
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
-USER_MODES = ['READuser', 'EDITuser']
+USER_MODES = ['DUNEreader', 'DUNEwriter']
 
 
 '''
@@ -39,7 +39,7 @@ def requires_permissions(permissions_levels):
     return decorator
 
 @app.route('/', methods=['GET', 'POST'])
-@requires_permissions(['READuser', 'EDITuser', 'Admin'])
+@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
 def reference_endpoint():
     return render_template('index.html')
 
@@ -86,7 +86,7 @@ def login():
         return render_template('login.html')
 
 @app.route('/logout', methods=['GET'])
-@requires_permissions(['READuser', 'EDITuser', 'Admin'])
+@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
 def logout():
     session.clear()
     return redirect(url_for('login'))
@@ -96,7 +96,7 @@ def restricted_page():
     return render_template('restricted_page.html')
 
 @app.route('/search', methods=['GET','POST'])
-@requires_permissions(['READuser', 'EDITuser', 'Admin'])
+@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
 def search_endpoint():
     if request.form.get("append_button") == "do_and":
         existing_q_str, num_q_lines, final_q_lines_list, results = do_q_append(request.form, "AND")
@@ -130,7 +130,7 @@ def search_endpoint():
     return render_template('search.html', existing_query=existing_q_str, search_msg=search_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
-@requires_permissions(['EDITuser', 'Admin'])
+@requires_permissions(['DUNEwriter', 'Admin'])
 def insert_endpoint():
     if request.method == "POST":
         new_doc_id, error_msg = perform_insert(request.form)
@@ -142,7 +142,7 @@ def insert_endpoint():
     return render_template('insert.html', new_doc_msg=new_doc_msg)
 
 @app.route('/update', methods=['GET','POST'])
-@requires_permissions(['EDITuser', 'Admin'])
+@requires_permissions(['DUNEwriter', 'Admin'])
 def update_endpoint():
     if request.method == "GET":
         return render_template('update.html', doc_data=False, message="")
