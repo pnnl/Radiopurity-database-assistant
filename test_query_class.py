@@ -2,16 +2,24 @@ import re
 import pytest
 from query_class import Query
 
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+import datetime
+
+from python_mongo_toolkit import set_ui_db
+from python_mongo_toolkit import search
+
 data_load_from_str = [
     ("all contains ", {}),
     ("all contains testing", {'$text': {'$search': 'testing'}}),
     ("grouping equals ", {"grouping": {"$regex": re.compile('^$', re.IGNORECASE)}}),
     ("grouping contains one\nOR\nsample.name does not contain two\nAND\nsample.description equals three", {"$or": [{'grouping': {"$regex": re.compile('^.*one.*$', re.IGNORECASE)}}, {"$and":[{'sample.name': {'$not': re.compile('^two$', re.IGNORECASE)}}, {'sample.description': {"$regex": re.compile('^three$', re.IGNORECASE)}}]}]}),
-    ("measurement.results.value is less than 10\nAND\nmeasurement.results.value is greater than or equal to 5", {'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$lt': 10, '$gte': 5}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.1': {'$gt': 10}, 'value.0': {'$lte': 5}}}}]}),
-    ("measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", {'$or': [{'measurement.results': {'$elemMatch': {'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$eq': 37.2}}}}, {'$and': [{'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$gt': 20.4, '$lte': 40.6}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$lt': 20.4}, 'value.1': {'$gte': 40.6}}}}]}, {'grouping': {'$regex': re.compile('^.*majorana.*$', re.IGNORECASE)}}]}]}),
+    ("measurement.results.value is less than 10\nAND\nmeasurement.results.value is greater than or equal to 5", {'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$lt': 10, '$gte': 5}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.1': {'$lt': 10}, 'value.0': {'$gte': 5}}}}]}),
+    ("measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", {'$or': [{'measurement.results': {'$elemMatch': {'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$eq': 37.2}}}}, {'$and': [{'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$gt': 20.4, '$lte': 40.6}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$gt': 20.4}, 'value.1': {'$lte': 40.6}}}}]}, {'grouping': {'$regex': re.compile('^.*majorana.*$', re.IGNORECASE)}}]}]}),
     ('grouping contains ["copper", "Cu"]', {'$or': [{'grouping': {'$regex': re.compile('^.*copper.*$', re.IGNORECASE)}}, {'grouping': {'$regex': re.compile('^.*Cu.*$', re.IGNORECASE)}}]}),
-    ('measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1', {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$gt': 0.1, '$lte': 1}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'range', 'value.0': {'$lt': 0.1}, 'value.1': {'$gte': 1}}}}]}),
-    ('measurement.results.type equals range\nAND\nmeasurement.results.value is greater than 200\nAND\nmeasurement.results.value is less than 1', {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$lt': 200}, 'value.1': {'$gt': 1}}}})
+    ('measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1', {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$gt': 0.1, '$lte': 1}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'range', 'value.0': {'$gt': 0.1}, 'value.1': {'$lte': 1}}}}]}),
+    ('measurement.results.type equals range\nAND\nmeasurement.results.value is greater than 200\nAND\nmeasurement.results.value is less than 1', {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$gt': 200}, 'value.1': {'$lt': 1}}}}),
+    ("grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt", {'$and': [{'grouping': {'$regex': re.compile('^.*majorana.*$', re.IGNORECASE)}}, {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$lte': 1.0}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': 'range', 'value.1': {'$lte': 1.0}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': 'limit', 'value.0': {'$lte': 1.0}}}}]}]}),
 ]
 @pytest.mark.parametrize("base_str,correct_q_dict", data_load_from_str)
 def test_load_from_str(base_str, correct_q_dict):
@@ -23,56 +31,278 @@ def test_load_from_str(base_str, correct_q_dict):
     assert q_str == base_str
     assert q_dict == correct_q_dict
 
+def test_query_results_1():
+    # set up database to be updated
+    teardown_db_for_test()
+    set_up_db_for_test()
+    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
 
-'''
-"measurement.results.value is less than 10\nAND\nmeasurement.results.value is greater than or equal to 5"
-{'$or': [{'measurement.results': {'$elemMatch': {'value.0': {'$lt': 10, '$gte': 5}}}}, {'measurement.results': {'$elemMatch': {'value.1': {'$gt': 10}, 'value.0': {'$lte': 5}}}}]}
-{'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$lt': 10, '$gte': 5}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.1': {'$gt': 10}, 'value.0': {'$lte': 5}}}}]}
-'''
+    query_str = "all contains "
+    num_expected_docs = 45 # all docs returned
 
-'''
-'measurement.results.type equals range\nAND\nmeasurement.results.value is greater than 200\nAND\nmeasurement.results.value is less than 1'
- {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$lt': 200}, 'value.1': {'$gt': 1}}}}
-'''
+    q = Query(query_str=query_str).to_query_lang()
+    docs = search(q)
 
-'''
-{'$or': [
-    {'measurement.results': {'$elemMatch': {
-        'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 
-        'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 
-        'type': 'measurement', 
-        'value.0': {'$gt': 0.1, '$lte': 1}
-    }}}, 
-    {'measurement.results': {'$elemMatch': {
-        'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 
-        'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 
-        'type': 'range', 
-        'value.0': {'$lt': 0.1}, 
-        'value.1': {'$gte': 1}
-    }}}
-]}
-'''
+    assert len(docs) == num_expected_docs
+
+def test_query_results_2():
+    # set up database to be updated
+    teardown_db_for_test()
+    set_up_db_for_test()
+    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+
+    query_str = "all contains testing"
+
+    q = Query(query_str=query_str).to_query_lang()
+    docs = search(q)
+
+    found_ids = []
+    for doc in docs:
+        found_ids.append(doc['_id'])
+        datasource_input_notes = 'test' in doc['data_source']['input']['notes'].lower()
+        datasource_reference = 'test' in doc['data_source']['reference'].lower()
+        grouping = 'test' in doc['grouping'].lower()
+        measurement_description = 'test' in doc['measurement']['description'].lower()
+        measurement_technique = 'test' in doc['measurement']['technique'].lower()
+        sample_description = 'test' in doc['sample']['description'].lower()
+        sample_id = 'test' in doc['sample']['id'].lower()
+        sample_name = 'test' in doc['sample']['name'].lower()
+        sample_source = 'test' in doc['sample']['source'].lower()
+
+        assert datasource_input_notes or datasource_reference or grouping or measurement_description or measurement_technique or sample_description or sample_id or sample_name or sample_source
+
+    # check that none are missing (query for all docs, go through them, and make sure none of them meets all the criteria)
+    for doc in search({}):
+        if doc['_id'] not in found_ids:
+            datasource_input_notes = 'test' in doc['data_source']['input']['notes'].lower()
+            datasource_reference = 'test' in doc['data_source']['reference'].lower()
+            grouping = 'test' in doc['grouping'].lower()
+            measurement_description = 'test' in doc['measurement']['description'].lower()
+            measurement_technique = 'test' in doc['measurement']['technique'].lower()
+            sample_description = 'test' in doc['sample']['description'].lower()
+            sample_id = 'test' in doc['sample']['id'].lower()
+            sample_name = 'test' in doc['sample']['name'].lower()
+            sample_source = 'test' in doc['sample']['source'].lower()
+            assert not(datasource_input_notes or datasource_reference or grouping or measurement_description or measurement_technique or sample_description or sample_id or sample_name or sample_source)
+
+def test_query_results_3():
+    # set up database to be updated
+    teardown_db_for_test()
+    set_up_db_for_test()
+    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+
+    query_str = 'grouping equals '
+    num_expected_docs = 0
+
+    q = Query(query_str=query_str).to_query_lang()
+    docs = search(q)
+
+    assert len(docs) == num_expected_docs
+
+def test_query_results_5():
+    # set up database to be updated
+    teardown_db_for_test()
+    set_up_db_for_test()
+    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+
+    query_str = 'measurement.results.value is less than 10\nAND\nmeasurement.results.value is greater than or equal to 5'
+
+    q = Query(query_str=query_str).to_query_lang()
+    docs = search(q)
+
+    # check that all found docs meet the criteria
+    found_ids = []
+    for doc in docs:
+        found_ids.append(doc['_id'])
+        found_valid = False
+        for meas_ele in doc['measurement']['results']:
+            valid_type =  meas_ele['type'] in ['measurement', 'range']
+            if meas_ele['type'] == 'measurement':
+                valid_val = meas_ele['value'][0] < 10.0 and meas_ele['value'][0] >= 5.0
+            elif meas_ele['type'] == 'range':
+                valid_val = meas_ele['value'][1] < 10.0 and meas_ele['value'][0] >= 5.0
+            if valid_type and valid_val:
+                found_valid = True
+        assert found_valid
+
+    # check that none are missing (query for all docs, go through them, and make sure none of them meets all the criteria)
+    for doc in search({}):
+        if doc['_id'] not in found_ids:
+            found_valid = False
+            for meas_ele in doc['measurement']['results']:
+                valid_type =  meas_ele['type'] in ['measurement', 'range']
+                if meas_ele['type'] == 'measurement':
+                    valid_val = meas_ele['value'][0] < 10.0 and meas_ele['value'][0] >= 5.0
+                elif meas_ele['type'] == 'range':
+                    valid_val = meas_ele['value'][1] < 10.0 and meas_ele['value'][0] >= 5.0
+                if valid_type and valid_val:
+                    found_valid = True
+            assert not found_valid
+
+def test_query_results_6():
+    # set up database to be updated
+    teardown_db_for_test()
+    set_up_db_for_test()
+    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+
+    query_str = 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1\nOR\nmeasurement.results.unit equals ppb\nAND\nmeasurement.results.value is greater than 100\nAND\nmeasurement.results.value is less than or equal to 1000'
+
+    q = Query(query_str=query_str).to_query_lang()
+    docs = search(q)
+
+    found_ids = []
+    for doc in docs:
+        found_ids.append(doc['_id'])
+
+        found_isotope = False
+        for meas_ele in doc['measurement']['results']:
+            if meas_ele['isotope'] == 'K-40':
+                found_isotope = True
+                assert meas_ele['unit'] in ['ppm', 'ppb']
+                assert meas_ele['type'] in ['measurement', 'range']
+                if meas_ele['unit'] == 'ppm':
+                    if meas_ele['type'] == 'measurement':
+                        assert meas_ele['value'][0] <= 1.0 and meas_ele['value'][0] > 0.1
+                    elif meas_ele['type'] == 'range':
+                        assert meas_ele['value'][1] <= 1.0 and meas_ele['value'][0] > 0.1
+                elif meas_ele['unit'] == 'ppb':
+                    if meas_ele['type'] == 'measurement':
+                        assert meas_ele['value'][0] <= 1000 and meas_ele['value'][0] > 100
+                    elif meas_ele['type'] == 'range':
+                        assert meas_ele['value'][1] <= 1000 and meas_ele['value'][0] > 100
+        assert found_isotope
+
+    # check that none are missing (query for all docs, go through them, and make sure none of them meets all the criteria)
+    for doc in search({}):
+        if doc['_id'] not in found_ids:
+            found_isotope = False
+            for meas_ele in doc['measurement']['results']:
+                if meas_ele['isotope'] == 'K-40':
+                    found_isotope = True
+                    correct_unit = meas_ele['unit'] in ['ppm', 'ppb']
+                    correct_type = meas_ele['type'] in ['measurement', 'range']
+                    if meas_ele['unit'] == 'ppm':
+                        if meas_ele['type'] == 'measurement':
+                            correct_val = meas_ele['value'][0] <= 1.0 and meas_ele['value'][0] > 0.1
+                        elif meas_ele['type'] == 'range':
+                            correct_val = meas_ele['value'][1] <= 1.0 and meas_ele['value'][0] > 0.1
+                        else:
+                            correct_val = False
+                    elif meas_ele['unit'] == 'ppb':
+                        if meas_ele['type'] == 'measurement':
+                            correct_val = meas_ele['value'][0] <= 1000 and meas_ele['value'][0] > 100
+                        elif meas_ele['type'] == 'range':
+                            correct_val = meas_ele['value'][1] <= 1000 and meas_ele['value'][0] > 100
+                        else:
+                            correct_val = False
+            assert not (found_isotope and correct_unit and correct_type and correct_val)
+
+def test_query_results_10():
+    # set up database to be updated
+    teardown_db_for_test()
+    set_up_db_for_test()
+    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+
+    query_str = "grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt"
+
+    q = Query(query_str=query_str).to_query_lang()
+    docs = search(q)
+
+    found_ids = []
+    for doc in docs:
+        found_ids.append(doc['_id'])
+        assert 'majorana' in doc['grouping'].lower()
+        found_isotope = False
+        for meas_ele in doc['measurement']['results']:
+            if meas_ele['isotope'] == 'U-238':
+                found_isotope = True
+                assert meas_ele['unit'] == 'ppt'
+                assert meas_ele['type'] in ['measurement', 'range', 'limit']
+                if meas_ele['type'] == 'measurement':
+                    assert meas_ele['value'][0] <= 1.0
+                elif meas_ele['type'] == 'range':
+                    assert meas_ele['value'][1] <= 1.0
+                elif meas_ele['type'] == 'limit':
+                    assert meas_ele['value'][0] <= 1.0
+        assert found_isotope
+
+    # check that none are missing (query for all docs, go through them, and make sure none of them meets all the criteria)
+    for doc in search({}):
+        if doc['_id'] not in found_ids:
+            found_majorana = 'majorana' in doc['grouping'].lower()
+            found_isotope = False
+            for meas_ele in doc['measurement']['results']:
+                if meas_ele['isotope'] == 'U-238':
+                    found_isotope = True
+                    correct_unit = meas_ele['unit'] == 'ppt'
+                    correct_type = meas_ele['type'] in ['measurement', 'range', 'limit']
+                    if meas_ele['type'] == 'measurement':
+                        correct_val = meas_ele['value'][0] <= 1.0
+                    elif meas_ele['type'] == 'range':
+                        correct_val = meas_ele['value'][1] <= 1.0
+                    elif meas_ele['type'] == 'limit':
+                        correct_val = meas_ele['value'][0] <= 1.0
+                    else:
+                        correct_val = False
+            assert not(found_majorana and found_isotope and correct_unit and correct_type and correct_val)
+
+def set_up_db_for_test():
+    client = MongoClient('localhost', 27017)
+    coll = client.dune_pytest_data.test_data
+    coll.insert_one({ "_id" : ObjectId("000000000000000000000002"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA", "results" : [ { "unit" : "ppb", "value" : [ 0.18, 2 ], "isotope" : "U-238", "type" : "measurement" }, { "unit" : "ppb", "value" : [ 59, 2 ], "isotope" : "Th-232", "type" : "measurement" }, { "unit" : "ppm", "value" : [ 0.78, 0.02 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "Majorana (2016)", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "we are performing a test right now" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Resin, Magnex, 2:1 Thiokol 308, RAL", "id" : "ILIAS UKDM #249", "owner" : { "name" : "", "contact" : "" }, "name" : "Resin, Magnex, 2:1 Thiokol 308", "source" : "" }, "type" : "measurement", "_version" : 1 })
+    coll.insert_one({ "_id" : ObjectId("000000000000000000000003"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA testing", "results" : [ { "unit" : "ppb", "value" : [ 3 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.89, 0.2 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Rexalite, copper removed", "id" : "ILIAS UKDM #266", "owner" : { "name" : "", "contact" : "" }, "name" : "Rexalite, copper removed", "source" : "" }, "type" : "measurement", "_version" : 1 })
+    coll.insert_one({ "_id" : ObjectId("000000000000000000000004"), "measurement" : { "description" : "", "practitioner" : { "name" : "RAL", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "AA", "results" : [ { "unit" : "ppb", "value" : [ 150 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Salt, ICI, pure dried vacuum TESTING", "id" : "ILIAS UKDM #273", "owner" : { "name" : "", "contact" : "" }, "name" : "Salt, ICI, pure dried vacuum", "source" : "" }, "type" : "measurement", "_version" : 1 })
+    coll.insert_one({ "_id" : ObjectId("000000000000000000000005"), "measurement" : { "description" : "Lu < 1ppb, Rb < 10ppb", "practitioner" : { "name" : "Charles Evans/Cascade Scientific", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "GD-MS", "results" : [ { "unit" : "ppb", "value" : [ 1 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.22 ], "isotope" : "K-40", "type" : "limit" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "copper COPPER" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Si", "id" : "ILIAS UKDM #279", "owner" : { "name" : "", "contact" : "" }, "name" : "Si", "source" : "" }, "type" : "measurement", "_version" : 1 })
+    coll.insert_one({ "_id" : ObjectId("000000000000000000000006"), "measurement" : { "description" : "", "practitioner" : { "name" : "Supplier's data", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "?", "results" : [ { "unit" : "ppm", "value" : [ 0.03 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 1, 30, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "this has a COPPER test phrase" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Silica fibre, TSL, 'Spectrosil'", "id" : "ILIAS UKDM #289", "owner" : { "name" : "", "contact" : "" }, "name" : "Silica fibre, TSL, 'Spectrosil'", "source" : "" }, "type" : "measurement", "_version" : 1 })
+
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ee8'), 'measurement': {'description': '', 'practitioner': {'name': 'ICI Tracerco', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'NAA', 'results': [{'unit': 'ppb', 'value': [18, 2], 'isotope': 'U-238', 'type': 'measurement'}, {'unit': 'ppb', 'value': [59, 2], 'isotope': 'Th-232', 'type': 'measurement'}, {'unit': 'ppm', 'value': [0.78, 0.02], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'ILIAS UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Resin, Magnex, 2:1 Thiokol 308, RAL', 'id': 'ILIAS UKDM #249', 'owner': {'name': '', 'contact': ''}, 'name': 'Resin, Magnex, 2:1 Thiokol 308', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ee9'), 'measurement': {'description': '', 'practitioner': {'name': 'ICI Tracerco', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'NAA', 'results': [{'unit': 'ppb', 'value': [3], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'ppb', 'value': [1], 'isotope': 'Th-232', 'type': 'limit'}, {'unit': 'ppb', 'value': [890, 0.2], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'ILIAS UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Rexalite, copper removed', 'id': 'ILIAS UKDM #266', 'owner': {'name': '', 'contact': ''}, 'name': 'Rexalite, copper removed', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85eea'), 'measurement': {'description': '', 'practitioner': {'name': 'RAL', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'AA', 'results': [{'unit': 'ppm', 'value': [0.15], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'Majorana(2016)', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Salt, ICI, pure dried vacuum', 'id': 'ILIAS UKDM #273', 'owner': {'name': '', 'contact': ''}, 'name': 'Salt, ICI, pure dried vacuum', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85eeb'), 'measurement': {'description': 'Lu < 1ppb, Rb < 10ppb', 'practitioner': {'name': 'Charles Evans/Cascade Scientific', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'GD-MS', 'results': [{'unit': 'ppb', 'value': [1], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'ppb', 'value': [1], 'isotope': 'Th-232', 'type': 'limit'}, {'unit': 'ppm', 'value': [0.22], 'isotope': 'K-40', 'type': 'limit'}]}, 'grouping': 'Majorana(2016)', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Si', 'id': 'ILIAS UKDM #279', 'owner': {'name': '', 'contact': ''}, 'name': 'Si', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85eec'), 'measurement': {'description': '', 'practitioner': {'name': "Supplier's data", 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': '?', 'results': [{'unit': 'ppm', 'value': [0.03], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'Majorana(2016)', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': "Silica fibre, TSL, 'Spectrosil'", 'id': 'ILIAS UKDM #289', 'owner': {'name': '', 'contact': ''}, 'name': "Silica fibre, TSL, 'Spectrosil'", 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85eed'), 'measurement': {'description': 'From previously unused 250g bottle', 'practitioner': {'name': 'ICI Tracerco', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'NAA', 'results': [{'unit': 'ppb', 'value': [1], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'ppb', 'value': [1.7], 'isotope': 'Th-232', 'type': 'limit'}, {'unit': 'ppm', 'value': [0.099, 0.002], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'ILIAS UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database testing http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Silicone grease, DC/200/500000 (IC) (n = 5.e+5 )', 'id': 'ILIAS UKDM #304', 'owner': {'name': '', 'contact': ''}, 'name': 'Silicone grease, DC/200/500000, IC', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85eee'), 'measurement': {'description': 'U conc. from 226Ra gamma count, U chain assumed in eq.  Th conc. from 228Ac, Th chain assumed in eq. 137Cs < 20 kru,  60Co < 20 kru', 'practitioner': {'name': 'Harwell (AEA Technology) (Harwell Scientifics after mid-1999)', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'Ge', 'results': [{'unit': 'ppb', 'value': [160], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'ppm', 'value': [150], 'isotope': 'Th-232', 'type': 'limit'}]}, 'grouping': 'ILIAS TeStInG UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Steel, test sheet', 'id': 'ILIAS UKDM #320', 'owner': {'name': '', 'contact': ''}, 'name': 'Steel, sheet', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85eef'), 'measurement': {'description': '(14/10/04) DRIFT-II vessel, frame (Manufacturer: Royal Welding)', 'practitioner': {'name': 'Charles Evans/Cascade Scientific', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'GD-MS', 'results': [{'unit': 'ppb', 'value': [0.37, 0.04], 'isotope': 'U-238', 'type': 'measurement'}, {'unit': 'ppb', 'value': [1.6, 0.2], 'isotope': 'Th-232', 'type': 'measurement'}, {'unit': 'ppb', 'value': [905], 'isotope': 'K-40', 'type': 'limit'}]}, 'grouping': 'ILIAS UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Steel (stainless, frame) (USA)', 'id': 'ILIAS test UKDM #330', 'owner': {'name': '', 'contact': ''}, 'name': 'Steel, stainless, frame, USA', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef0'), 'measurement': {'description': '', 'practitioner': {'name': 'Charles Evans/Cascade Scientific', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'GD-MS', 'results': [{'unit': 'ppb', 'value': [0.9, 0.1], 'isotope': 'U-238', 'type': 'measurement'}, {'unit': 'ppb', 'value': [0.6, 0.1], 'isotope': 'Th-232', 'type': 'measurement'}, {'unit': 'ppm', 'value': [0.21], 'isotope': 'K-40', 'type': 'limit'}]}, 'grouping': 'Majorana', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Steel, stainless, USA', 'id': 'ILIAS UKDM #340', 'owner': {'name': '', 'contact': ''}, 'name': 'Steel, stainless, USA', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef1'), 'measurement': {'description': 'Results taken from a weighted average of selected quality lines with a 1-sigma error or 90% CL Upper Limits.', 'practitioner': {'name': 'Mark Pepin / Prisca Cushman', 'contact': 'pepin@physics.umn.edu / prisca@physics.umn.edu'}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'Soudan Underground Laboratory - Gopher', 'technique': 'Ge', 'results': [{'unit': 'mBq/kg', 'value': [2.791, 0.885], 'isotope': 'U-238', 'type': 'measurement'}, {'unit': 'mBq/kg', 'value': [0.707, 1.39], 'isotope': 'Th-232', 'type': 'measurement'}, {'unit': 'mBq/kg', 'value': [24.0, 4.96], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'SuperCDMS', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 10, 8, 0, 0)], 'name': 'Matthew Bruemmer / James Loach / Jodi Cooley', 'contact': 'mbruemmer@smu.edu / james.loach@gmail.com / cooley@physics.smu.edu', 'notes': ''}, 'reference': 'Gopher: High-Purity Ge gamma counter at Soudan'}, 'sample': {'description': 'Carbon fiber, 97 separator rods, diameter 0.158 inches, length ~ 9.92 inches, total mass 0.468 kg, total volume ~18.866 in^3. Composed of carbon fill (we do not know anything about the purity of the carbon or the CF composition, but a rough estimate is 67% carbon by volume), epoxy (Bisphenol F Epoxy, C:H:0 is 13:12:02, ~33% Bis F Epoxy by volume), hardener (type Unknown)', 'id': 'Sample 19', 'owner': {'name': '', 'contact': ''}, 'name': 'Carbon fiber rods', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef2'), 'measurement': {'description': '1.3 ?µS, Apr 93', 'practitioner': {'name': 'RAL', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'AA', 'results': [{'unit': 'ppb', 'value': [210.9], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'ILIAS UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Water (Boulby tank)', 'id': 'ILIAS UKDM #361', 'owner': {'name': '', 'contact': ''}, 'name': 'Water, Boulby tank', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef3'), 'measurement': {'description': '', 'practitioner': {'name': 'Harwell (AEA Technology) (Harwell Scientifics after mid-1999)', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'ICP-MS', 'results': [{'unit': 'ppb', 'value': [0.0004], 'isotope': 'U-238', 'type': 'measurement'}, {'unit': 'ppb', 'value': [0.0001], 'isotope': 'Th-232', 'type': 'measurement'}]}, 'grouping': 'ILIAS UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Water, Fisons demin', 'id': 'ILIAS UKDM #366', 'owner': {'name': '', 'contact': ''}, 'name': 'Water, Fisons demin', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef4'), 'measurement': {'description': '', 'practitioner': {'name': 'J.Puimedón & A.Ortiz', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'LSC', 'technique': 'Ge', 'results': [{'unit': 'Bq/kg', 'value': [50, 6], 'isotope': 'Th-234', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [50, 6], 'isotope': 'Pb-214', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [50, 6], 'isotope': 'Bi-214', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [30, 5], 'isotope': 'Ac-228', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [30, 5], 'isotope': 'Pb-212', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [30, 5], 'isotope': 'Tl-208', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [2.0, 0.6], 'isotope': 'U-235', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [70, 10], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'ILIAS CAST', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 4, 9, 0, 0)], 'name': 'Benjamin Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Laminate', 'id': 'Conc. #7', 'owner': {'name': '', 'contact': ''}, 'name': 'Laminate, Stesalit', 'source': 'Stesalit'}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef5'), 'measurement': {'description': '', 'practitioner': {'name': 'J.Puimedón & A.Ortiz', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'LSC', 'technique': 'Ge', 'results': [{'unit': 'mBq', 'value': [120, 30], 'isotope': 'Th-234', 'type': 'measurement'}, {'unit': 'mBq', 'value': [65, 10], 'isotope': 'Pb-214', 'type': 'measurement'}, {'unit': 'mBq', 'value': [65, 10], 'isotope': 'Bi-214', 'type': 'measurement'}, {'unit': 'mBq', 'value': [90, 10], 'isotope': 'Ac-228', 'type': 'measurement'}, {'unit': 'mBq', 'value': [90, 10], 'isotope': 'Pb-212', 'type': 'measurement'}, {'unit': 'mBq', 'value': [90, 10], 'isotope': 'Tl-208', 'type': 'measurement'}, {'unit': 'mBq', 'value': [6, 2], 'isotope': 'U-235', 'type': 'measurement'}, {'unit': 'mBq', 'value': [42, 14], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'ILIAS CAST', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 4, 9, 0, 0)], 'name': 'Benjamin Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Zero force socket', 'id': 'Conc. #11', 'owner': {'name': '', 'contact': ''}, 'name': 'Zero force socket', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef6'), 'measurement': {'description': '', 'practitioner': {'name': '', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'LGNS', 'technique': 'Ge', 'results': [{'unit': 'mBq/kg', 'value': [2.4, 95], 'isotope': 'Ra-228', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [1.0, 95], 'isotope': 'Th-228', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [130, 95], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [1.9, 95], 'isotope': 'Ra-226', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [2.0, 95], 'isotope': 'U-235', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [10, 4], 'isotope': 'K-40', 'type': 'measurement'}, {'unit': 'mBq/kg', 'value': [0.9, 95], 'isotope': 'Cs-137', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [8.5, 9], 'isotope': 'Co-60', 'type': 'measurement'}]}, 'grouping': 'XENON100 (2011) ', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 3, 22, 0, 0)], 'name': 'Matthew Bruemmer / James Loach / Jodi Cooley', 'contact': 'mbruemmer@smu.edu / james.loach@gmail.com / cooley@physics.smu.edu', 'notes': ''}, 'reference': 'E. Aprile et al., Astropart. Phys., 35 (2011)  (http://dx.doi.org/10.1016/j.astropartphys.2011.06.001)'}, 'sample': {'description': 'Stainless steel, 316Ti, NIRONIT, 1.5mm, cryostat wall', 'id': 'Table 1. #7', 'owner': {'name': '', 'contact': ''}, 'name': 'Stainless steel, 316Ti, NIRONIT', 'source': 'NIRONIT'}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef7'), 'measurement': {'description': '', 'practitioner': {'name': '', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'LNGS', 'technique': 'Ge', 'results': [{'unit': 'mBq/kg', 'value': [0.92, 95], 'isotope': 'Ra-228', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [2.9, 7], 'isotope': 'Th-228', 'type': 'measurement'}, {'unit': 'mBq/kg', 'value': [20, 95], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [1.3, 95], 'isotope': 'Ra-226', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [1.3, 95], 'isotope': 'U-235', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [7.1, 95], 'isotope': 'K-40', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [0.82, 95], 'isotope': 'Cs-137', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [1.4, 3], 'isotope': 'Co-60', 'type': 'measurement'}]}, 'grouping': 'XENON100 (2011) ', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 3, 22, 0, 0)], 'name': 'Matthew Bruemmer / James Loach / Jodi Cooley', 'contact': 'mbruemmer@smu.edu / james.loach@gmail.com / cooley@physics.smu.edu', 'notes': ''}, 'reference': 'E. Aprile et al., Astropart. Phys., 35 (2011)  (http://dx.doi.org/10.1016/j.astropartphys.2011.06.001)'}, 'sample': {'description': 'Stainless steel, 316Ti, NIRONIT, 25mm, top flange/support bars', 'id': 'Table 1. #10', 'owner': {'name': '', 'contact': ''}, 'name': 'Stainless steel, 316Ti, NIRONIT', 'source': 'NIRONIT'}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef8'), 'measurement': {'description': '', 'practitioner': {'name': '', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'University of Zurich', 'technique': 'Ge', 'results': [{'unit': 'mBq/kg', 'value': [0.16, 95], 'isotope': 'Ra-228', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [0.1, 95], 'isotope': 'Th-228', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [3.0, 95], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [0.06, 95], 'isotope': 'Ra-226', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [0.13, 95], 'isotope': 'U-235', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [0.75, 95], 'isotope': 'K-40', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [0.07, 95], 'isotope': 'Cs-137', 'type': 'limit'}, {'unit': 'mBq/kg', 'value': [0.03, 95], 'isotope': 'Co-60', 'type': 'limit'}]}, 'grouping': 'XENON100 (2011) ', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 3, 22, 0, 0)], 'name': 'Matthew Bruemmer / James Loach / Jodi Cooley', 'contact': 'mbruemmer@smu.edu / james.loach@gmail.com / cooley@physics.smu.edu', 'notes': ''}, 'reference': 'E. Aprile et al., Astropart. Phys., 35 (2011) (http://dx.doi.org/10.1016/j.astropartphys.2011.06.001)'}, 'sample': {'description': 'PTFE, Maagtechnic, TPC', 'id': 'Table 1. #16', 'owner': {'name': '', 'contact': ''}, 'name': 'PTFE, Maagtechnic', 'source': 'Maagtechnic'}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85ef9'), 'measurement': {'description': '', 'practitioner': {'name': '', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'LNGS', 'technique': 'Ge', 'results': [{'unit': 'mBq/unit', 'value': [0.087, 3], 'isotope': 'Ra-228', 'type': 'measurement'}, {'unit': 'mBq/unit', 'value': [0.11, 1], 'isotope': 'Th-228', 'type': 'measurement'}, {'unit': 'mBq/unit', 'value': [4.7, 95], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'mBq/unit', 'value': [0.12, 1], 'isotope': 'Ra-226', 'type': 'measurement'}, {'unit': 'mBq/unit', 'value': [0.04, 1], 'isotope': 'U-235', 'type': 'measurement'}, {'unit': 'mBq/unit', 'value': [6.9, 7], 'isotope': 'K-40', 'type': 'measurement'}, {'unit': 'mBq/unit', 'value': [0.027, 7], 'isotope': 'Cs-137', 'type': 'measurement'}, {'unit': 'mBq/unit', 'value': [1.5, 1], 'isotope': 'Co-60', 'type': 'measurement'}]}, 'grouping': 'XENON100 (2011) ', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 3, 22, 0, 0)], 'name': 'Matthew Bruemmer / James Loach / Jodi Cooley', 'contact': 'mbruemmer@smu.edu / james.loach@gmail.com / cooley@physics.smu.edu', 'notes': ''}, 'reference': 'E. Aprile et al., Astropart. Phys., 35 (2011) (http://dx.doi.org/10.1016/j.astropartphys.2011.06.001)'}, 'sample': {'description': 'PMT, Hamamatsu R8520 - batch 7, top/bottom array, veto', 'id': 'Table 1. #26', 'owner': {'name': '', 'contact': ''}, 'name': 'PMT, Hamamatsu R8520 - batch 7', 'source': 'Hamamatsu'}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85efa'), 'measurement': {'description': '', 'practitioner': {'name': '', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'LNGS', 'technique': 'Ge', 'results': [{'unit': 'uBq/m', 'value': [20, 10], 'isotope': 'Ra-228', 'type': 'measurement'}, {'unit': 'uBq/m', 'value': [19, 95], 'isotope': 'Th-228', 'type': 'limit'}, {'unit': 'uBq/m', 'value': [180, 95], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'uBq/m', 'value': [8.9, 95], 'isotope': 'Ra-226', 'type': 'limit'}, {'unit': 'uBq/m', 'value': [14, 95], 'isotope': 'U-235', 'type': 'limit'}, {'unit': 'uBq/m', 'value': [200, 80], 'isotope': 'K-40', 'type': 'measurement'}, {'unit': 'uBq/m', 'value': [12, 95], 'isotope': 'Cs-137', 'type': 'limit'}, {'unit': 'uBq/m', 'value': [3.9, 95], 'isotope': 'Co-60', 'type': 'limit'}]}, 'grouping': 'XENON100 (2011) ', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 3, 22, 0, 0)], 'name': 'Matthew Bruemmer / James Loach / Jodi Cooley', 'contact': 'mbruemmer@smu.edu / james.loach@gmail.com / cooley@physics.smu.edu', 'notes': ''}, 'reference': 'E. Aprile et al., Astropart. Phys., 35 (2011) (http://dx.doi.org/10.1016/j.astropartphys.2011.06.001)'}, 'sample': {'description': 'Coaxial cable (RG174), PMT Signal', 'id': 'Table 1. #42', 'owner': {'name': '', 'contact': ''}, 'name': 'Coaxial cable (RG174), Caburn-MDC', 'source': 'Caburn-MDC'}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb85efb'), 'measurement': {'description': '', 'practitioner': {'name': '', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': 'University of Zurich', 'technique': 'Ge', 'results': [{'unit': 'Bq/kg', 'value': [7, 2], 'isotope': 'Ra-228', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [8, 2], 'isotope': 'Th-228', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [190, 95], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'Bq/kg', 'value': [26, 5], 'isotope': 'Ra-226', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [8.5, 95], 'isotope': 'U-235', 'type': 'limit'}, {'unit': 'Bq/kg', 'value': [170, 30], 'isotope': 'K-40', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [0.9, 3], 'isotope': 'Cs-137', 'type': 'measurement'}, {'unit': 'Bq/kg', 'value': [0.58, 95], 'isotope': 'Co-60', 'type': 'limit'}]}, 'grouping': 'XENON100 (2011) ', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 3, 22, 0, 0)], 'name': 'Matthew Bruemmer / James Loach / Jodi Cooley', 'contact': 'mbruemmer@smu.edu / james.loach@gmail.com / cooley@physics.smu.edu', 'notes': ''}, 'reference': 'E. Aprile et al., Astropart. Phys., 35 (2011) (http://dx.doi.org/10.1016/j.astropartphys.2011.06.001)'}, 'sample': {'description': 'Concrete, LNGS floor', 'id': 'Table 1. #49', 'owner': {'name': '', 'contact': ''}, 'name': 'Concrete, LNGS floor', 'source': ''}, 'type': 'measurement', '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86290'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed', 'source': '', 'description': 'Copper, electroformed, stock sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #001'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'limit', 'value': [0.17, 68], 'isotope': 'Th-232', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86291'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed', 'source': '', 'description': 'Copper, electroformed, stock sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #002'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.011, 0.005], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.017, 0.003], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86292'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed', 'source': '', 'description': 'Copper, electroformed, stock sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #003'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'GD-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'limit', 'value': [2.2, 68], 'isotope': 'K', 'unit': 'ppb'}, {'type': 'limit', 'value': [50, 68], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'limit', 'value': [70, 68], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86293'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed', 'source': '', 'description': 'Copper, electroformed, stock sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #004'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'limit', 'value': [0.029, 68], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'limit', 'value': [0.008, 68], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86294'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed', 'source': '', 'description': 'Copper, electroformed, stock sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #005'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'limit', 'value': [0.029, 68], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'limit', 'value': [0.009, 68], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86295'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed', 'source': '', 'description': 'Copper, electroformed, stock sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #006'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'limit', 'value': [0.029, 68], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'limit', 'value': [0.008, 68], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86296'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed', 'source': '', 'description': 'Copper, electroformed, stock sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #007'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'limit', 'value': [0.03, 68], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'limit', 'value': [0.009, 68], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86297'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed, machined parts', 'source': '', 'description': 'Copper, electroformed, machined part, guide clip', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #008'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.33, 0.022], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.123, 0.005], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86298'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed, machined part', 'source': '', 'description': 'Copper, electroformed, machined part, guide clip', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #009'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.112, 0.009], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.078, 0.002], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb86299'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed, machined part', 'source': '', 'description': 'Copper, electroformed, machined part, guide clip', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #010'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.17, 0.008], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.087, 0.002], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb8629a'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed, machined part', 'source': '', 'description': 'Copper, electroformed, machined part, spring clip', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #011'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.215, 0.009], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.13, 0.01], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb8629b'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed, machined part', 'source': '', 'description': 'Copper, electroformed, machined part, hex bolt', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #012'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.118, 0.011], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.035, 0.004], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb8629c'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed, machined part', 'source': '', 'description': 'Copper, electroformed, machined part, hex bolt', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #013'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.119, 0.014], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.041, 0.003], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb8629d'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, electroformed, machined part', 'source': '', 'description': 'Copper, electroformed, machined part, hex bolt', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #014'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.148, 0.021], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.051, 0.002], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb8629e'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, cake stock', 'source': '', 'description': 'Copper, C10100, cake stock, (source for #016 and #017)', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #015'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.46, 0.06], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.21, 0.06], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb8629f'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, plate stock', 'source': '', 'description': 'Copper, C10100, 2.5 in. plate stock, exterior sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #016'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.27, 0.05], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.1, 0.02], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb862a0'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, plate stock', 'source': '', 'description': 'Copper, C10100, 2.5 in. plate stock, interior sample', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #017'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [0.27, 0.05], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [0.12, 0.02], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb862a1'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, plate stock, saw cut', 'source': '', 'description': 'Copper, C10100, 1 in. plate stock, saw cut (same stock #019)', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #018'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [10.2, 1.0], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [6.62, 0.58], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb862a2'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, plate stock, machined surfaces', 'source': '', 'description': 'Copper, C10100, 1 in. plate stock, machined surfaces', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #019'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [1.88, 0.45], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [3.11, 0.39], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
+    coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb862a3'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, bar stock, machined surfaces', 'source': '', 'description': 'Copper, C10100, 1 in. x 2 in. bar stock, machined surfaces', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #020'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [2.12, 0.39], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [2.25, 0.15], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
 
 
-"measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana"
+def teardown_db_for_test():
+    client = MongoClient('localhost', 27017)
+    coll = client.dune_pytest_data.test_data
+    old_versions_coll = client.dune_pytest_data.test_data_oldversions
+    remove_resp = coll.delete_many({})
+    resmove_oldversions_resp = old_versions_coll.delete_many({})
 
-'''
-{'measurement.results': {'$elemMatch': {'type': 'measurement', 'unit': re.compile('^ppm$', re.IGNORECASE), 'value.0': {'$eq': 37.2}}}}
-{'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$gt': 20.4, '$lte': 40.6}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$lt': 20.4}, 'value.1': {'$gte': 40.6}}}}]}
-{'grouping': re.compile('^.*majorana.*$', re.IGNORECASE)}
 
-{'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'unit': re.compile('^ppm$', re.IGNORECASE), 'value.0': {'$eq': 37.2}}}}, '$and': [{'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$gt': 20.4, '$lte': 40.6}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$lt': 20.4}, 'value.1': {'$gte': 40.6}}}}]}, {'grouping': re.compile('^.*majorana.*$', re.IGNORECASE)}]]}
 
-{'$or': [{'measurement.results': {'$elemMatch': {'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$eq': 37.2}}}}, {'$and': [{'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$gt': 20.4, '$lte': 40.6}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$lt': 20.4}, 'value.1': {'$gte': 40.6}}}}]}, {'grouping': {'$regex': re.compile('^.*majorana.*$', re.IGNORECASE)}}]}]}
-'''
-
-'''
-grouping contains majorana
-AND
-measurement.results.value is greater than or equal to 10.0
-AND
-measurement.results.value is less than or equal to 20.0
-AND
-measurement.results.unit equals ppm 
-gives weird results where not all response docs are between 10 and 20 because the value arrays are searched separately (you could have 3 values)
-'''

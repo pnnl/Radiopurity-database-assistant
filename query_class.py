@@ -28,10 +28,12 @@ class Query():
         if query_str is not None:
             self._load_from_str(query_str)
 
+        '''
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         print('TERMS:',self.terms)
         print('APNDS:',self.appends)
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        '''
 
     def _load_synonyms(self, filepath):
         synonyms_list = []
@@ -70,9 +72,7 @@ class Query():
         return comparison, line
     def _get_value_from_str(self, field, comparison, line):
         if field == 'all':
-            #value = line.split()
             value = line.replace('["', '').replace('"]', '').split('", "')
-            print('VAL:',value)
             if len(value) < 1:
                 value = "" # convert to empty string if no values
             elif len(value) == 1:
@@ -114,7 +114,6 @@ class Query():
         for word_list in self.synonyms:
             for word in word_list:
                 if re.match('.*'+value+'.*', word, re.IGNORECASE):
-                    #print('found val',value,'in',word)
                     return word_list
         return None
 
@@ -302,28 +301,28 @@ class Query():
                 if 'measurement' in meas_obj_keys:
                     meas_obj['measurement'].append({'value.0':{'$lt':value}})
                 if 'range' in meas_obj_keys:
-                    meas_obj['range'].append({'value.1':{'$gt':value}})
+                    meas_obj['range'].append({'value.1':{'$lt':value}})
                 if 'limit' in meas_obj_keys:
-                    meas_obj['limit'].append({'value.0':{'$gt':value}})
+                    meas_obj['limit'].append({'value.0':{'$lt':value}})
             elif comparison == 'lte':
                 if 'measurement' in meas_obj_keys:
                     meas_obj['measurement'].append({'value.0':{'$lte':value}})
                 if 'range' in meas_obj_keys:
-                    meas_obj['range'].append({'value.1':{'$gte':value}})
+                    meas_obj['range'].append({'value.1':{'$lte':value}})
                 if 'limit' in meas_obj_keys:
-                    meas_obj['limit'].append({'value.0':{'$gte':value}})
+                    meas_obj['limit'].append({'value.0':{'$lte':value}})
 
             # the "limit" type only has an upper bound, so we have to exclude it from queries that include a "eq"/"gt"/"gte" comparison
             elif comparison == 'gt':
                 if 'measurement' in meas_obj_keys:
                     meas_obj['measurement'].append({'value.0':{'$gt':value}})
                 if 'range' in meas_obj_keys:
-                    meas_obj['range'].append({'value.0':{'$lt':value}})
+                    meas_obj['range'].append({'value.0':{'$gt':value}})
             elif comparison == 'gte':
                 if 'measurement' in meas_obj_keys:
                     meas_obj['measurement'].append({'value.0':{'$gte':value}})
                 if 'range' in meas_obj_keys:
-                    meas_obj['range'].append({'value.0':{'$lte':value}})
+                    meas_obj['range'].append({'value.0':{'$gte':value}})
 
         return meas_obj
 
@@ -352,16 +351,12 @@ class Query():
 
         # each measurement type gets its own query term
         for meas_type in list(meas_type_obj.keys()):
-            print('TYPE:',meas_type)
-            print('VALS:',meas_type_obj[meas_type])
             meas_term = deepcopy(nonval_terms) # start with the query for all non-value fields
             meas_term['type'] = meas_type # add a query for the measurement type
-            print('meas_term:',meas_term)
 
             # consolidate all value terms under the same measurement type
             for val_term in meas_type_obj[meas_type]:
             #for val_term in val_terms:
-                print('val term:',val_term)
                 val_term_field = list(val_term.keys())[0] # we expect field to be one of: "value.0" or "value.1"
                 val_term_comp = list(val_term[val_term_field].keys())[0]
 
@@ -414,9 +409,7 @@ class Query():
         terms, appends = self._consolidate_measurement_results()
 
         for i in range(len(terms)-1,-1,-1): # iterate backwards to keep the proper order when nesting
-            print()
             ele = terms[i]
-            print(i,ele)
             field = ele['field']
             comparison = ele['comparison']
             value = ele['value']
@@ -425,7 +418,6 @@ class Query():
                 append_mode = self._convert_append_str_to_q_operator(appends[i])
             else:
                 append_mode = None
-            print(append_mode)
 
             # NOTE: To use a $text query in an $or expression, all clauses in the $or array must be indexed. 
             #   (https://docs.mongodb.com/manual/reference/operator/query/text/#restrictions)
