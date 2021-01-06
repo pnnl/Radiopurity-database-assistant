@@ -29,6 +29,7 @@ def _add_user(user, encrypted_pw, db_name):
 def do_q_append(form):
     existing_q_text, field, comparison, value, append_mode, include_synonyms = parse_existing_q(form)
     q_str, q_dict = add_to_query(field, comparison, value, append_mode=append_mode, include_synonyms=include_synonyms, query_string=existing_q_text)
+    q_obj = Query(q_str)
     q_dict = q_obj.to_query_language()
     q_str = q_obj.to_string()
     num_q_lines = q_str.count('\n') + 1
