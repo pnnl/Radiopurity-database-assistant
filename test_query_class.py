@@ -9,28 +9,32 @@ import datetime
 from python_mongo_toolkit import set_ui_db
 from python_mongo_toolkit import search
 
+#'''
 data_load_from_str = [
     ("all contains ", {}),
     ("all contains testing", {'$text': {'$search': 'testing'}}),
     ("grouping equals ", {"grouping": {"$regex": re.compile('^$', re.IGNORECASE)}}),
     ("grouping contains one\nOR\nsample.name does not contain two\nAND\nsample.description equals three", {"$or": [{'grouping': {"$regex": re.compile('^.*one.*$', re.IGNORECASE)}}, {"$and":[{'sample.name': {'$not': re.compile('^two$', re.IGNORECASE)}}, {'sample.description': {"$regex": re.compile('^three$', re.IGNORECASE)}}]}]}),
-    ("measurement.results.value is less than 10\nAND\nmeasurement.results.value is greater than or equal to 5", {'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$lt': 10, '$gte': 5}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.1': {'$lt': 10}, 'value.0': {'$gte': 5}}}}]}),
-    ("measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", {'$or': [{'measurement.results': {'$elemMatch': {'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$eq': 37.2}}}}, {'$and': [{'$or': [{'measurement.results': {'$elemMatch': {'type': 'measurement', 'value.0': {'$gt': 20.4, '$lte': 40.6}}}}, {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$gt': 20.4}, 'value.1': {'$lte': 40.6}}}}]}, {'grouping': {'$regex': re.compile('^.*majorana.*$', re.IGNORECASE)}}]}]}),
+    ("measurement.results.value is less than 10\nAND\nmeasurement.results.value is greater than or equal to 5", {'$or': [{'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$lt': 10, '$gte': 5}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.1': {'$lt': 10}, 'value.0': {'$gte': 5}}}}]}),
+    ("measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", {'$or': [{'measurement.results': {'$elemMatch': {'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$eq': 37.2}}}}, {'$and': [{'$or': [{'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$gt': 20.4, '$lte': 40.6}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gt': 20.4}, 'value.1': {'$lte': 40.6}}}}]}, {'grouping': {'$regex': re.compile('^.*majorana.*$', re.IGNORECASE)}}]}]}),
     ('grouping contains ["copper", "Cu"]', {'$or': [{'grouping': {'$regex': re.compile('^.*copper.*$', re.IGNORECASE)}}, {'grouping': {'$regex': re.compile('^.*Cu.*$', re.IGNORECASE)}}]}),
-    ('measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1', {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$gt': 0.1, '$lte': 1}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': 'range', 'value.0': {'$gt': 0.1}, 'value.1': {'$lte': 1}}}}]}),
-    ('measurement.results.type equals range\nAND\nmeasurement.results.value is greater than 200\nAND\nmeasurement.results.value is less than 1', {'measurement.results': {'$elemMatch': {'type': 'range', 'value.0': {'$gt': 200}, 'value.1': {'$lt': 1}}}}),
-    ("grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt", {'$and': [{'grouping': {'$regex': re.compile('^.*majorana.*$', re.IGNORECASE)}}, {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': 'measurement', 'value.0': {'$lte': 1.0}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': 'range', 'value.1': {'$lte': 1.0}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': 'limit', 'value.0': {'$lte': 1.0}}}}]}]}),
+    ('measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1', {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$gt': 0.1, '$lte': 1}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^K-40$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}, 'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gt': 0.1}, 'value.1': {'$lte': 1}}}}]}),
+    ('measurement.results.type equals range\nAND\nmeasurement.results.value is greater than 200\nAND\nmeasurement.results.value is less than 1', {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gt': 200}, 'value.1': {'$lt': 1}}}}),
+    ("grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt", {'$and': [{'grouping': {'$regex': re.compile('^.*majorana.*$', re.IGNORECASE)}}, {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$lte': 1.0}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.1': {'$lte': 1.0}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U-238$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}, 'type': {'$regex': re.compile('^limit$', re.IGNORECASE)}, 'value.0': {'$lte': 1.0}}}}]}]}),
+    ('grouping contains testing\nOR\nmeasurement.results.isotope equals ["Actinium", "Ac"]', {'$or': [{'grouping': {'$regex': re.compile('^.*testing.*$', re.IGNORECASE)}}, {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^Actinium$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^Ac$', re.IGNORECASE)}}}}]}]}),
+    ('grouping contains testing\nOR\nmeasurement.results.isotope equals ["Actinium", "Ac"]\nAND\nmeasurement.results.unit equals ppm\nOR\nmeasurement.results.unit equals ppb', {'$or': [{'grouping': {'$regex': re.compile('^.*testing.*$', re.IGNORECASE)}}, {'$or': [{'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^Actinium$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^Ac$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppm$', re.IGNORECASE)}}}}]}, {'measurement.results': {'$elemMatch': {'unit': {'$regex': re.compile('^ppb$', re.IGNORECASE)}}}}]}]})
 ]
 @pytest.mark.parametrize("base_str,correct_q_dict", data_load_from_str)
 def test_load_from_str(base_str, correct_q_dict):
     q_obj = Query(query_str=base_str)
-    q_str = q_obj.to_human_string()
-    q_dict = q_obj.to_query_lang()
+    q_str = q_obj.to_string()
+    q_dict = q_obj.to_query_language()
     print('ACTUAL:',q_dict)
     print('CORRCT:',correct_q_dict)
     assert q_str == base_str
     assert q_dict == correct_q_dict
 
+"""
 def test_query_results_1():
     # set up database to be updated
     teardown_db_for_test()
@@ -40,7 +44,7 @@ def test_query_results_1():
     query_str = "all contains "
     num_expected_docs = 45 # all docs returned
 
-    q = Query(query_str=query_str).to_query_lang()
+    q = Query(query_str=query_str).to_query_language()
     docs = search(q)
 
     assert len(docs) == num_expected_docs
@@ -53,7 +57,7 @@ def test_query_results_2():
 
     query_str = "all contains testing"
 
-    q = Query(query_str=query_str).to_query_lang()
+    q = Query(query_str=query_str).to_query_language()
     docs = search(q)
 
     found_ids = []
@@ -94,7 +98,7 @@ def test_query_results_3():
     query_str = 'grouping equals '
     num_expected_docs = 0
 
-    q = Query(query_str=query_str).to_query_lang()
+    q = Query(query_str=query_str).to_query_language()
     docs = search(q)
 
     assert len(docs) == num_expected_docs
@@ -107,7 +111,7 @@ def test_query_results_5():
 
     query_str = 'measurement.results.value is less than 10\nAND\nmeasurement.results.value is greater than or equal to 5'
 
-    q = Query(query_str=query_str).to_query_lang()
+    q = Query(query_str=query_str).to_query_language()
     docs = search(q)
 
     # check that all found docs meet the criteria
@@ -147,7 +151,7 @@ def test_query_results_6():
 
     query_str = 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1\nOR\nmeasurement.results.unit equals ppb\nAND\nmeasurement.results.value is greater than 100\nAND\nmeasurement.results.value is less than or equal to 1000'
 
-    q = Query(query_str=query_str).to_query_lang()
+    q = Query(query_str=query_str).to_query_language()
     docs = search(q)
 
     found_ids = []
@@ -205,7 +209,7 @@ def test_query_results_10():
 
     query_str = "grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt"
 
-    q = Query(query_str=query_str).to_query_lang()
+    q = Query(query_str=query_str).to_query_language()
     docs = search(q)
 
     found_ids = []
@@ -305,4 +309,5 @@ def teardown_db_for_test():
     resmove_oldversions_resp = old_versions_coll.delete_many({})
 
 
+"""
 

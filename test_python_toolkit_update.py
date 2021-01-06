@@ -5,22 +5,21 @@ import datetime
 
 from python_mongo_toolkit import set_ui_db
 from python_mongo_toolkit import search_by_id
-from python_mongo_toolkit import update_with_versions
+from python_mongo_toolkit import update
 from python_mongo_toolkit import search
 from python_mongo_toolkit import add_to_query
 from python_mongo_toolkit import insert
 from python_mongo_toolkit import convert_str_to_date
 from python_mongo_toolkit import convert_date_to_str
-from python_mongo_toolkit import _validate_measurement_results_data
 
 # OTHER POSSIBLE TESTS:
 # a bunch of updates --> does doc maintain truth?
 # 
 
 '''
-testing update_with_versions
+testing update
 '''
-def test_update_with_versions_remove_doc():
+def test_update_remove_doc():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -29,7 +28,7 @@ def test_update_with_versions_remove_doc():
     # perform update
     doc_id = '000000000000000000000002'
     doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=True)
+    new_doc_id, error_msg = update(doc_id, remove_doc=True)
     assert new_doc_id == None
 
     successful_db_change = set_ui_db('dune_pytest_data', 'test_data_oldversions')
@@ -38,8 +37,7 @@ def test_update_with_versions_remove_doc():
     oldversion_doc = search_by_id(doc_id)
     assert doc == oldversion_doc
 
-
-def test_update_with_versions_nochange():
+def test_update_nochange():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -48,7 +46,7 @@ def test_update_with_versions_nochange():
     # perform update
     doc_id = '000000000000000000000002'
     doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, \
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, \
         update_pairs={}, \
         new_meas_objects=[], \
         meas_remove_indices=[] \
@@ -85,7 +83,7 @@ def test_update_with_versions_nochange():
     assert doc == currversion_doc
 
 
-def test_update_with_versions_bad_field():
+def test_update_bad_field():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -94,7 +92,7 @@ def test_update_with_versions_bad_field():
     # perform update
     doc_id = '000000000000000000000002'
     doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, \
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, \
         update_pairs={'bad_field':'val'}, \
         new_meas_objects=[], \
         meas_remove_indices=[] \
@@ -112,7 +110,7 @@ def test_update_with_versions_bad_field():
         assert 'bad_field' not in list(doc.keys())
 
 
-def test_update_with_versions_update_pairs_all():
+def test_update_update_pairs_all():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -147,7 +145,7 @@ def test_update_with_versions_update_pairs_all():
         'data_source.input.date':['2010/18/02','2020-10-21'],
         'data_source.input.notes':'test test test',
     }
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, \
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, \
         update_pairs=update_pairs, \
         new_meas_objects=[], \
         meas_remove_indices=[] \
@@ -209,7 +207,7 @@ def test_update_with_versions_update_pairs_all():
             assert 0 == 1
 
 
-def test_update_with_versions_update_pairs_update_twice():
+def test_update_update_pairs_update_twice():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -219,7 +217,7 @@ def test_update_with_versions_update_pairs_update_twice():
     u1_doc_id = '000000000000000000000002'
     u1_doc = search_by_id(u1_doc_id)
     u1_update_pairs={'grouping':'new test value', 'data_source.input.contact':'testing@test.org', 'measurement.results.0.unit':'g', 'measurement.date':['2020-10-21']}
-    u1_new_doc_id, u1_error_msg = update_with_versions(u1_doc_id, remove_doc=False, \
+    u1_new_doc_id, u1_error_msg = update(u1_doc_id, remove_doc=False, \
         update_pairs=u1_update_pairs, \
         new_meas_objects=[], \
         meas_remove_indices=[] \
@@ -265,7 +263,7 @@ def test_update_with_versions_update_pairs_update_twice():
     u2_doc_id = u1_new_version_doc_id
     u2_doc = search_by_id(u2_doc_id)
     u2_update_pairs = {'grouping':'test value two'}
-    u2_new_doc_id, u2_error_msg = update_with_versions(u2_doc_id, remove_doc=False, update_pairs=u2_update_pairs)
+    u2_new_doc_id, u2_error_msg = update(u2_doc_id, remove_doc=False, update_pairs=u2_update_pairs)
     assert u2_new_doc_id != None
     u2_new_doc_id = str(u2_new_doc_id)
 
@@ -289,7 +287,7 @@ def test_update_with_versions_update_pairs_update_twice():
     assert u2_new_doc.pop('grouping') == 'test value two'
 
 
-def test_update_with_versions_new_meas_objects_bad_object():
+def test_update_new_meas_objects_bad_object():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -299,7 +297,7 @@ def test_update_with_versions_new_meas_objects_bad_object():
         {'bad_field':1}
     ]
     doc_id = '000000000000000000000002'
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
     assert new_doc_id == None
 
     # test that doc did not get transferred
@@ -313,7 +311,7 @@ def test_update_with_versions_new_meas_objects_bad_object():
         assert 'bad_field' not in list(doc.keys())
 
 
-def test_update_with_versions_new_meas_objects():
+def test_update_new_meas_objects():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -325,7 +323,7 @@ def test_update_with_versions_new_meas_objects():
     ]
     doc_id = '000000000000000000000002'
     orig_doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
     assert new_doc_id != None
     new_doc_id = str(new_doc_id)
 
@@ -358,18 +356,21 @@ def test_update_with_versions_new_meas_objects():
     assert orig_doc == new_doc
 
 
-def test_update_with_versions_new_meas_objects_str_for_val_a():
+#NOTE this test has been changed to use numeric values for the measurement values, instead
+#  of strings (i.e. 0.3 instead of '0.3') because I decided we should always be able to expect
+#  that the incoming doc to an update or insert should have proper formatting, other than dates
+def test_update_new_meas_objects_str_for_val_a():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
     successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
 
     new_meas_objects = [
-        {'isotope':'U-235', 'type':'range', 'unit':'g', 'value':['0.3', '2.1']}
+        {'isotope':'U-235', 'type':'range', 'unit':'g', 'value':[0.3, 2.1]}
     ]
     doc_id = '000000000000000000000002'
     orig_doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
     assert new_doc_id != None
     new_doc_id = str(new_doc_id)
 
@@ -404,7 +405,7 @@ def test_update_with_versions_new_meas_objects_str_for_val_a():
     assert orig_doc == new_doc
 
 
-def test_update_with_versions_new_meas_objects_str_for_val_b():
+def test_update_new_meas_objects_str_for_val_b():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -415,7 +416,7 @@ def test_update_with_versions_new_meas_objects_str_for_val_b():
     ]
     doc_id = '000000000000000000000002'
     orig_doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
     assert new_doc_id == None
 
     # test that doc got transferred
@@ -429,7 +430,7 @@ def test_update_with_versions_new_meas_objects_str_for_val_b():
     assert len(new_doc['measurement']['results']) == len(orig_doc['measurement']['results'])
 
 
-def test_update_with_versions_meas_remove_indices_bad_idx():
+def test_update_meas_remove_indices_bad_idx():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -438,7 +439,7 @@ def test_update_with_versions_meas_remove_indices_bad_idx():
     remove_indices = [4] # list len is 3
     doc_id = '000000000000000000000002'
     orig_doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, meas_remove_indices=remove_indices)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, meas_remove_indices=remove_indices)
     assert new_doc_id == None
 
     # test that doc did not get transferred
@@ -452,7 +453,7 @@ def test_update_with_versions_meas_remove_indices_bad_idx():
     assert len(new_doc['measurement']['results']) == len(orig_doc['measurement']['results'])
 
 
-def test_update_with_versions_meas_remove_indices():
+def test_update_meas_remove_indices():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -461,7 +462,7 @@ def test_update_with_versions_meas_remove_indices():
     remove_indices = [0, 2] # list len is 3
     doc_id = '000000000000000000000002'
     orig_doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, meas_remove_indices=remove_indices)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, meas_remove_indices=remove_indices)
     assert new_doc_id != None
     new_doc_id = str(new_doc_id)
 
@@ -496,7 +497,7 @@ def test_update_with_versions_meas_remove_indices():
     assert orig_doc == new_doc
 
 
-def test_update_with_versions_all():
+def test_update_all():
     # set up database to be updated
     teardown_db_for_test()
     set_up_db_for_test()
@@ -510,7 +511,7 @@ def test_update_with_versions_all():
     remove_indices = [1, 2]
     doc_id = '000000000000000000000002'
     orig_doc = search_by_id(doc_id)
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc=False, update_pairs=update_pairs, new_meas_objects=new_meas_objects, meas_remove_indices=remove_indices)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, update_pairs=update_pairs, new_meas_objects=new_meas_objects, meas_remove_indices=remove_indices)
     assert new_doc_id != None
     new_doc_id = str(new_doc_id)
 

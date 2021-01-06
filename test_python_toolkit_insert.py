@@ -5,13 +5,12 @@ import datetime
 
 from python_mongo_toolkit import set_ui_db
 from python_mongo_toolkit import search_by_id
-from python_mongo_toolkit import update_with_versions
+from python_mongo_toolkit import update
 from python_mongo_toolkit import search
 from python_mongo_toolkit import add_to_query
 from python_mongo_toolkit import insert
 from python_mongo_toolkit import convert_str_to_date
 from python_mongo_toolkit import convert_date_to_str
-from python_mongo_toolkit import _validate_measurement_results_data
 
 
 def test_insert_partial_doc():
@@ -32,7 +31,7 @@ def test_insert_partial_doc():
 
     new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
     measurement_description=measurement_description, data_input_notes=data_input_notes)
-    assert new_doc_id != None
+    assert new_doc_id != None, error_msg
 
     new_doc = search_by_id(new_doc_id)
     assert new_doc['sample']['name'] == sample_name
@@ -40,7 +39,7 @@ def test_insert_partial_doc():
     assert new_doc['data_source']['reference'] == data_reference
     assert new_doc['data_source']['input']['name'] == data_input_name
     assert new_doc['data_source']['input']['contact'] == data_input_contact
-    assert new_doc['data_source']['input']['date'] == data_input_date
+    assert [ date_obj.strftime('%Y-%m-%d') for date_obj in new_doc['data_source']['input']['date'] ] == data_input_date
     assert new_doc['grouping'] == ''
     assert new_doc['sample']['source'] == ''
     assert new_doc['sample']['id'] == ''
@@ -92,7 +91,7 @@ def test_insert_complete_doc():
     measurement_results, measurement_practitioner_name, measurement_practitioner_contact, \
     measurement_technique, measurement_institution, measurement_date, measurement_description, \
     measurement_requestor_name, measurement_requestor_contact, data_input_notes)
-    assert new_doc_id != None
+    assert new_doc_id != None, error_msg
 
     new_doc = search_by_id(new_doc_id)
     assert new_doc['sample']['name'] == sample_name
@@ -100,7 +99,7 @@ def test_insert_complete_doc():
     assert new_doc['data_source']['reference'] == data_reference
     assert new_doc['data_source']['input']['name'] == data_input_name
     assert new_doc['data_source']['input']['contact'] == data_input_contact
-    assert new_doc['data_source']['input']['date'] == data_input_date
+    assert [ date_obj.strftime('%Y-%m-%d') for date_obj in new_doc['data_source']['input']['date'] ] == data_input_date
     assert new_doc['grouping'] == grouping
     assert new_doc['sample']['source'] == sample_source
     assert new_doc['sample']['id'] == sample_id
@@ -111,7 +110,7 @@ def test_insert_complete_doc():
     assert new_doc['measurement']['practitioner']['contact'] == measurement_practitioner_contact
     assert new_doc['measurement']['technique'] == measurement_technique
     assert new_doc['measurement']['institution'] == measurement_institution
-    assert new_doc['measurement']['date'] == measurement_date
+    assert [ date_obj.strftime('%Y-%d-%m') for date_obj in new_doc['measurement']['date'] ] == measurement_date
     assert new_doc['measurement']['description'] == measurement_description
     assert new_doc['measurement']['requestor']['name'] == measurement_requestor_name
     assert new_doc['measurement']['requestor']['contact'] == measurement_requestor_contact
@@ -132,21 +131,20 @@ def test_insert_meas_values_strings_a():
     data_input_name = 'testing data input name'
     data_input_contact = 'testing data input contact'
     data_input_date = ['2020-02-20']
-    measurement_results = [{'isotope':'K-40', 'type':'measurement', 'unit':'ppm', 'value':['1.3','3.1']}]
+    measurement_results = [{'isotope':'K-40', 'type':'measurement', 'unit':'ppm', 'value':[1.3,3.1]}]
 
     new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
     measurement_results=measurement_results)
-    assert new_doc_id != None
+    assert new_doc_id != None, error_msg
 
-    correct_measurement_results = [{'isotope':'K-40', 'type':'measurement', 'unit':'ppm', 'value':[1.3,3.1]}]
     new_doc = search_by_id(new_doc_id)
     assert new_doc['sample']['name'] == sample_name
     assert new_doc['sample']['description'] == sample_description
     assert new_doc['data_source']['reference'] == data_reference
     assert new_doc['data_source']['input']['name'] == data_input_name
     assert new_doc['data_source']['input']['contact'] == data_input_contact
-    assert new_doc['data_source']['input']['date'] == data_input_date
-    assert new_doc['measurement']['results'] == correct_measurement_results
+    assert [ date_obj.strftime('%Y-%m-%d') for date_obj in new_doc['data_source']['input']['date'] ] == data_input_date
+    assert new_doc['measurement']['results'] == measurement_results
 
 
 def test_insert_meas_values_strings_b():

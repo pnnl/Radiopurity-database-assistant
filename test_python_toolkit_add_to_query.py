@@ -6,13 +6,12 @@ import re
 
 from python_mongo_toolkit import set_ui_db
 from python_mongo_toolkit import search_by_id
-from python_mongo_toolkit import update_with_versions
+from python_mongo_toolkit import update
 from python_mongo_toolkit import search
 from python_mongo_toolkit import add_to_query
 from python_mongo_toolkit import insert
 from python_mongo_toolkit import convert_str_to_date
 from python_mongo_toolkit import convert_date_to_str
-from python_mongo_toolkit import _validate_measurement_results_data
 
 
 # OTHER POSSIBLE TESTS
@@ -30,32 +29,31 @@ def test_add_to_query_with_search_a():
     field = 'grouping'
     comp = 'contains'
     val = 'testing'
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q={})
-    assert existing_q == {'grouping':re.compile('^.*testing.*$',re.IGNORECASE)}
-
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string='')
+    assert q_dict == {'grouping':{'$regex':re.compile('^.*testing.*$',re.IGNORECASE)}}
+    
     field = 'measurement.results.isotope'
     comp = 'eq'
     val = 'U'
     append_mode = 'OR'
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q=existing_q, append_mode=append_mode)
-    assert existing_q == {'$or':[{'grouping':re.compile('^.*testing.*$',re.IGNORECASE)}, {'measurement.results':{'$elemMatch':{'isotope':re.compile('^U$',re.IGNORECASE)}}}]}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string=q_string, append_mode=append_mode)
+    assert q_dict == {'$or': [{'grouping': {'$regex': re.compile('^.*testing.*$', re.IGNORECASE)}}, {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^Uranium$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^U$', re.IGNORECASE)}}}}]}]}
 
     field = 'measurement.results.value'
     comp = 'gte'
     val = 100.0
     append_mode = 'AND'
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q=existing_q, append_mode=append_mode)
-    assert existing_q == {'$or':[{'grouping':re.compile('^.*testing.*$',re.IGNORECASE)}, {'measurement.results':{'$elemMatch':{'$and':[{'isotope':re.compile('^U$',re.IGNORECASE)}, {'value.0':{'$gte':100.0}}]}}}]}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string=q_string, append_mode=append_mode)
+    assert q_dict == {'$or': [{'grouping': {'$regex': re.compile('^.*testing.*$', re.IGNORECASE)}}, {'$or': [{'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^Uranium$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^U$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^Uranium$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^U$', re.IGNORECASE)}}}}]}]}
 
     field = 'measurement.results.unit'
     comp = 'eq'
     val = 'ppt'
     append_mode = 'AND'
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q=existing_q, append_mode=append_mode)
-    assert existing_q == {'$or':[{'grouping':re.compile('^.*testing.*$',re.IGNORECASE)}, {'measurement.results':{'$elemMatch':{'$and':[{'isotope':re.compile('^U$',re.IGNORECASE)}, {'value.0':{'$gte':100.0}}, {'unit':re.compile('^ppt$', re.IGNORECASE)}]}}}]}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string=q_string, append_mode=append_mode)
+    assert q_dict == {'$or': [{'grouping': {'$regex': re.compile('^.*testing.*$', re.IGNORECASE)}}, {'$or': [{'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^Uranium$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^U$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^Uranium$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^U$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}}}}]}]}
 
-
-    search_resp = search(existing_q)
+    search_resp = search(q_dict)
     for doc in search_resp:
         grouping = doc['grouping']
         valid_meas_found = False
@@ -65,48 +63,47 @@ def test_add_to_query_with_search_a():
                     valid_meas_found = True
         assert 'testing' in grouping or valid_meas_found
 
-
 def test_add_to_query_bad_field_name():
     field = 'test' # not a valid field name
     comp = 'contains'
     val = 'testing'
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q={})
-    assert existing_q == {}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string='')
+    assert q_dict == {}
 
 def test_add_to_query_bad_comparison():
     field = 'grouping'
     comp = 'test' # not a valid comparator; must be one of ['contains', 'notcontains', 'eq', 'gt', 'gte', 'lt', 'lte']
     val = 'testing'
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q={})
-    assert existing_q == {}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string='')
+    assert q_dict == {}
 
 def test_add_to_query_bad_comparison_num_comp_on_str():
     field = 'grouping'
     comp = 'gt' # not a string comparator
     val = 'testing'
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q={})
-    assert existing_q == {}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string='')
+    assert q_dict == {}
 
 def test_add_to_query_bad_comparison_str_comp_on_num():
     field = 'measurement.results.value'
     comp = 'contains' # not a numerical comparator
     val = 10
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q={})
-    assert existing_q == {}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string='')
+    assert q_dict == {}
 
 def test_add_to_query_bad_val():
     field = 'measurement.results.value'
     comp = 'gt'
     val = 'test' # must be num, not str
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q={})
-    assert existing_q == {}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string='')
+    assert q_dict == {}
 
 def test_add_to_query_bad_append_mode():
     field = 'grouping'
     comp = 'contains'
     val = 'testing'
     append_mode = 'testing' # must be one of ['AND', 'OR']
-    existing_q, error_msg = add_to_query(field=field, comparison=comp, value=val, existing_q={}, append_mode='testing')
-    assert existing_q == {}
+    q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string='', append_mode='testing')
+    assert q_dict == {}
 
 

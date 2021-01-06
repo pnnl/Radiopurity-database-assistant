@@ -7,7 +7,7 @@ from copy import deepcopy
 class Query():
     def __init__(self, query_str=None):
         # terms is a list of dicts with the following structure:
-        # {"field":str, "comparison":str, "value":int|str|float|list}
+        #   {"field":str, "comparison":str, "value":int|str|float|list}
         self.terms = []
         self.appends = []
         self.all_fields = []
@@ -25,7 +25,7 @@ class Query():
         self.num_comparisons = ["eq", "lt", "lte", "gt", "gte"]
         self.date_comparisons = ["eq", "lt", "lte", "gt", "gte"]
 
-        if query_str is not None:
+        if query_str is not None and query_str != '':
             self._load_from_str(query_str)
 
         '''
@@ -113,7 +113,7 @@ class Query():
     def _find_synonyms(self, value):
         for word_list in self.synonyms:
             for word in word_list:
-                if re.match('.*'+value+'.*', word, re.IGNORECASE):
+                if re.match(value, word, re.IGNORECASE):
                     return word_list
         return None
 
@@ -281,104 +281,121 @@ class Query():
 
         return terms, appends
 
-    def _get_meas_value_variations(self, val_terms, nonval_raw_terms):
-        # figure out which measurement types are valid for this case
-        meas_obj = self._get_meas_type_object(val_terms, nonval_raw_terms)
+    def _get_valid_meas_types(self, val_terms, specified_meas_type):
+        if specified_meas_type is not None:
+            # if the query specifies to search for docs with a specific measurement type, then we only want to use that one
+            valid_meas_types = [specified_meas_type]
+        else:
+            # certain measurement types only support certain comparison types
+            val_comparisons = [ term['comparison'] for term in val_terms if term['field'] == 'value' ]
+            if 'eq' in val_comparisons:
+                # the "measurement" type is the only one with a single value that we can compare "eq" against
+                valid_meas_types = ['measurement']
+            elif 'gt' in val_comparisons or 'gte' in val_comparisons:
+                # the "limit" type only has an upper bound, so we have to exclude it from queries that include a "eq"/"gt"/"gte" comparison
+                valid_meas_types = ['measurement', 'range']
+            elif 'lt' in val_comparisons or 'lte' in val_comparisons:
+                # the "lt"/"lte" comparison can be done with any of the three measurement types
+                valid_meas_types = ['measurement', 'range', 'limit']
+            else:
+                valid_meas_types = []
 
-        meas_obj_keys = list(meas_obj.keys()) # get all the measurement types that were determined to be valid based on the comparisons and query terms
+        return valid_meas_types
 
+    def _get_meas_value_variations(self, valid_meas_types, val_terms):
         # add terms to the meas_obj according to their appropriate measurement type
-        for term in val_terms:
+        def _gather_value_variations(meas_obj, term):
             comparison = term['comparison']
             value = term['value']
 
             # the "measurement" type is the only one with a single value that we can compare "eq" against
-            if comparison == 'eq' and 'measurement' in meas_obj_keys:
+            if comparison == 'eq' and 'measurement' in valid_meas_types:
                 meas_obj['measurement'].append({'value.0':{'$eq':value}})
 
             # the "lt"/"lte" comparison can be done with any of the three measurement types
             elif comparison == 'lt':
-                if 'measurement' in meas_obj_keys:
+                if 'measurement' in valid_meas_types:
                     meas_obj['measurement'].append({'value.0':{'$lt':value}})
-                if 'range' in meas_obj_keys:
+                if 'range' in valid_meas_types:
                     meas_obj['range'].append({'value.1':{'$lt':value}})
-                if 'limit' in meas_obj_keys:
+                if 'limit' in valid_meas_types:
                     meas_obj['limit'].append({'value.0':{'$lt':value}})
             elif comparison == 'lte':
-                if 'measurement' in meas_obj_keys:
+                if 'measurement' in valid_meas_types:
                     meas_obj['measurement'].append({'value.0':{'$lte':value}})
-                if 'range' in meas_obj_keys:
+                if 'range' in valid_meas_types:
                     meas_obj['range'].append({'value.1':{'$lte':value}})
-                if 'limit' in meas_obj_keys:
+                if 'limit' in valid_meas_types:
                     meas_obj['limit'].append({'value.0':{'$lte':value}})
 
             # the "limit" type only has an upper bound, so we have to exclude it from queries that include a "eq"/"gt"/"gte" comparison
             elif comparison == 'gt':
-                if 'measurement' in meas_obj_keys:
+                if 'measurement' in valid_meas_types:
                     meas_obj['measurement'].append({'value.0':{'$gt':value}})
-                if 'range' in meas_obj_keys:
+                if 'range' in valid_meas_types:
                     meas_obj['range'].append({'value.0':{'$gt':value}})
             elif comparison == 'gte':
-                if 'measurement' in meas_obj_keys:
+                if 'measurement' in valid_meas_types:
                     meas_obj['measurement'].append({'value.0':{'$gte':value}})
-                if 'range' in meas_obj_keys:
+                if 'range' in valid_meas_types:
                     meas_obj['range'].append({'value.0':{'$gte':value}})
 
-        return meas_obj
+            return meas_obj
 
-    def _get_meas_type_object(self, val_terms, nonval_terms):
-        # certain measurement types only support certain comparison types
-        val_comparisons = [ term['comparison'] for term in val_terms if term['field'] == 'value' ]
-        if 'eq' in val_comparisons:
-            # the "measurement" type is the only one with a single value that we can compare "eq" against
-            meas_type_obj = {'measurement':[]}
-        elif 'gt' in val_comparisons or 'gte' in val_comparisons:
-            # the "limit" type only has an upper bound, so we have to exclude it from queries that include a "eq"/"gt"/"gte" comparison
-            meas_type_obj = {'measurement':[], 'range':[]}
+        # convert the variations into actual mongodb query language format
+        def _aggregate_value_variations(meas_obj):
+            aggregated_terms = []
+            for meas_type in list(meas_obj.keys()):
+                term = self._assemble_qterm_str('type', 'equals', meas_type) # this func will return a dictionary we can add fields and their comparisons/values to
+
+                for val_ele in meas_obj[meas_type]:
+                    val_field = list(val_ele.keys())[0] # we expect field to be one of: "value.0" or "value.1"
+                    val_comp = list(val_ele[val_field].keys())[0] # we expect the comparison to be the first sub-field
+                    val_val = val_ele[val_field][val_comp]
+
+                    if val_field in list(term.keys()):
+                        term[val_field][val_comp] = val_val
+                    else:
+                        term[val_field] = val_ele[val_field]
+                aggregated_terms.append(term)
+
+            return aggregated_terms
+
+        meas_obj = { meas_type:[] for meas_type in valid_meas_types }
+        for val_term in val_terms:
+            meas_obj = _gather_value_variations(meas_obj, val_term)
+        aggregated_terms = _aggregate_value_variations(meas_obj)
+        return aggregated_terms
+
+    def _assemble_meas_result_terms(self, val_terms, isotope_terms, unit_term):
+        combined_terms = []
+        if len(val_terms) > 0 and len(isotope_terms) > 0:
+            for val_term in val_terms:
+                for isotope_term in isotope_terms:
+                    combined_terms.append({**val_term, **isotope_term, **unit_term})
+        elif len(isotope_terms) > 0:
+            for isotope_term in isotope_terms:
+                combined_terms.append({**isotope_term, **unit_term})
+        elif len(val_terms) > 0:
+            for val_term in val_terms:
+                combined_terms.append({**val_term, **unit_term})
         else:
-            # the "lt"/"lte" comparison can be done with any of the three measurement types
-            meas_type_obj = {'measurement':[], 'range':[], 'limit':[]}
+            combined_terms = [unit_term]
+        
+        combined_terms = [{"measurement.results":{"$elemMatch":term}} for term in combined_terms]
 
-        # if the query specifies to search for docs with a specific measurement type, then we only want to use that one
-        for term in nonval_terms:
-            if term['field'] == 'type':
-                meas_type_obj = {term['value']:[]}
-
-        return meas_type_obj
-
-    def _convert_meas_result_value_terms(self, meas_type_obj, nonval_terms, val_terms):
-        converted_terms = []
-
-        # each measurement type gets its own query term
-        for meas_type in list(meas_type_obj.keys()):
-            meas_term = deepcopy(nonval_terms) # start with the query for all non-value fields
-            meas_term['type'] = meas_type # add a query for the measurement type
-
-            # consolidate all value terms under the same measurement type
-            for val_term in meas_type_obj[meas_type]:
-            #for val_term in val_terms:
-                val_term_field = list(val_term.keys())[0] # we expect field to be one of: "value.0" or "value.1"
-                val_term_comp = list(val_term[val_term_field].keys())[0]
-
-                # either add to an existing value (value.0 or value.1) field or create it 
-                if val_term_field in list(meas_term.keys()):
-                    meas_term[val_term_field][val_term_comp] = val_term[val_term_field][val_term_comp]
-                else:
-                    meas_term[val_term_field] = val_term[val_term_field]
-
-            # add term to set of terms
-            converted_terms.append({"measurement.results":{"$elemMatch":meas_term}})
-
-        if len(converted_terms) > 1:
-            converted_terms = {'$or':converted_terms}
+        if len(combined_terms) > 1:
+            combined_terms = {'$or':combined_terms}
         else:
-            converted_terms = converted_terms[0]
-        return converted_terms
+            combined_terms = combined_terms[0]
+        return combined_terms
 
     def _assemble_qterm_meas_results(self, terms):
-        nonval_terms = {}
-        nonval_raw_terms = []
-        val_terms = []
+        val_terms_raw = []
+        isotope_terms = []
+        unit_term = {}
+
+        specified_measurement_type = None
 
         # the terms object is the list of all consolidated meas results terms in an "and"ed list of terms
         for raw_term in terms:
@@ -387,22 +404,29 @@ class Query():
             value = raw_term['value']
 
             # assemble query term
-            if field in ['unit', 'isotope', 'type']:
-                # NOTE: there shouldn't be a case where someone specifies multiple "and"ed units, isotopes, or types in their query, but we should TODO error check for this
-                term = self._assemble_qterm_str(field, comparison, value)
-                nonval_terms[field] = term[field]
-                nonval_raw_terms.append(raw_term)
+            if field == 'value':
+                val_terms_raw.append(raw_term) #format --> [{'field':}, ...]
+            elif field == 'type':
+                specified_measurement_type = value
+            elif field == 'isotope':
+                isotope_terms = self._assemble_qterm_str(field, comparison, value)
+                term_keys = list(isotope_terms.keys())
+                if len(term_keys) == 1 and term_keys[0] in ['$and', '$or']:
+                    isotope_terms = isotope_terms.pop(term_keys[0])
+                else:
+                    isotope_terms = [isotope_terms]
+            elif field == 'unit':
+                unit_term = self._assemble_qterm_str(field, comparison, value)
             else:
-                #term = self._assemble_qterm_num(field, comparison, value)
-                val_terms.append(raw_term)
-                continue
+                print('field wasnt in [value, type, isotope, unit]')
+                terms = None
 
-        meas_type_obj = self._get_meas_value_variations(val_terms, nonval_raw_terms)
-        term = self._convert_meas_result_value_terms(meas_type_obj, nonval_terms, val_terms)
-
+        valid_meas_types = self._get_valid_meas_types(val_terms_raw, specified_measurement_type)
+        val_terms = self._get_meas_value_variations(valid_meas_types, val_terms_raw)
+        term = self._assemble_meas_result_terms(val_terms, isotope_terms, unit_term)
         return term
 
-    def to_query_lang(self):
+    def to_query_language(self):
         query = {}
 
         # preprocess all measurement.results terms 
@@ -468,7 +492,7 @@ class Query():
         else:
             human = str(value)
         return human
-    def to_human_string(self):
+    def to_string(self):
         query = ''
         for i, ele in enumerate(self.terms):
             field = ele['field']
@@ -573,67 +597,12 @@ if __name__ == '__main__':
     #q_str = "grouping contains one\nOR\nsample.name does not contain two\nAND\nsample.description equals three"
     q_str = 'grouping contains ["copper", "Cu"]'
     q_obj = Query(query_str=q_str)
-    print(q_obj.to_human_string())
-    print(q_obj.to_query_lang())
+    print(q_obj.to_string())
+    print(q_obj.to_query_language())
     q_obj.add_query_term('measurement.description', 'contains', 'helium', "AND")
-    print(q_obj.to_human_string())
-    print(q_obj.to_query_lang())
+    print(q_obj.to_string())
+    print(q_obj.to_query_language())
 
 
-'''
-EQ      measurement.results.type == "measurement" and measurement.results.value.0 == VAL
-LT      measurement.results.type == "measurement" and measurement.results.value.0 < VAL
-LTE     measurement.results.type == "measurement" and measurement.results.value.0 <= VAL
-GT      measurement.results.type == "measurement" and measurement.results.value.0 > VAL
-GTE     measurement.results.type == "measurement" and measurement.results.value.0 >= VAL
-CONF    -
-SYM     measurement.results.type == "measurement" and measurement.results.value.1 < > <= >= == VAL
-ASYM    measurement.results.type == "measurement" and measurement.results.value.2 < > <= >= == VAL
 
-EQ      -
-LT      measurement.results.type == "range" and measurement.results.value.1 > VAL
-LTE     measurement.results.type == "range" and measurement.results.value.1 >= VAL
-GT      measurement.results.type == "range" and measurement.results.value.0 < VAL
-GTE     measurement.results.type == "range" and measurement.results.value.0 <= VAL
-CONF    measurement.results.type == "range" and measurement.results.value.2 < > <= >= == VAL
-SYM     -
-ASYM    -
 
-EQ      -
-LT      measurement.results.type == "limit" and measurement.results.value.0 > VAL
-LTE     measurement.results.type == "limit" and measurement.results.value.0 >= VAL
-GT      -
-GTE     -
-CONF    measurement.results.type == "limit" and measurement.results.value.1 < > <= >= == VAL
-SYM     -
-ASYM    -
-'''
-
-'''
-EQ
-measurement.results.type == "measurement" and measurement.results.value.0 == VAL
-
-LT
-measurement.results.type == "measurement" and measurement.results.value.0 < VAL
-or
-measurement.results.type == "range" and measurement.results.value.1 > VAL
-or
-measurement.results.type == "limit" and measurement.results.value.0 > VAL
-
-LTE
-measurement.results.type == "measurement" and measurement.results.value.0 <= VAL
-or
-measurement.results.type == "range" and measurement.results.value.1 >= VAL
-or
-measurement.results.type == "limit" and measurement.results.value.0 >= VAL
-
-GT
-measurement.results.type == "measurement" and measurement.results.value.0 > VAL
-or
-measurement.results.type == "range" and measurement.results.value.0 < VAL
-
-GTE 
-measurement.results.type == "measurement" and measurement.results.value.0 >= VAL
-or 
-measurement.results.type == "range" and measurement.results.value.0 <= VAL
-'''
