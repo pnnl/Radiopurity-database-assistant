@@ -34,6 +34,8 @@
         <div class="section-container">
             <h3>CURRENT QUERY</h3>
             <textarea class="false-textarea" name="existing_query" rows="{{num_q_lines}}" cols="50" readonly>{{existing_query}}</textarea>
+            <br>
+            <textarea class="false-textarea" name="append_mode" rows="1" cols="5" readonly>{{append_mode}}</textarea>
         </div>
     {% endif %}
 
@@ -42,7 +44,7 @@
             <span>
                 <h3>field:</h3>
                 <select id="query_field" name="query_field">
-                    <option value="all">all</option>
+                    <option id="removable" value="all">all</option>
                     <option value="grouping">grouping</option>
                     <option value="sample.name">sample.name</option>
                     <option value="sample.description">sample.description</option>
@@ -60,8 +62,8 @@
                     <option value="measurement.institution">measurement.institution</option>
                     <option value="measurement.date">measurement.date</option>
                     <option value="measurement.description">measurement.description</option>
-                    <option value="measurement.description">measurement.requestor.name</option>
-                    <option value="measurement.description">measurement.requestor.contact</option>
+                    <option value="measurement.requestor.name">measurement.requestor.name</option>
+                    <option value="measurement.requestor.contact">measurement.requestor.contact</option>
                     <option value="data_source.reference">source.reference</option>
                     <option value="data_source.input.name">source.input.name</option>
                     <option value="data_source.input.contact">source.input.contact</option>
@@ -72,20 +74,15 @@
 
             <span>
                 <h3>comparison:</h3>
-                <select id="comparison_operator" name="comparison_operator">
-                    <option value="contains">contains</option>
-                    <option value="notcontains">does not contain</option>
-                    <option value="eq">equals</option>
-                    <option value="lt">less than</option>
-                    <option value="lte">less than or equal to</option>
-                    <option value="gt">greater than</option>
-                    <option value="gte">greater than or equal to</option>
-                </select>
+                <select id="comparison_operator" name="comparison_operator"></select>
             </span>
 
             <span>
                 <h3>value:</h3>
                 <textarea name="query_value" rows="1" cols="15"></textarea>
+                <br>
+                <input type="checkbox" name="include_synonyms" value="true" checked>
+                <label class="normal-text" for="include_synonyms">include synonyms</label>
             </span>
         </div>
 
@@ -109,9 +106,9 @@
     </div>
 </form>
 
-{% if search_msg|length %}
+{% if error_msg|length %}
     <div class="section-container">
-        <p class="normal-text">query error: {{search_msg}}</p>
+        <p class="normal-text">query error: {{error_msg}}</p>
     </div>
 {% endif %}
 
@@ -351,6 +348,82 @@
     {% endif %}
 </div>
 
+
+<script>
+    window.onload = function() {
+        // levels is an Object
+        var query_operators = {
+            "all":{"contains":"contains"},
+            "grouping":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.description":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.source":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.id":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.owner.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.owner.contact":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.results.isotope":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.results.type":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.results.unit":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.results.value":{"equals":"eq", "less than":"lt", "less than or equal to":"lte", "greater than":"gt", "greater than or equal to":"gte"},
+            "measurement.practitioner.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.practitioner.contact":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.technique":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.institution":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.date":{"equals":"eq", "less than":"lt", "less than or equal to":"lte", "greater than":"gt", "greater than or equal to":"gte"},
+            "measurement.description":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.requestor.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.requestor.contact":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "data_source.reference":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "data_source.input.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "data_source.input.contact":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "data_source.input.date":{"equals":"eq", "less than":"lt", "less than or equal to":"lte", "greater than":"gt", "greater than or equal to":"gte"},
+            "data_source.input.notes":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"}
+        };
+
+        // grab references to the drop-downs
+        field_select = document.querySelector('#query_field');
+        comparison_select = document.querySelector('#comparison_operator');
+
+        // populate drop-down menus
+        setOptions(comparison_select, query_operators[field_select.value]);
+  
+        // attach a change event listener to the themes drop-down
+        field_select.addEventListener('change', function() {
+            setOptions(comparison_select, query_operators[field_select.value]);
+        });
+    
+        function setOptions(dropDownObject, options) {
+            // clear out any existing values
+            dropDownObject.innerHTML = '';
+            // insert the new options into the drop-down
+            Object.keys(options).forEach(function(value) {
+                dropDownObject.innerHTML += '<option value="' + options[value] + '">' + value + '</option>';
+            });
+        }
+    };
+</script>
+
+<!--
+<script>
+    field_selector = document.querySelector('#query_field');
+    append_buttons = document.querySelectorAll('button[name="append_button"]');
+    //alert(field_selector.value);
+    for (var i = 0; i < append_buttons.length; i++) {
+        append_button = append_buttons[i];
+        append_button.addEventListener('click', function() {
+            existing_q = document.querySelector('textarea[name="existing_query"]').value;
+            if (existing_q.includes("all")) {
+                console.log('"all" present');
+                document.getElementById('removable').disabled = true;
+            } else {
+                console.log('"all" not present');
+                document.getElementById('removable').disabled = false;
+            }
+            alert(document.getElementById('removable').disabled);
+        });
+    };
+</script>
+-->
 
 <script>
     var coll = document.getElementsByClassName("collapsible");

@@ -76,6 +76,10 @@ select {
   color: #6c6d70;
 }
 
+.hidden-object {
+  display: none;
+}
+
 .fourths-container {
   max-width: 25%;
 }
