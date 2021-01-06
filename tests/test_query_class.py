@@ -1,13 +1,16 @@
 import re
 import pytest
-from query_class import Query
+#from query_class import Query
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import datetime
 
-from python_mongo_toolkit import set_ui_db
-from python_mongo_toolkit import search
+#from python_mongo_toolkit import set_ui_db
+#from python_mongo_toolkit import search
+
+#from dunetoolkit import Query, set_ui_db, search
+from dunetoolkit import Query, set_ui_db, search
 
 #'''
 data_load_from_str = [

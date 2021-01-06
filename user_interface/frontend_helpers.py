@@ -1,8 +1,9 @@
 import re
 #import json
 from pymongo import MongoClient
-from python_mongo_toolkit import add_to_query, search, insert, update, convert_date_to_str
-from query_class import Query
+from dunetoolkit import Query, add_to_query, search, insert, update, convert_date_to_str
+#from python_mongo_toolkit import add_to_query, search, insert, update, convert_date_to_str
+#from query_class import Query
 
 def _get_user(user, db_name):
     client = MongoClient('localhost', 27017)

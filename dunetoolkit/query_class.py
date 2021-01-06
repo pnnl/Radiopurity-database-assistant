@@ -13,7 +13,7 @@ class Query():
         self.all_fields = []
         self.current_meas_results_obj = {}
 
-        synonyms_filepath = os.getcwd() + '/synonyms.txt'
+        synonyms_filepath = os.path.dirname(os.path.abspath(__file__)) + '/synonyms.txt'
         self.synonyms = self._load_synonyms(synonyms_filepath)
 
         self.valid_append_modes = ['AND', 'OR']

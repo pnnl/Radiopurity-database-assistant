@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 import json
 import jsonschema
@@ -47,8 +48,8 @@ class DuneValidator:
         return Validator
 
     def _load_meas_result_schema(self):
-        valid_isotopes = open('isotopes.csv', 'r').read().strip().split(',')
-        valid_units = open('units.csv', 'r').read().strip().split(',')
+        valid_isotopes = open(os.path.dirname(os.path.abspath(__file__))+'/isotopes.csv', 'r').read().strip().split(',')
+        valid_units = open(os.path.dirname(os.path.abspath(__file__))+'/units.csv', 'r').read().strip().split(',')
         measurement_result_schema = {
             "type": "object",
             "additionalProperties": False,

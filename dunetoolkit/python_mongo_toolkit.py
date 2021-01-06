@@ -5,8 +5,8 @@ from datetime import datetime
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from copy import deepcopy
-from validate import DuneValidator, validate_meas_remove_indices, validate_query_terms
-from query_class import Query
+from .validate import DuneValidator, validate_meas_remove_indices, validate_query_terms
+from .query_class import Query
 
 ##########################################
 # IN ORDER TO CONNECT TO DB:
@@ -50,6 +50,10 @@ def _get_specified_collection(collection_name):
     elif collection_name == 'assay_requests':
         collection = assay_requests_coll
     return collection
+
+
+def create_query_object(query_string=None):
+    return Query(query_string)
 
 
 '''

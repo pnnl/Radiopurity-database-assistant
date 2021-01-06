@@ -3,14 +3,11 @@ import datetime
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
-from python_mongo_toolkit import set_ui_db
-from python_mongo_toolkit import search_by_id
-#from python_mongo_toolkit import update
-#from python_mongo_toolkit import search
-#from python_mongo_toolkit import add_to_query
-#from python_mongo_toolkit import insert
-from python_mongo_toolkit import convert_str_to_date
-from python_mongo_toolkit import convert_date_to_str
+from dunetoolkit import set_ui_db, search_by_id, convert_str_to_date, convert_date_to_str
+#from python_mongo_toolkit import set_ui_db
+#from python_mongo_toolkit import search_by_id
+#from python_mongo_toolkit import convert_str_to_date
+#from python_mongo_toolkit import convert_date_to_str
 
 '''
 testing set_ui_db

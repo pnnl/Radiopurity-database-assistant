@@ -1,12 +1,15 @@
 import sys
+#import json
 import argparse
 import datetime
 from functools import wraps
 import scrypt
 from flask import Flask, request, session, url_for, redirect, render_template
-from python_mongo_toolkit import set_ui_db, search_by_id, convert_date_to_str
+from dunetoolkit import set_ui_db, search_by_id, convert_date_to_str
+#from python_mongo_toolkit import set_ui_db, search_by_id, convert_date_to_str
 from frontend_helpers import do_q_append, parse_existing_q, perform_search, perform_insert, parse_update, perform_update
 from frontend_helpers import _get_user
+#from query_class import Query
 
 app = Flask(__name__)
 sk = None
@@ -96,38 +99,52 @@ def restricted_page():
     return render_template('restricted_page.html')
 
 @app.route('/search', methods=['GET','POST'])
-@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
+#@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
 def search_endpoint():
+    final_q_lines_list = []
+    append_mode = ''
+    results = []
+    results_str = []
+
     if request.form.get("append_button") == "do_and":
-        existing_q_str, num_q_lines, final_q_lines_list, results = do_q_append(request.form, "AND")
-        results_str = [ str(r) for r in results ]
-        search_msg = ''
+        print('and...')
+        q_dict, q_str, num_q_lines, error_msg = do_q_append(request.form)
+        append_mode = "AND"
 
     elif request.form.get("append_button") == "do_or":
-        existing_q_str, num_q_lines, final_q_lines_list, results = do_q_append(request.form, "OR")
-        results_str = [ str(r) for r in results ]
-        search_msg = ''
-
+        print('or...')
+        q_dict, q_str, num_q_lines, error_msg = do_q_append(request.form)
+        append_mode = "OR"
+ 
     elif request.method == "POST":
-        final_q_str = parse_existing_q(request.form)
+        print('search...')
+        final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
+
+        results, error_msg = perform_search(final_q)
+        
         final_q_lines_list = []
         if final_q_str != '':
             final_q_lines_list = final_q_str.split('\n')
         
-        results, search_msg = perform_search(final_q_lines_list)
         results_str = [ str(r) for r in results ]
-        existing_q_str = ''
+        q_dict = {}
+        q_str = ''
         num_q_lines = 0
 
     else:
-        existing_q_str = ''
+        q_dict = {}
+        q_str = ''
         num_q_lines = 0
-        final_q_lines_list = []
-        results = []
-        results_str = []
-        search_msg = ''
+        #append_mode = ''
+        #final_q_lines_list = []
+        #results = []
+        #results_str = []
+        error_msg = ''
 
-    return render_template('search.html', existing_query=existing_q_str, search_msg=search_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
+    #q_dict = json.dumps(q_dict)
+
+    print('num q lines:',num_q_lines)
+    return render_template('search.html', existing_query=q_str, append_mode=append_mode, error_msg=error_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
 @requires_permissions(['DUNEwriter', 'Admin'])
@@ -198,11 +215,16 @@ def update_endpoint():
         return render_template('update.html', doc_data=False, message=message)
     return None
 
+
+
+
 @app.before_first_request
 def _setup_database():
     global database_name
-    database_name = 'dune'
-    collection_name = 'dune_data'
+    #database_name = 'dune'
+    #collection_name = 'dune_data'
+    database_name = 'radiopurity_data'
+    collection_name = 'testing'
     port = 8001
     successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
