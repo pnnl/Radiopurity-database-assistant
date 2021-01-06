@@ -1,5 +1,8 @@
+import re
+#import json
 from pymongo import MongoClient
-from python_mongo_toolkit import add_to_query, search, insert, update_with_versions, convert_date_to_str
+from python_mongo_toolkit import add_to_query, search, insert, update, convert_date_to_str
+from query_class import Query
 
 def _get_user(user, db_name):
     client = MongoClient('localhost', 27017)
@@ -22,59 +25,42 @@ def _add_user(user, encrypted_pw, db_name):
     insert_resp = coll.insert_one(db_new_user)
     return insert_resp
 
-def do_q_append(form, append_mode):
-    existing_q = parse_existing_q(form)
-    existing_q += "\n"+append_mode
-    q_lines = existing_q.count('\n')
-    return existing_q, q_lines, [], []
+
+def do_q_append(form):
+    existing_q_text, field, comparison, value, append_mode, include_synonyms = parse_existing_q(form)
+    q_str, q_dict = add_to_query(field, comparison, value, append_mode=append_mode, include_synonyms=include_synonyms, query_string=existing_q_text)
+    q_dict = q_obj.to_query_language()
+    q_str = q_obj.to_string()
+    num_q_lines = q_str.count('\n') + 1
+
+    error_msg = ''
+
+    return q_dict, q_str, num_q_lines, error_msg
+
+def convert_str_to_float(value):
+    try:
+        value = float(value)
+    except:
+        pass
+    return value
 
 def parse_existing_q(form_obj):
-    existing_q = form_obj.get('existing_query', '').strip() + '\n'
-    existing_q += form_obj.get('query_field', '').strip() +' '\
-        + form_obj.get('comparison_operator', '').strip() +' '\
-        + form_obj.get('query_value', '').strip()
-    existing_q = existing_q.strip()
-    return existing_q
+    existing_q = form_obj.get('existing_query', '').strip()
+    print("EXISTING Q...",type(existing_q),existing_q)
+    field = form_obj.get('query_field', '').strip()
+    comparison = form_obj.get('comparison_operator', '').strip()
+    value = form_obj.get('query_value', '').strip()
+    if field in ['measurement.results.value']:
+        value = convert_str_to_float(value)
+    include_synonyms = form_obj.get('include_synonyms', '').strip() == "true"
+    append_mode = form_obj.get('append_mode', '').strip()
+    return existing_q, field, comparison, value, append_mode, include_synonyms
 
-def perform_search(q_lines):
-    # assemble query
-    curr_q = {}
-    append_mode = 'AND'
-    for q_line in q_lines:
-        q_line = q_line.strip()
-        if q_line == '':
-            continue
-        elif q_line == 'AND' or q_line == 'OR':
-            append_mode = q_line
-        else:
-            line_eles = q_line.split(' ')
-            field = line_eles[0]
-            comparison = line_eles[1]
-            value = ' '.join(line_eles[2:])
-
-            # implement search for "all" fields, aka the string fields that might have the same type of value in them
-            if field == 'all':
-                fields_for_all = ['grouping', 'sample.name', 'sample.description', 'sample.source', \
-                                  'sample.id', 'measurement.technique', 'measurement.description', \
-                                  'data_source.reference', 'data_source.input.notes']
-                curr_q, error_msg = add_to_query(fields_for_all[0], comparison, value, existing_q=curr_q, append_mode='AND')
-                if error_msg != '':
-                    return [], error_msg
-                for all_field in fields_for_all[1:]:
-                    curr_q, error_msg = add_to_query(all_field, comparison, value, existing_q=curr_q, append_mode='OR')
-                    if error_msg != '':
-                        return [], error_msg
-
-                continue
-
-            curr_q, error_msg = add_to_query(field, comparison, value, existing_q=curr_q, append_mode=append_mode)
-            if error_msg != '':
-                return [], error_msg
-
+def perform_search(curr_q, coll_type=''):
     print('QUERY:::::',curr_q)
 
     # query for results
-    results = search(curr_q)
+    results = search(curr_q, coll_type)
 
     # convert datetime objects to strings for UI display
     for i in range(len(results)):
@@ -86,7 +72,7 @@ def perform_search(q_lines):
     return results, ''
 
 
-def perform_insert(form):
+def perform_insert(form, coll_type=''):
     meas_results = []
     i = 1
     form_keys = list(form.to_dict().keys())
@@ -149,7 +135,8 @@ def perform_insert(form):
         measurement_description=form.get('measurement.description',''), \
         measurement_requestor_name=form.get('measurement.requestor.name',''), \
         measurement_requestor_contact=form.get('measurement.requestor.contact',''), \
-        data_input_notes=form.get('data_source.input.notes','')
+        data_input_notes=form.get('data_source.input.notes',''),
+        coll_type=coll_type
     )
     
     return new_doc_id, error_msg
@@ -277,8 +264,8 @@ def parse_update(form):
     return doc_id, remove_doc, update_pairs, remove_meas_indices, add_eles
 
 
-def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles):
-    new_doc_id, error_msg = update_with_versions(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices)
+def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles, do_update_assay_request=False):
+    new_doc_id, error_msg = update(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices, do_update_assay_request=do_update_assay_request)
     return new_doc_id, error_msg
 
 

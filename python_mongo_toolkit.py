@@ -5,17 +5,8 @@ from datetime import datetime
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from copy import deepcopy
-
-numeric_fields = ["measurement.results.value"]
-date_fields = ["measurement.date", "data_source.input.date"]
-valid_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.results.isotope", "measurement.results.type", "measurement.results.unit", "measurement.results.value", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
-valid_str_comparisons = ["contains", "notcontains", "eq"]
-valid_num_comparisons = ["eq", "lt", "lte", "gt", "gte"]
-valid_appendmodes = ["AND", "OR"]
-
-valid_isotopes = open('isotopes.csv', 'r').read().strip().split(',')
-valid_units = open('units.csv', 'r').read().strip().split(',')
-
+from validate import DuneValidator, validate_meas_remove_indices, validate_query_terms
+from query_class import Query
 
 ##########################################
 # IN ORDER TO CONNECT TO DB:
@@ -34,6 +25,7 @@ RETURNS: bool (successful db change)
 def set_ui_db(db_name, coll_name):
     global coll
     global old_versions_coll
+    global assay_requests_coll
 
     valid_dbs = [ ele['name'] for ele in list(client.list_databases()) ]
     if db_name not in valid_dbs:
@@ -44,19 +36,37 @@ def set_ui_db(db_name, coll_name):
         return False
 
     old_versions_coll_name = coll_name + '_oldversions'
+    assay_requests_coll_name = coll_name + '_assay_requests'
+
     coll = client[db_name][coll_name]
     old_versions_coll = client[db_name][old_versions_coll_name]
+    assay_requests_coll = client[db_name][assay_requests_coll_name]
     return True
+
+def _get_specified_collection(collection_name):
+    collection = coll
+    if collection_name == 'old_versions':
+        collection = old_versions_coll
+    elif collection_name == 'assay_requests':
+        collection = assay_requests_coll
+    return collection
 
 
 '''
 RETURNS: list (documents found)
 '''
-def search(query):
+def search(query, coll_type=''):
+    # user can enter a string or dict query. If string, we parse it into a dict.
+    if type(query) is str:
+        q_obj = Query(query)
+        query = q_obj.to_query_lang()
+    '''
     if type(query) is not dict:
         print("Error: the query argument must be a dictionary.")
         return None
-    resp = coll.find(query)
+    '''
+    collection = _get_specified_collection(coll_type)
+    resp = collection.find(query)
     resp = list(resp)
     for i, ele in enumerate(resp):
         ele['_id'] = str(ele['_id'])
@@ -67,14 +77,16 @@ def search(query):
 '''
 RETURNS: dict (doc found)
 '''
-def search_by_id(doc_id):
+def search_by_id(doc_id, coll_type=''):
     try:
         id_obj = ObjectId(doc_id)
     except:
         print("Error: you did not enter a valid MongoDB ObjectId string.")
         return None
     q = {'_id':id_obj}
-    resp = coll.find(q)
+
+    collection = _get_specified_collection(coll_type)
+    resp = collection.find(q)
     resp = list(resp)
 
     if len(resp) > 1:
@@ -88,87 +100,65 @@ def search_by_id(doc_id):
 
 
 '''
-RETURNS: ObjectId or None (new document ID)
-         str (error message)
+helper functions for update
 '''
-def update_with_versions(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[]):
-    # make copy of update_pairs dict in case values change; don't want that to change values in the func calling this
-    update_pairs_copy = deepcopy(update_pairs)
-
-    # validate foramt of new_meas_objects
-    valid_measurement_results, error_msg = _validate_measurement_results_data(new_meas_objects)
-    if not valid_measurement_results:
-        return None, error_msg
-
-    # validate fields in update_pairs_copy
-    for update_key in update_pairs_copy:
-        key_eles = update_key.split('.')
-        if len(key_eles) == 4:
-            try:
-                int(key_eles[2])
-                update_key = '.'.join([key_eles[0], key_eles[1], key_eles[3]])
-            except:
-                pass
-        if update_key not in valid_fields:
-            error_msg = 'the "field" argument must be one of: '+', '.join(valid_fields)+' and you entered: '+update_key
-            print('Error:',error_msg)
-            return None, error_msg
-        
-        # convert date vals to datetime objects
-        if update_key in date_fields:
-            for i in range(len(update_pairs_copy[update_key])):
-                update_val = convert_str_to_date(update_pairs_copy[update_key][i])
-                if update_val is not None:
-                    update_pairs_copy[update_key][i] = convert_str_to_date(update_pairs_copy[update_key][i])
-                else:
-                    error_msg = 'the "'+update_key+'" value, '+update_pairs_copy[update_key][i]+', is not a valid date'
-                    print('Error:',error_msg)
-                    return None, error_msg
-
+def _get_existing_doc(doc_id, update_from_coll):
     parent_q = {'_id':ObjectId(doc_id)}
-    parent_resp = coll.find(parent_q)
+    collection = _get_specified_collection(update_from_coll)
+    parent_resp = collection.find(parent_q)
     parent_doc = list(parent_resp)[0]
-    parent_version = parent_doc['_version']
-    parent_id = ObjectId(doc_id)
+    return parent_doc
 
-    # validate remove indices
-    for rm_idx in meas_remove_indices:
-        if rm_idx < 0 or rm_idx >= len(parent_doc['measurement']['results']):
-            error_msg = 'you entered an invalid measurement removal of '+str(rm_idx)+' and valid indices must be between 0 and '+str(len(parent_doc['measurement']['results']))
-            print('Error:',error_msg)
-            return None, error_msg
-
-    print('REMOVE DOC:::::',remove_doc)
-    print('UPDATE PAIRS:::',update_pairs_copy)
-    print('NEW MEAS:::::::',new_meas_objects)
-    print('MEAS REMOVE::::',meas_remove_indices)
-
-    # create child (new record)
-    new_doc = deepcopy(parent_doc)
-    new_doc.pop('_id')
-    new_doc['_version'] += 1
-    new_doc['_parent_id'] = doc_id
-
-    # remove meas - MUST do removal before add/update to keep original indices
+def _remove_meas_objects(new_doc, meas_remove_indices):
+    is_valid, error_msg = validate_meas_remove_indices(new_doc, meas_remove_indices) #TODO: should this be "new_doc" not "parent_doc"
+    if not is_valid:
+        print(error_msg)
+        return None, error_msg
     meas_remove_indices.sort(reverse=True) #must sort descending to keep removal indices correct
     for rm_idx in meas_remove_indices:
         new_doc['measurement']['results'].pop(rm_idx)
+    return new_doc, ''
 
-    # add new measurement result
+def _validate_new_meas_objects(new_meas_objects):
+    meas_validator = DuneValidator("measurement_result")
+    is_valid = True
+    error_message = ''
     for new_meas_obj in new_meas_objects:
+        is_valid, error_message = meas_validator.validate(new_meas_obj)
+        if not is_valid:
+            print(error_message)
+            return False, error_message
+    return is_valid, error_message
 
-        # ensure that all measurement values are floats
+def _add_new_meas_objects(new_doc, new_meas_objects):
+    is_valid, error_msg = _validate_new_meas_objects(new_meas_objects)
+    if not is_valid:
+        return None, error_msg
+    for new_meas_obj in new_meas_objects:
         for i in range(len(new_meas_obj['value'])):
-            new_meas_obj['value'][i] = float(new_meas_obj['value'][i])
-
-        # add meas to new doc
+            try:
+                new_meas_obj['value'][i] = float(new_meas_obj['value'][i]) #ensure meas values are floats
+            except:
+                error_msg = 'measurement value '+str(new_meas_obj['value'][i])+' cannot be converted to a number'
+                print(error_msg)
+                return None, error_msg
         new_doc['measurement']['results'].append(new_meas_obj)
+    return new_doc, ''
 
-    # update existing non-meas_result values
+def _update_nonmeas_fields(new_doc, update_pairs_copy):
     for update_key in update_pairs_copy:
         update_val = update_pairs_copy[update_key]
         update_keys = update_key.split('.')
 
+        # convert date strings to datetime objects
+        if update_keys[-1] == 'date':
+            update_val = convert_str_list_to_date(update_val)
+            if update_val is None:
+                error_msg = 'one of the values for '+update_key+' cannot be converted to a date object'
+                print(error_msg)
+                return None, error_msg
+
+        # set update values in new_doc
         if len(update_keys) == 1:
             new_doc[update_keys[0]] = update_val
         elif len(update_keys) == 2:
@@ -178,185 +168,117 @@ def update_with_versions(doc_id, remove_doc=False, update_pairs={}, new_meas_obj
                 update_key_2 = int(update_keys[2])
             except:
                 update_key_2 = update_keys[2]
-            
+
             if len(update_keys) == 3:
                 new_doc[update_keys[0]][update_keys[1]][update_key_2] = update_val
             elif len(update_keys) == 4:
                 new_doc[update_keys[0]][update_keys[1]][update_key_2][update_keys[3]] = update_val
 
+    return new_doc, ''
+
+def _update_new_doc(new_doc, meas_remove_indices, new_meas_objects, update_pairs_copy):
+    # validate remove indices, do meas removal - MUST do removal before add/update to keep original indices 
+    new_doc, error_msg = _remove_meas_objects(new_doc, meas_remove_indices)
+    if new_doc is None:
+        return None, error_msg
+
+    # add new measurement result
+    new_doc, error_msg = _add_new_meas_objects(new_doc, new_meas_objects)
+    if new_doc is None:
+        return None, error_msg
+
+    # update existing non-meas_result values
+    new_doc, error_msg = _update_nonmeas_fields(new_doc, update_pairs_copy)
+    if new_doc is None:
+        return None, error_msg
+
+    # validate new doc
+    validator = DuneValidator("whole_record")
+    is_valid, error_message = validator.validate(new_doc)
+    if not is_valid:
+        print(error_message)
+        return None, error_msg
+
+    return new_doc, ''
+
+def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll, update_to_coll, do_update_assay_request):
     new_doc_id = None
     update_ok = True
-    if not remove_doc:
+    collection = _get_specified_collection(update_to_coll)
+    if not do_remove_doc:
         # insert new doc into current versions collection
         try:
-            new_doc_id = coll.insert_one(new_doc).inserted_id
+            new_doc_id = collection.insert_one(new_doc).inserted_id
             update_ok = True
         except:
             update_ok = False
 
     # clean up database if there is an issue inserting the new doc
-    if not remove_doc and not update_ok:
-        coll.delete_one(new_doc)
+    if not do_remove_doc and not update_ok:
+        collection.delete_one(new_doc)
 
     if update_ok:
-        try:
-            # add old doc to old versions collection
-            old_versions_coll.insert_one(parent_doc)
-            update_ok = True
-        except:
-            update_ok = False
+        if not do_update_assay_request:
+            try:
+                # add old doc to old versions collection (unless it's an update of an assay request, in which we don't add the old doc to anything, we just get rid of it)
+                old_versions_coll.insert_one(parent_doc)
+                update_ok = True
+            except:
+                update_ok = False
 
         if update_ok:
             # remove old doc from current versions collection
-            removeold_resp = coll.delete_one(parent_q)
-    
+            collection = _get_specified_collection(update_from_coll)
+            parent_q = {'_id':parent_doc['_id']}
+            removeold_resp = collection.delete_one(parent_q)
+
+    return new_doc_id
+
+'''
+RETURNS: ObjectId or None (new document ID)
+         str (error message)
+'''
+def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[], do_update_assay_request=False):
+    # make copy of update_pairs dict in case values change; don't want that to change values in the func calling this
+    update_pairs_copy = deepcopy(update_pairs)
+
+    if do_update_assay_request:
+        update_from_coll = 'assay_requests'
+        update_to_coll = ''
+    else:
+        update_from_coll = ''
+        update_to_coll = ''
+
+    # find existing doc to update
+    parent_doc = _get_existing_doc(doc_id, update_from_coll)
+
+    # create child (new record) based off of parent doc
+    new_doc = deepcopy(parent_doc)
+    new_doc.pop('_id')
+    new_doc['_version'] += 1
+    new_doc['_parent_id'] = doc_id
+
+    # make updates and validate new doc
+    new_doc, error_msg = _update_new_doc(new_doc, meas_remove_indices, new_meas_objects, update_pairs_copy)
+    if new_doc is None:
+        return None, error_msg
+
+    # do update in database, move old version, etc.
+    new_doc_id = _update_databases(new_doc, parent_doc, remove_doc, update_from_coll, update_to_coll, do_update_assay_request)
+
     return new_doc_id, ''
 
-
-'''
-RETURNS: dict (new version of query)
-         str (error msg)
-'''
-def add_to_query(field, comparison, value, existing_q={}, append_mode="AND"):
-    # validate arguments
-    if field not in valid_fields:
-        error_msg = 'the "field" argument must be one of: '+', '.join(valid_fields)+' and you entered: '+field
-        print('Warning:',error_msg)
-        return existing_q, error_msg
-    if comparison not in set(valid_str_comparisons+valid_num_comparisons):
-        error_msg = 'the "comparison" argument must be one of: '+', '.join(set(valid_str_comparisons+valid_num_comparisons))+' and you entered: '+comparison
-        print('Warning:', error_msg)
-        return existing_q, error_msg
-    if append_mode.upper() not in valid_appendmodes:
-        error_msg = 'the "append_mode" argument must be one of: '+', '.join(valid_appendmodes)+' and you entered: '+append_mode.upper()
-        print('Warning:',error_msg)
-        return existing_q, error_msg
-    if field in numeric_fields and type(value) not in [int, float]:
-        try:
-            value = float(value)
-        except:
-            error_msg = 'you must enter a numeric value when comparing fields in: '+ ', '.join(numeric_fields)+' (you entered: '+value+')'
-            print('Warning:',error_msg)
-            return existing_q, error_msg
-    if type(value) is str and field not in date_fields and comparison not in valid_str_comparisons:
-        error_msg = 'when comparing string values, the comparison operator must be one of: '+', '.join(valid_str_comparisons)+' (you entered: '+comparison+')'
-        print('Warning:',error_msg)
-        return existing_q, error_msg
-    if type(value) is not str and comparison not in valid_num_comparisons:
-        error_msg = 'when comparing numeric values, the comparison operator must be one of: '+', '.join(valid_num_comparisons)+' (you entered: '+comparison+')'
-        print('Warning:',error_msg)
-        return existing_q, error_msg
-    if field in date_fields and comparison not in valid_num_comparisons:
-        error_msg = 'when comparing date values, the comparison operator must be one of: '+', '.join(valid_num_comparisons)+' (you entered: '+comparison+')'
-        print('Warning:',error_msg)
-        return existing_q, error_msg
-
-    # assemble field compared against value
-    #TODO: implement date comparison taking second value into account (aka range)
-    #TODO: implement measurement value comparison taking second and third values into account for range, measurement, and limit measurement types
-    if field.startswith('measurement.results.value'):
-        field += '.0'
-
-    if field in date_fields:
-        field += '.0'
-        search_val = convert_str_to_date(value)
-        if search_val is None:
-            error_msg = 'the date value, '+value+' is not in a valid date format'
-            print('Warning:',error_msg)
-            return existing_q, error_msg
-        comparison = '$' + comparison
-        new_term = {field:{comparison:search_val}}
-    elif type(value) is str:
-        if comparison == 'contains':
-            search_val = re.compile('^.*'+value+'.*$', re.IGNORECASE)
-        elif comparison == 'notcontains':
-            match_pattern = re.compile('^'+value+'$', re.IGNORECASE)
-            search_val = {"$not":match_pattern}
-        else:
-            search_val = re.compile('^'+value+'$', re.IGNORECASE)
-        new_term = {field.replace('measurement.results.', ''):search_val}
-    else:
-        comparison = '$' + comparison
-        new_term = {field.replace('measurement.results.', ''):{comparison:value}}
-
-    existing_keys = list(existing_q.keys())
-
-    # add to elemmatch field if it's part of the measurement results
-    if field.startswith('measurement.results'):
-        top_level_field = ''
-        if '$or' in existing_keys and 'measurement.results' in [list(l.keys())[0] for l in existing_q['$or']]:
-            # elemMatch exists in query already, under the top "or" term
-            top_level_field = '$or'
-        elif '$and' in existing_keys and 'measurement.results' in [list(l.keys())[0] for l in existing_q['$and']]:
-            # elemMatch exists in query already, under the top "and" term
-            top_level_field = '$and'
-        else:
-            # elemMatch does not exist in query yet
-            top_level_field = None
-
-        # create elemMatch field of query
-        if top_level_field == None:
-            if append_mode == 'OR':
-                if '$or' in existing_keys:
-                    existing_q['$or'].append({'measurement.results':{'$elemMatch':new_term}})
-                else:
-                    if len([field_name for field_name in list(existing_q.keys()) if field_name not in ['$and', '$or'] ]) > 0:
-                        existing_field = [field_name for field_name in list(existing_q.keys()) if field_name not in ['$and', '$or'] ][0]
-                        existing_q['$or'] = [{existing_field:existing_q.pop(existing_field)}, {'measurement.results':{'$elemMatch':new_term}}]
-                    else:
-                        existing_q['$or'] = [{'measurement.results':{'$elemMatch':new_term}}]
-            else:
-                if '$and' in existing_keys:
-                    existing_q['$and'].append({'measurement.results':{'$elemMatch':new_term}})
-                else:
-                    if len([field_name for field_name in list(existing_q.keys()) if field_name not in ['$and', '$or'] ]) > 0:
-                        existing_field = [field_name for field_name in list(existing_q.keys()) if field_name not in ['$and', '$or'] ][0]
-                        existing_q['$and'] = [{existing_field:existing_q.pop(existing_field)}, {'measurement.results':{'$elemMatch':new_term}}]
-                    else:
-                        existing_q['$and'] = [{'measurement.results':{'$elemMatch':new_term}}]
-
-        # elemMatch field exists in query; add to it
-        else:
-            # find index of measurement.results element in top_level_field list
-            meas_results_idx = 0
-            for i, q_term in enumerate(existing_q[top_level_field]):
-                if 'measurement.results' == list(q_term.keys())[0]:
-                    meas_results_idx = i
-                    break
-
-            append_mode = '$'+append_mode.lower()
-            if append_mode in list(existing_q[top_level_field][meas_results_idx]['measurement.results']['$elemMatch'].keys()):
-                # append mode list already exists
-                existing_q[top_level_field][meas_results_idx]['measurement.results']['$elemMatch'][append_mode].append(new_term)
-            else:
-                # append mode list does not exist yet; create it
-                existing_field = [field_name for field_name in list(existing_q[top_level_field][meas_results_idx]['measurement.results']['$elemMatch'].keys()) if field_name not in ['$and', '$or'] ][0]
-                existing_q[top_level_field][meas_results_idx]['measurement.results']['$elemMatch'][append_mode] = [{existing_field:existing_q[top_level_field][meas_results_idx]['measurement.results']['$elemMatch'].pop(existing_field)}, new_term]
-
-    # add to the general query if it's not for measurement results field
-    else:
-        if append_mode == 'OR':
-            if '$or' in existing_keys:
-                # add to other $or elements (this groups all $or terms together))
-                existing_q['$or'].append(new_term)
-            elif len(existing_keys) == 0:
-                existing_q[field] = new_term[field]
-            else:
-                # creates an $or list out of this new term and the most recently added element (query dict --> "Python 3.6 onwards, the standard dict type maintains insertion order by default.")
-                existing_q['$or'] = [{existing_keys[-1]:existing_q.pop(existing_keys[-1])}, new_term]
-        else:
-            if field in existing_q.keys():
-                #print('A. creating $and from existing.')
-                existing_q['$and'] = [{field:existing_q.pop(field)}, new_term]
-            elif '$and' in existing_q.keys() and [list(f.keys())[0] for f in existing_q['$and']]:
-                #print('B. adding to existing $and')
-                existing_q['$and'].append(new_term)
-            else:
-                #print('C. new q element')
-                existing_q[field] = new_term[field]
-
-    return existing_q, ''
-
+"""
+RETURNS: str (new version of query string)
+         dict (new version of query in query langage)
+"""
+def add_to_query(field, comparison, value, query_object=None, query_string='', append_mode='', include_synonyms=True):
+    if query_object is None:
+        query_object = Query(query_string) #NOTE: query string must be in the specific format like "field1 compare1 value1\nAND\nfield2 compare2 value2\nOR\n..."
+    query_object.add_query_term(field, comparison, value, append_mode, include_synonyms)
+    query_string = query_object.to_string()
+    query_dict = query_object.to_query_language()
+    return query_string, query_dict
 
 '''
 RETURNS: ObjectId or None (id of new doc)
@@ -366,46 +288,13 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     grouping="", sample_source="", sample_id="", sample_owner_name="", sample_owner_contact="", \
     measurement_results=[], measurement_practitioner_name="", measurement_practitioner_contact="", \
     measurement_technique="", measurement_institution="", measurement_date=[], measurement_description="", \
-    measurement_requestor_name="", measurement_requestor_contact="", data_input_notes=""):
+    measurement_requestor_name="", measurement_requestor_contact="", data_input_notes="", coll_type=''):
 
-    # verify and convert measurement_results arg
-    valid_measurement_results, error_msg = _validate_measurement_results_data(measurement_results)
-    if not valid_measurement_results:
-        return None, error_msg
-
-    # verify and convert data_input_date arg
-    if type(data_input_date) is not list:
-        error_msg = 'the data_input_date argument must be a list of date strings.'
-        print('Error:',error_msg)
-        return None, error_msg
-    for d, date_str in enumerate(data_input_date):
-        new_date_obj = convert_str_to_date(date_str)
-        if new_date_obj is None:
-            error_msg = 'at least one of the data input date strings is not in one of the accepted formats'
-            print('Error:', error_msg)
-            return None, error_msg
-        else:
-            data_input_date[d] = new_date_obj
-
-    # verify and convert measurement_date arg
-    if type(measurement_date) is not list:
-        error_msg = 'the measurement date argument must be a list of date strings'
-        print('Error:', error_msg)
-        return None, error_msg
-    if len(measurement_date) > 0:
-        for d, date_str in enumerate(measurement_date):
-            new_date_obj = convert_str_to_date(date_str)
-            if new_date_obj is None:
-                error_msg = 'at least one of the measurement date strings is not in one of the accepted formats'
-                print('Error:',error_msg)
-                return None, error_msg
-            else:
-                measurement_date[d] = new_date_obj
-
-    # ensure that all measurement values are floats
-    for i in range(len(measurement_results)):
-        for j in range(len(measurement_results[i]['value'])):
-            measurement_results[i]['value'][j] = float(measurement_results[i]['value'][j])
+    # convert date string lists to date object lists
+    data_input_date = convert_str_list_to_date(data_input_date)
+    measurement_date = convert_str_list_to_date(measurement_date)
+    if data_input_date is None or measurement_date is None:
+        return None, 'a value in one of the date arguments could not be converted to a datetime object'
 
     # assemble insertion object
     doc = {"specification":"3.00", "grouping":grouping, "type":"assay", 
@@ -447,8 +336,15 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     }
     print(doc)
 
+    # validate doc
+    validator = DuneValidator("whole_record")
+    is_valid, error_message = validator.validate(doc) 
+    if not is_valid:
+        return None, error_message
+
     # perform doc insert
-    mongo_id = coll.insert_one(doc).inserted_id
+    collection = _get_specified_collection(coll_type)
+    mongo_id = collection.insert_one(doc).inserted_id
 
     try:
         print("Successfully inserted doc with id:",mongo_id)
@@ -461,7 +357,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
 
 
 '''
-RETURNS: datetime (object representing date)
+RETURNS: datetime (object representing date) or NONE if error
 '''
 def convert_str_to_date(date_str):
     new_date_obj = None
@@ -476,7 +372,7 @@ def convert_str_to_date(date_str):
 
 
 '''
-RETURNS: str (datetime obj converted to str)
+RETURNS: str (datetime obj converted to str) EMPTY if error
 '''
 def convert_date_to_str(date_obj):
     try:
@@ -485,56 +381,27 @@ def convert_date_to_str(date_obj):
         new_date_str = ''
     return new_date_str
 
+'''
+RETURNS: list (strings converted to datetime objects) or NONE if error
+'''
+def convert_str_list_to_date(str_list):
+    date_objects = []
+    for date_str in str_list:
+        date_obj = convert_str_to_date(date_str)
+        if date_obj is None:
+            return None
+        else:
+            date_objects.append(date_obj)
+    return date_objects
 
-'''
-RETURNS: bool (meas data is valid)
-         str (error message)
-'''
-def _validate_measurement_results_data(measurement_results):
-    if type(measurement_results) is not list:
-        error_msg = 'the measurement_results argument must be a list containing dictionary objects'
-        print('Error:',error_msg)
-        return False, error_msg
-    for i, results_element in enumerate(measurement_results):
-        if type(results_element) is not dict:
-            error_msg = 'the measurement_results argument must be dictionaries'
-            print('Error:',error_msg)
-            return False, error_msg
-        for results_key in ["isotope", "type", "unit", "value"]:
-            if results_key not in list(results_element.keys()):
-                error_msg = 'at least one of the required keys ["isotope", "type", "unit", "value"] is missing from at least one of the dictionaries in the measurement results'
-                print('Error:',error_msg)
-                return False, error_msg
-            if results_key == 'isotope':
-                if measurement_results[i][results_key] not in valid_isotopes:
-                    error_msg = 'the isotope '+measurement_results[i][results_key]+' is not a valid isotope. Note: Isotopes must be in the following format: <ELEMENT SYMBOL>-<MASS NUMBER>'
-                    print('Error:',error_msg)
-                    return False, error_msg
-            if results_key == 'type':
-                if measurement_results[i][results_key] not in ['measurement', 'range', 'limit']:
-                    error_msg = '"type" field of the measurement results dictionaries must be one of: "measurement", "range", "limit"'
-                    print('Error:',error_msg)
-                    return False, error_msg
-            if results_key == 'unit':
-                if measurement_results[i][results_key] not in valid_units:
-                    error_msg = 'the unit '+measurement_results[i][results_key]+' is not a valid measurement unit. Valid units are: '+str(valid_units)
-                    print('Error:',error_msg)
-                    return False, error_msg
-            elif results_key == 'value':
-                if type(measurement_results[i][results_key]) is not list:
-                    error_msg = 'the "value" field of the dictionaries in the measurement_results list must be a list'
-                    print('Error:', error_msg)
-                    return False, error_msg
-                for j in range(len(measurement_results[i][results_key])):
-                    try:
-                        measurement_results[i][results_key][j] = float(measurement_results[i][results_key][j])
-                    except:
-                        error_msg = 'at least one of the elements in the "value" list of at least one of the dictionaries in the measurement_results list cannot be parsed into a number'
-                        print('Error:',error_msg)
-                        return False, error_msg
-    return True, ''
 
 if __name__ == '__main__':
+    valid_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.results.isotope", "measurement.results.type", "measurement.results.unit", "measurement.results.value", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
+    valid_str_comparisons = ["contains", "notcontains", "eq"]
+    valid_num_comparisons = ["eq", "lt", "lte", "gt", "gte"]
+    valid_appendmodes = ["AND", "OR"]
+
+
     parser = argparse.ArgumentParser(description='A python toolkit for interfacing with the radiopurity_example MongoDB.')
     subparsers = parser.add_subparsers(help='options for which function to run', dest='subparser_name')
 
@@ -547,7 +414,7 @@ if __name__ == '__main__':
         help='comparison operator to use to compare actual field value to given value')
     query_append_parser.add_argument('--val', type=str, required=True, help='the value to compare against. Can be a string or numeric')
     query_append_parser.add_argument('--mode', type=str, choices=["OR", "AND"], default="AND", help='optional argument to define append mode. If not present, defaults to "AND"')
-    query_append_parser.add_argument('--q', type=json.loads, default={}, \
+    query_append_parser.add_argument('--q', type=str, default='', \
         help='*must be surrounded with single quotes, and use double quotes within dict* existing query dictionary to add a new term to. If not present, creates a new query')
 
     insert_parser = subparsers.add_parser('insert', help='execute document insert function')
@@ -585,7 +452,8 @@ if __name__ == '__main__':
     if args['subparser_name'] == 'search':
         result = search(args['q'])
     elif args['subparser_name'] == 'add_query_term':
-        result = add_to_query(args['field'], args['compare'], args['val'], existing_q=args['q'], append_mode=args['mode'])
+        #TODO: add "include_synonyms" field
+        result = add_to_query(args['field'], args['compare'], args['val'], query_string=args['q'], append_mode=args['mode'])
     elif args['subparser_name'] == 'insert':
         for i in range(len(args['measurement_results'])):
             args['measurement_results'][i] = json.loads(args['measurement_results'][i])
@@ -618,7 +486,7 @@ if __name__ == '__main__':
                 update_key = args['update_pairs'][i]
                 update_val = args['update_pairs'][i+1]
                 update_keyval_pairs[update_key] = update_val
-        result, error_msg = update_with_versions(args['doc_id'], \
+        result, error_msg = update(args['doc_id'], \
             remove_doc=args['remove_doc'], \
             update_pairs=update_keyval_pairs, \
             new_meas_objects=args['new_meas_objects'], \
