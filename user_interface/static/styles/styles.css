@@ -69,6 +69,25 @@ select {
   margin-bottom: 35px;
 }
 
+.centered-div {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+}
+
+.left-aligned {
+  float: left;
+}
+
+.right-aligned {
+  float: right;
+}
+
+.clear-float {
+  clear: both;
+}
+
 .false-textarea {
   border: none;
   margin: 0;

@@ -1,15 +1,12 @@
 import sys
-#import json
 import argparse
 import datetime
 from functools import wraps
 import scrypt
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import set_ui_db, search_by_id, convert_date_to_str
-#from python_mongo_toolkit import set_ui_db, search_by_id, convert_date_to_str
 from frontend_helpers import do_q_append, parse_existing_q, perform_search, perform_insert, parse_update, perform_update
 from frontend_helpers import _get_user
-#from query_class import Query
 
 app = Flask(__name__)
 sk = None
@@ -19,7 +16,7 @@ with open('app_config.txt', 'r') as config:
     salt = config.readline().strip()
 app.config['SECRET_KEY'] = sk
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
-USER_MODES = ['DUNEreader', 'DUNEwriter']
+USER_MODES = ['DUNEwriter']
 
 
 '''
@@ -42,9 +39,8 @@ def requires_permissions(permissions_levels):
     return decorator
 
 @app.route('/', methods=['GET', 'POST'])
-@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
 def reference_endpoint():
-    return render_template('index.html')
+    return render_template('simple_search.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -89,7 +85,7 @@ def login():
         return render_template('login.html')
 
 @app.route('/logout', methods=['GET'])
-@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
+@requires_permissions(['DUNEwriter', 'Admin'])
 def logout():
     session.clear()
     return redirect(url_for('login'))
@@ -98,8 +94,24 @@ def logout():
 def restricted_page():
     return render_template('restricted_page.html')
 
+@app.route('/simple_search', methods=['GET','POST'])
+def simplesearch_endpoint():
+    if request.method == 'POST':
+        field = "all"
+        comparison = "contains"
+        q_dict, q_str, _, error_msg = do_q_append(request.form)
+
+        results, error_msg = perform_search(q_dict)
+        results_str = [ str(r) for r in results ]
+
+    else:
+        error_msg = ''
+        results_str = ''
+        results = []
+
+    return render_template('simple_search.html', error_msg=error_msg, results_str=results_str, results_dict=results)
+
 @app.route('/search', methods=['GET','POST'])
-#@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
 def search_endpoint():
     final_q_lines_list = []
     append_mode = ''
@@ -135,13 +147,7 @@ def search_endpoint():
         q_dict = {}
         q_str = ''
         num_q_lines = 0
-        #append_mode = ''
-        #final_q_lines_list = []
-        #results = []
-        #results_str = []
         error_msg = ''
-
-    #q_dict = json.dumps(q_dict)
 
     print('num q lines:',num_q_lines)
     return render_template('search.html', existing_query=q_str, append_mode=append_mode, error_msg=error_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
