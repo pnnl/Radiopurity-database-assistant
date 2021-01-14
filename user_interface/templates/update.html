@@ -36,9 +36,9 @@
     
     <form action="{{ url_for('update_endpoint') }}" method="POST">
         <div class="section-container">
-            <h3>document ID: <input type="text" name="doc_id"></h3>
+            <h3>document ID: <input id="doc-id-input" type="text" name="doc_id"></h3>
         </div>
-        <button class="normal-button" type="submit" name="submit_button" value="find_doc">find doc</button>
+        <button id="find-doc-button" class="normal-button" type="submit" name="submit_button" value="find_doc">find doc</button>
     </form>
 {% endif %}
 
@@ -55,7 +55,7 @@
 
                 <div class="section-container">
                     <span>
-                        <input class="remove-checkbox" type="checkbox" name="remove.doc" value="remove">
+                        <input id="remove-checkbox-ele" class="remove-checkbox" type="checkbox" name="remove.doc" value="remove">
                     </span>
                     <span>
                         <p class="info">remove entire document</p>
@@ -166,7 +166,7 @@
                 <h3>data input</h3>
                 <div>
                     <span>
-                        <p class="normal-text">data reference: <input type="text" name="datas_source.reference"></p>
+                        <p class="normal-text">data reference: <input type="text" name="data_source.reference"></p>
                     </span>
                     <span>
                         <p class="info">current value: {{data_reference}}</p>
@@ -180,7 +180,7 @@
                 </div>
                 <div>
                     <span>
-                        <p class="normal-text">data input name (required): <input required type="text" name="data_source.input.name"></p>
+                        <p class="normal-text">data input name (required): <input type="text" name="data_source.input.name"></p>
                     </span>
                     <span>
                         <p class="info">current value: {{data_input_name}}</p>
@@ -566,7 +566,7 @@
         </div>
 
         <div class="section-container">
-            <button class="submit-button" type="submit" name="submit_button" value="update_doc">update doc</button>
+            <button id="update-doc-button" class="submit-button" type="submit" name="submit_button" value="update_doc">update doc</button>
         <div class="section-container">
         
     </form>

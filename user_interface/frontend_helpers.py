@@ -2,8 +2,6 @@ import re
 #import json
 from pymongo import MongoClient
 from dunetoolkit import Query, add_to_query, search, insert, update, convert_date_to_str
-#from python_mongo_toolkit import add_to_query, search, insert, update, convert_date_to_str
-#from query_class import Query
 
 def _get_user(user, db_name):
     client = MongoClient('localhost', 27017)
@@ -67,7 +65,7 @@ def perform_search(curr_q, coll_type=''):
     # convert datetime objects to strings for UI display
     for i in range(len(results)):
         for j in range(len(results[i]['measurement']['date'])):
-            results[i]['measurement']['date'][j] = convert_date_to_str(results[i]['measurement']['date'][j])
+                results[i]['measurement']['date'][j] = convert_date_to_str(results[i]['measurement']['date'][j])
         for j in range(len(results[i]['data_source']['input']['date'])):
             results[i]['data_source']['input']['date'][j] = convert_date_to_str(results[i]['data_source']['input']['date'][j])
 
@@ -216,6 +214,9 @@ def parse_update(form):
             if vals[0] is None or vals[0] == '':
                 update = []
 
+            for i in range(len(update)):
+                update[i] = convert_str_to_float(update[i])
+
             update_pairs['measurement.results.'+str(num_measurement_results-1)+'.value'] = update
 
     # assemble newly-added measurement results
@@ -244,13 +245,16 @@ def parse_update(form):
         if new_meas_element["value"][0] == '':
             new_meas_element["value"] = []
 
+        for i in range(len(new_meas_element["value"])):
+            new_meas_element["value"][i] = convert_str_to_float(new_meas_element["value"][i])
+
         # add new object to the "new additions" list
         add_eles.append(new_meas_element)
 
     # go over non-measurement_result fields looking for updates
     non_meas_result_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
     for field in non_meas_result_fields:
-        val = form.get(field, '')
+        val = form.get(field, '') #convert_str_to_float(form.get(field, ''))
         do_remove = form.get('remove.'+field, '') != ''
     
         if do_remove:
@@ -266,8 +270,8 @@ def parse_update(form):
     return doc_id, remove_doc, update_pairs, remove_meas_indices, add_eles
 
 
-def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles, do_update_assay_request=False):
-    new_doc_id, error_msg = update(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices, do_update_assay_request=do_update_assay_request)
+def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles, is_assay_request_update=False, is_assay_request_verify=False):
+    new_doc_id, error_msg = update(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices, is_assay_request_update=is_assay_request_update, is_assay_request_verify=is_assay_request_verify)
     return new_doc_id, error_msg
 
 

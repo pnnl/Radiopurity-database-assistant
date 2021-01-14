@@ -33,7 +33,7 @@
     {% if (num_q_lines > 0) %}
         <div class="section-container">
             <h3>CURRENT QUERY</h3>
-            <textarea class="false-textarea" name="existing_query" rows="{{num_q_lines}}" cols="50" readonly>{{existing_query}}</textarea>
+            <textarea id="existing-query-text" class="false-textarea" name="existing_query" rows="{{num_q_lines}}" cols="50" readonly>{{existing_query}}</textarea>
             <br>
             <textarea class="false-textarea" name="append_mode" rows="1" cols="5" readonly>{{append_mode}}</textarea>
         </div>
@@ -79,7 +79,7 @@
 
             <span>
                 <h3>value:</h3>
-                <textarea name="query_value" rows="1" cols="15"></textarea>
+                <textarea id="query_value" name="query_value" rows="1" cols="15"></textarea>
                 <br>
                 <input type="checkbox" name="include_synonyms" value="true" checked>
                 <label class="normal-text" for="include_synonyms">include synonyms</label>
@@ -88,10 +88,10 @@
 
         <div>
             <span>
-                <button class="normal-button" type="submit" name="append_button" value="do_and">AND</button>
+                <button id="query-and-button" class="normal-button" type="submit" name="append_button" value="do_and">AND</button>
             </span>
             <span>
-                <button class="normal-button" type="submit" name="append_button" value="do_or">OR</button/>
+                <button id="query-or-button" class="normal-button" type="submit" name="append_button" value="do_or">OR</button/>
             </span>
             <span>
                 <p class="info">add another query term</p>
@@ -100,7 +100,7 @@
 
         <div>
             <span>
-                <input class="submit-button" type="submit" value="search">
+                <input id="submit-query" class="submit-button" type="submit" value="search">
             </span>
         </div>
     </div>
@@ -113,7 +113,7 @@
 {% endif %}
 
 {% if final_q|length %}
-    <div class="section-container">
+    <div id="final-query-text-container" class="section-container">
         <h3>FINAL QUERY</h3>
         {% for final_q_line in final_q %}
             <p class="normal-text">{{final_q_line}}</p>
@@ -121,7 +121,7 @@
     </div>
 {% endif %}
 
-<div class="section-container">
+<div id="query-results-container" class="section-container">
     {% if results_str|length %}
         <h3>RESULTS</h3>
         <p class="info">num records: {{results_str|length}}</p>

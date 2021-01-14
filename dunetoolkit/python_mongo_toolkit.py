@@ -26,6 +26,7 @@ def set_ui_db(db_name, coll_name):
     global coll
     global old_versions_coll
     global assay_requests_coll
+    global assay_requests_old_versions_coll
 
     valid_dbs = [ ele['name'] for ele in list(client.list_databases()) ]
     if db_name not in valid_dbs:
@@ -37,10 +38,14 @@ def set_ui_db(db_name, coll_name):
 
     old_versions_coll_name = coll_name + '_oldversions'
     assay_requests_coll_name = coll_name + '_assay_requests'
+    assay_requests_old_versions_coll_name = coll_name + '_assay_requests_old_versions'
 
     coll = client[db_name][coll_name]
     old_versions_coll = client[db_name][old_versions_coll_name]
     assay_requests_coll = client[db_name][assay_requests_coll_name]
+    assay_requests_old_versions_coll = client[db_name][assay_requests_old_versions_coll_name]
+
+    print('CHANGING BACKEND TO',db_name, coll_name)
     return True
 
 def _get_specified_collection(collection_name):
@@ -49,6 +54,10 @@ def _get_specified_collection(collection_name):
         collection = old_versions_coll
     elif collection_name == 'assay_requests':
         collection = assay_requests_coll
+    elif collection_name == 'assay_requests_old_versions':
+        collection = assay_requests_old_versions_coll
+    else:
+        pass # don't change the collection
     return collection
 
 
@@ -106,9 +115,9 @@ def search_by_id(doc_id, coll_type=''):
 '''
 helper functions for update
 '''
-def _get_existing_doc(doc_id, update_from_coll):
+def _get_existing_doc(doc_id, update_from_coll_name):
     parent_q = {'_id':ObjectId(doc_id)}
-    collection = _get_specified_collection(update_from_coll)
+    collection = _get_specified_collection(update_from_coll_name)
     parent_resp = collection.find(parent_q)
     parent_doc = list(parent_resp)[0]
     return parent_doc
@@ -158,7 +167,7 @@ def _update_nonmeas_fields(new_doc, update_pairs_copy):
         if update_keys[-1] == 'date':
             update_val = convert_str_list_to_date(update_val)
             if update_val is None:
-                error_msg = 'one of the values for '+update_key+' cannot be converted to a date object'
+                error_msg = 'one of the values in '+str(update_val)+' for '+update_key+' cannot be converted to a date object'
                 print(error_msg)
                 return None, error_msg
 
@@ -176,6 +185,7 @@ def _update_nonmeas_fields(new_doc, update_pairs_copy):
             if len(update_keys) == 3:
                 new_doc[update_keys[0]][update_keys[1]][update_key_2] = update_val
             elif len(update_keys) == 4:
+                print('"""',update_keys)
                 new_doc[update_keys[0]][update_keys[1]][update_key_2][update_keys[3]] = update_val
 
     return new_doc, ''
@@ -205,12 +215,16 @@ def _update_new_doc(new_doc, meas_remove_indices, new_meas_objects, update_pairs
 
     return new_doc, ''
 
-def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll, update_to_coll, do_update_assay_request):
+def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll_name, old_versions_coll_name, move_to_coll_name):
     new_doc_id = None
     update_ok = True
-    collection = _get_specified_collection(update_to_coll)
+
+    collection = _get_specified_collection(move_to_coll_name)
+    old_versions_collection = _get_specified_collection(old_versions_coll_name)
+    original_collection = _get_specified_collection(update_from_coll_name)
+
+    # if the action is not to remove the entire doc, try to insert it into current versions collection
     if not do_remove_doc:
-        # insert new doc into current versions collection
         try:
             new_doc_id = collection.insert_one(new_doc).inserted_id
             update_ok = True
@@ -218,23 +232,21 @@ def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll, upda
             update_ok = False
 
     # clean up database if there is an issue inserting the new doc
-    if not do_remove_doc and not update_ok:
+    if not update_ok:
         collection.delete_one(new_doc)
 
-    if update_ok:
-        if not do_update_assay_request:
-            try:
-                # add old doc to old versions collection (unless it's an update of an assay request, in which we don't add the old doc to anything, we just get rid of it)
-                old_versions_coll.insert_one(parent_doc)
-                update_ok = True
-            except:
-                update_ok = False
+    else:
+        try:
+            # add old doc to old versions collection (unless it's an update of an assay request, in which we don't add the old doc to anything, we just get rid of it)
+            old_versions_collection.insert_one(parent_doc)
+            update_ok = True
+        except:
+            update_ok = False
 
         if update_ok:
             # remove old doc from current versions collection
-            collection = _get_specified_collection(update_from_coll)
             parent_q = {'_id':parent_doc['_id']}
-            removeold_resp = collection.delete_one(parent_q)
+            removeold_resp = original_collection.delete_one(parent_q)
 
     return new_doc_id
 
@@ -242,19 +254,29 @@ def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll, upda
 RETURNS: ObjectId or None (new document ID)
          str (error message)
 '''
-def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[], do_update_assay_request=False):
+def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[], is_assay_request_update=False, is_assay_request_verify=False):
     # make copy of update_pairs dict in case values change; don't want that to change values in the func calling this
     update_pairs_copy = deepcopy(update_pairs)
+    print(update_pairs_copy)
 
-    if do_update_assay_request:
-        update_from_coll = 'assay_requests'
-        update_to_coll = ''
+    # get appropriate database collection names for the situation
+    if is_assay_request_verify:
+        update_from_coll_name = 'assay_requests' # find old doc in requests collection
+        update_to_coll_name = '' # insert verified doc into main collection
+        old_versions_coll_name = 'assay_requests_old_versions'
+    elif is_assay_request_update:
+        update_from_coll_name = 'assay_requests'
+        update_to_coll_name = 'assay_requests' # insert updated doc into requests collection
+        old_versions_coll_name = 'assay_requests_old_versions'
     else:
-        update_from_coll = ''
-        update_to_coll = ''
+        update_from_coll_name = '' # find old doc in main collection
+        update_to_coll_name = '' # insert updated doc into main colleciton
+        old_versions_coll_name = 'old_versions'
+
+    print('UPDATING:','|',update_from_coll_name,'|',update_to_coll_name,'|',old_versions_coll_name,'|')
 
     # find existing doc to update
-    parent_doc = _get_existing_doc(doc_id, update_from_coll)
+    parent_doc = _get_existing_doc(doc_id, update_from_coll_name)
 
     # create child (new record) based off of parent doc
     new_doc = deepcopy(parent_doc)
@@ -268,7 +290,7 @@ def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_
         return None, error_msg
 
     # do update in database, move old version, etc.
-    new_doc_id = _update_databases(new_doc, parent_doc, remove_doc, update_from_coll, update_to_coll, do_update_assay_request)
+    new_doc_id = _update_databases(new_doc, parent_doc, remove_doc, update_from_coll_name, old_versions_coll_name, update_to_coll_name)
 
     return new_doc_id, ''
 
