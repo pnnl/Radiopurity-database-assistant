@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
+</head>
+
+<body>
+
+<!-- display logos for dune, pnnl, and radiopurity -->
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/dune_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
+</div>
+
+<div>
+    <a href="{{ url_for('logout') }}">
+        <p class="logout-link">logout</p>
+    </a>
+</div>
+
+<h1>Assay Request Search</h1>
+
+<!--<h3>this UI queries the {{db_name}} database</h3>-->
+
+<form action="{{ url_for('assay_request_search_endpoint') }}" method="POST">
+    {% if (num_q_lines > 0) %}
+        <div class="section-container">
+            <h3>CURRENT QUERY</h3>
+            <textarea class="false-textarea" name="existing_query" rows="{{num_q_lines}}" cols="50" readonly>{{existing_query}}</textarea>
+            <br>
+            <textarea class="false-textarea" name="append_mode" rows="1" cols="5" readonly>{{append_mode}}</textarea>
+        </div>
+    {% endif %}
+
+    <div class="section-container">
+        <div>
+            <span>
+                <h3>field:</h3>
+                <select id="query_field" name="query_field">
+                    <option id="removable" value="all">all</option>
+                    <option value="grouping">grouping</option>
+                    <option value="sample.name">sample.name</option>
+                    <option value="sample.description">sample.description</option>
+                    <option value="sample.source">sample.source</option>
+                    <option value="sample.id">sample.id</option>
+                    <option value="sample.owner.name">sample.owner.name</option>
+                    <option value="sample.owner.contact">sample.owner.contact</option>
+                    <option value="measurement.practitioner.name">measurement.practitioner.name</option>
+                    <option value="measurement.practitioner.contact">measurement.practitioner.contact</option>
+                    <option value="measurement.technique">measurement.technique</option>
+                    <option value="measurement.institution">measurement.institution</option>
+                    <option value="measurement.date">measurement.date</option>
+                    <option value="measurement.description">measurement.description</option>
+                    <option value="measurement.requestor.name">measurement.requestor.name</option>
+                    <option value="measurement.requestor.contact">measurement.requestor.contact</option>
+                    <option value="data_source.reference">source.reference</option>
+                    <option value="data_source.input.name">source.input.name</option>
+                    <option value="data_source.input.contact">source.input.contact</option>
+                    <option value="data_source.input.date">source.input.date</option>
+                    <option value="data_source.input.notes">source.input.notes</option>
+                </select>
+            </span>
+
+            <span>
+                <h3>comparison:</h3>
+                <select id="comparison_operator" name="comparison_operator"></select>
+            </span>
+
+            <span>
+                <h3>value:</h3>
+                <textarea name="query_value" rows="1" cols="15"></textarea>
+                <br>
+                <input type="checkbox" name="include_synonyms" value="true" checked>
+                <label class="normal-text" for="include_synonyms">include synonyms</label>
+            </span>
+        </div>
+
+        <div>
+            <span>
+                <button class="normal-button" type="submit" name="append_button" value="do_and">AND</button>
+            </span>
+            <span>
+                <button class="normal-button" type="submit" name="append_button" value="do_or">OR</button/>
+            </span>
+            <span>
+                <p class="info">add another query term</p>
+            </span>
+        </div>
+
+        <div>
+            <span>
+                <input class="submit-button" type="submit" value="search">
+            </span>
+        </div>
+    </div>
+</form>
+
+{% if error_msg|length %}
+    <div class="section-container">
+        <p class="normal-text">query error: {{error_msg}}</p>
+    </div>
+{% endif %}
+
+{% if final_q|length %}
+    <div class="section-container">
+        <h3>FINAL QUERY</h3>
+        {% for final_q_line in final_q %}
+            <p class="normal-text">{{final_q_line}}</p>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="section-container">
+    {% if results_str|length %}
+        <h3>RESULTS</h3>
+        <p class="info">num records: {{results_str|length}}</p>
+        {% for result in results_str %}
+            <!--<button type="button" class="collapsible">{{result|truncate(100, True)}}</button> -->
+            
+            {% set result_dict = results_dict[loop.index-1] %}
+            {% set meas_results = result_dict["measurement"]["results"] %}
+            
+            <button type="button" class="collapsible">
+                <span class="collapsiblebutton-name"><b>name:</b> {{result_dict["sample"]["name"]}}</span>
+                <span class="collapsiblebutton-name"><b>grouping:</b> {{result_dict["grouping"]}}</span>
+                <span class="collapsiblebutton-vals">
+                    {% for meas_ele in meas_results %}
+                        <b>{{meas_ele["isotope"]}}</b>: {{meas_ele["value"][0]}}{{meas_ele["unit"]}}
+                    {% endfor %}
+                </span>
+            </button>
+            
+            <div class="collapsible-content">
+                <div class="collapsible-line">
+                    <p class="collapsible-field">database id:</p>
+                    <p class="collapsible-value">{{ result_dict["_id"] }}</p>
+                </div>
+                <div class="collapsible-line">
+                    <p class="collapsible-field">grouping:</p>
+                    <p class="collapsible-value">{{ result_dict["grouping"] }}</p>
+                </div>
+                
+                <!-- SAMPLE INFO -->
+                <div>
+                    {% if result_dict["sample"]["name"]|length > 0 or result_dict["sample"]["description"]|length > 0 or result_dict["sample"]["source"]|length > 0 %}
+                        <div class="collapsible-line">
+                            <p class="collapsible-field">sample info:</p>
+                        </div>
+                        
+                        <div class="collapsible-subsection">                    
+                            {% if result_dict["sample"]["name"]|length > 0 %}
+                                <div class="collapsible-line">
+                                    <p class="collapsible-field">name:</p>
+                                    <p class="collapsible-value">{{ result_dict["sample"]["name"] }}</p>
+                                </div>
+                            {% endif %}
+                            
+                            {% if result_dict["sample"]["description"]|length > 0 %}
+                                <div class="collapsible-line">
+                                    <p class="collapsible-field">description:</p>
+                                    <p class="collapsible-value">{{ result_dict["sample"]["description"] }}</p>
+                                </div>
+                            {% endif %}
+                            
+                            {% if result_dict["sample"]["source"]|length > 0 %}
+                                <div class="collapsible-line">
+                                    <p class="collapsible-field">source:</p>
+                                    <p class="collapsible-value">{{ result_dict["sample"]["source"] }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- MEASUREMENT INFO -->
+                <div>
+                    <div class="collapsible-line">
+                        <p class="collapsible-field">measurement info:</p>
+                    </div>
+                    
+                    <div class="collapsible-subsection">
+                        {% if result_dict["measurement"]["technique"]|length > 0 %}
+                            <div class="collapsible-line">
+                                <p class="collapsible-field">technique:</p>
+                                <p class="collapsible-value">{{ result_dict["measurement"]["technique"] }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        {% if result_dict["measurement"]["institution"]|length > 0 %}
+                            <div class="collapsible-line">
+                                <p class="collapsible-field">institution:</p>
+                                <p class="collapsible-value">{{ result_dict["measurement"]["institution"] }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        {% if result_dict["measurement"]["description"]|length > 0 %}
+                            <div class="collapsible-line">
+                                <p class="collapsible-field">description:</p>
+                                <p class="collapsible-value">{{ result_dict["measurement"]["description"] }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="collapsible-line">
+                        <p class="collapsible-field">measurement values:</p>
+                    </div>
+                    
+                    <div class="collapsible-subsection">
+                        <!-- measurement results -->
+                        {% for meas in meas_results %}
+                            <div class="collapsible-line">
+                                <p class="collapsible-value">{{ meas["isotope"] }}</p>
+                                {% if meas["type"] == "measurement" %}
+                                    {% if meas["value"]|length == 1 %}
+                                        <p class="collapsible-field">value:</p>
+                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
+                                    {% elif meas["value"]|length == 2 %}
+                                        <p class="collapsible-field">value:</p>
+                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
+                                        <p class="collapsible-field">symmetric error:</p>
+                                        <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
+                                    {% elif meas["value"]|length == 3 %}
+                                        <p class="collapsible-field">value:</p>
+                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
+                                        <p class="collapsible-field">symmetric error:</p>
+                                        <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
+                                        <p class="collapsible-field">asymmetric error:</p>
+                                        <p class="collapsible-value">{{ meas["value"][2] }} {{ meas["unit"] }}</p>
+                                    {% endif %}
+
+                                {% elif meas["type"] == "limit" %}
+                                    {% if meas["value"]|length == 1 %}
+                                        <p class="collapsible-field">less than:</p>
+                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
+                                    {% elif meas["value"]|length == 2 %}
+                                        <p class="collapsible-field">less than:</p>
+                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
+                                        <p class="collapsible-field">confidence:</p>
+                                        <p class="collapsible-value">{{ meas["value"][1] }}%</p>
+                                    {% endif %}
+
+                                {% elif meas["type"] == "range" %}
+                                    {% if meas["value"]|length == 1 %}
+                                        <p class="collapsible-field">greater than:</p>
+                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
+                                    {% elif meas["value"]|length == 2 %}
+                                        <p class="collapsible-field">greater than:</p>
+                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
+                                        <p class="collapsible-field">less than:</p>
+                                        <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
+                                    {% elif meas["value"]|length == 3 %}
+                                        <p class="collapsible-field">greater than:</p>
+                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
+                                        <p class="collapsible-field">less than:</p>
+                                        <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
+                                        <p class="collapsible-field">confidence:</p>
+                                        <p class="collapsible-value">{{ meas["value"][2] }}%</p>
+                                    {% endif %}
+                                    
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PEOPLE INFO -->
+                <div>
+                    <!-- data input -->
+                    <div class="collapsible-line">
+                        {% if result_dict["data_source"]["input"]["name"]|length > 0 and result_dict["data_source"]["input"]["contact"]|length > 0 %}
+                            <p class="collapsible-field">data input:</p>
+                            <p class="collapsible-value">{{result_dict["data_source"]["input"]["name"]}} </p>
+                            <p class="collapsible-field">contact:</p>
+                            <p class="collapsible-value">{{result_dict["data_source"]["input"]["contact"]}} </p>
+                        {% elif result_dict["data_source"]["input"]["name"]|length > 0 %}
+                            <p class="collapsible-field">data input:</p>
+                            <p class="collapsible-value">{{result_dict["data_source"]["input"]["name"]}} </p>
+                        {% endif %}
+                        {% if result_dict["data_source"]["input"]["date"]|length == 1 %}
+                            <p class="collapsible-field">data input date:</p>
+                            <p class="collapsible-value">{{ result_dict["data_source"]["input"]["date"][0] }}</p>
+                        {% elif result_dict["data_source"]["input"]["date"]|length == 2 %}
+                            <p class="collapsible-field">data input date range:</p>
+                            <p class="collapsible-value">{{ result_dict["data_source"]["input"]["date"][0] }} - {{ result_dict["data_source"]["input"]["date"][1] }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- measurement practitioner -->
+                    <div class="collapsible-line">
+                        {% if result_dict["measurement"]["practitioner"]["name"]|length > 0 and result_dict["measurement"]["practitioner"]["contact"]|length > 0 %}
+                            <p class="collapsible-field">measurement practitioner:</p>
+                            <p class="collapsible-value">{{result_dict["measurement"]["practitioner"]["name"]}} </p>
+                            <p class="collapsible-field">contact:</p>
+                            <p class="collapsible-value">{{result_dict["measurement"]["practitioner"]["contact"]}} </p>
+                        {% elif result_dict["measurement"]["practitioner"]["name"]|length > 0 %}
+                            <p class="collapsible-field">measurement practitioner:</p>
+                            <p class="collapsible-value">{{result_dict["measurement"]["practitioner"]["name"]}} </p>
+                        {% endif %}
+                        {% if result_dict["measurement"]["date"]|length == 1 %}
+                            <p class="collapsible-field">measurement date:</p>
+                            <p class="collapsible-value">{{ result_dict["measurement"]["date"][0] }}</p>
+                        {% elif result_dict["measurement"]["date"]|length == 2 %}
+                            <p class="collapsible-field">measurement date range:</p>
+                            <p class="collapsible-value">{{ result_dict["measurement"]["date"][0] }} - {{ result_dict["measurement"]["date"][1] }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- measurement requestor -->
+                    <div class="collapsible-line">
+                        {% if result_dict["measurement"]["requestor"]["name"]|length > 0 and result_dict["measurement"]["requestor"]["contact"]|length > 0 %}
+                            <p class="collapsible-field">measurement requestor:</p>
+                            <p class="collapsible-value">{{result_dict["measurement"]["requestor"]["name"]}} </p>
+                            <p class="collapsible-field">contact:</p>
+                            <p class="collapsible-value">{{result_dict["measurement"]["requestor"]["contact"]}} </p>
+                        {% elif result_dict["measurement"]["requestor"]["name"]|length > 0 %}
+                            <p class="collapsible-field">measurement requestor:</p>
+                            <p class="collapsible-value">{{result_dict["measurement"]["requestor"]["name"]}} </p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- sample owner -->
+                    <div class="collapsible-line">
+                        {% if result_dict["sample"]["owner"]["name"]|length > 0 and result_dict["sample"]["owner"]["contact"]|length > 0 %}
+                            <p class="collapsible-field">sample owner:</p>
+                            <p class="collapsible-value">{{result_dict["sample"]["owner"]["name"]}} </p>
+                            <p class="collapsible-field">contact:</p>
+                            <p class="collapsible-value">{{result_dict["sample"]["owner"]["contact"]}} </p>
+                        {% elif result_dict["sample"]["owner"]["name"]|length > 0 %}
+                            <p class="collapsible-field">sample owner:</p>
+                            <p class="collapsible-value">{{result_dict["sample"]["owner"]["name"]}} </p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+
+<script>
+    window.onload = function() {
+        // levels is an Object
+        var query_operators = {
+            "all":{"contains":"contains"},
+            "grouping":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.description":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.source":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.id":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.owner.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "sample.owner.contact":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.practitioner.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.practitioner.contact":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.technique":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.institution":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.date":{"equals":"eq", "less than":"lt", "less than or equal to":"lte", "greater than":"gt", "greater than or equal to":"gte"},
+            "measurement.description":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.requestor.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "measurement.requestor.contact":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "data_source.reference":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "data_source.input.name":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "data_source.input.contact":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"},
+            "data_source.input.date":{"equals":"eq", "less than":"lt", "less than or equal to":"lte", "greater than":"gt", "greater than or equal to":"gte"},
+            "data_source.input.notes":{"contains":"contains", "does not contain":"notcontains", "equals":"eq"}
+        };
+
+        // grab references to the drop-downs
+        field_select = document.querySelector('#query_field');
+        comparison_select = document.querySelector('#comparison_operator');
+
+        // populate drop-down menus
+        setOptions(comparison_select, query_operators[field_select.value]);
+  
+        // attach a change event listener to the themes drop-down
+        field_select.addEventListener('change', function() {
+            setOptions(comparison_select, query_operators[field_select.value]);
+        });
+    
+        function setOptions(dropDownObject, options) {
+            // clear out any existing values
+            dropDownObject.innerHTML = '';
+            // insert the new options into the drop-down
+            Object.keys(options).forEach(function(value) {
+                dropDownObject.innerHTML += '<option value="' + options[value] + '">' + value + '</option>';
+            });
+        }
+    };
+</script>
+
+<!--
+<script>
+    field_selector = document.querySelector('#query_field');
+    append_buttons = document.querySelectorAll('button[name="append_button"]');
+    //alert(field_selector.value);
+    for (var i = 0; i < append_buttons.length; i++) {
+        append_button = append_buttons[i];
+        append_button.addEventListener('click', function() {
+            existing_q = document.querySelector('textarea[name="existing_query"]').value;
+            if (existing_q.includes("all")) {
+                console.log('"all" present');
+                document.getElementById('removable').disabled = true;
+            } else {
+                console.log('"all" not present');
+                document.getElementById('removable').disabled = false;
+            }
+            alert(document.getElementById('removable').disabled);
+        });
+    };
+</script>
+-->
+
+<script>
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+
+    for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.display === "block") {
+                content.style.display = "none";
+            } else {
+                content.style.display = "block";
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
+

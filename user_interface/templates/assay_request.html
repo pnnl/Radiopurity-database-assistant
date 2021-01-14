@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
+</head>
+
+<body>
+
+<!-- display logos for dune, pnnl, and radiopurity -->
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/dune_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
+</div>
+
+<div>
+    <a href="{{ url_for('logout') }}">
+        <p class="logout-link">logout</p>
+    </a>
+</div>
+
+<h1>Assay Request</h1>
+
+
+{% if new_doc_msg|length > 0 %}
+    <div class="section-container">
+        <h3>{{new_doc_msg}}</h3>
+    </div>
+{% endif %}
+
+<form name="new_record_vals" action="{{ url_for('assay_request_endpoint') }}" method="POST">
+    <div class="section-container">
+        <div id="input-section">
+            <div>
+                <span>
+                    <p class="normal-text">experiment name or similar (required): <input type="text" required name="grouping"></p>
+                </span>
+            </div>
+
+            <div>
+                <span>
+                    <p class="normal-text">concise sample description (required): <input type="text" required name="sample.name"></p>
+                </span>
+            </div>
+            <div>
+                <span>
+                    <p class="normal-text">detailed sample description: <input type="text" name="sample.description"></p>
+                </span>
+            </div>
+            <div>
+                <span>
+                    <p class="normal-text">where the sample came from: <input type="text" name="sample.source"></p>
+                </span>
+            </div>
+            <div>
+                <span>
+                    <p class="normal-text">sample identification number: <input type="text" name="sample.id"></p>
+                </span>
+            </div>
+            <div>
+                <span>
+                    <p class="normal-text">name of the person/people who own the sample (required): <input type="text" required name="sample.owner.name"></p>
+                </span>
+            </div>
+            <div>
+                <span>
+                    <p class="normal-text">email of the person who owns the sample (required): <input type="email" required name="sample.owner.contact"></p>
+                </span>
+            </div>
+        </div>
+
+        <div>
+            <span>
+                <input id="submit-record-button" class="submit-button" type="submit" value="insert">
+            </span>
+        </div>
+    </div>
+</form>
+
+</body>
+</html>
+
