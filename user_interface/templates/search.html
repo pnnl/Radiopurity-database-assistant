@@ -2,6 +2,7 @@
 <html>
 
 <head>
+<script type="text/javascript" src="{{ url_for('static', filename='javascript_funcs.js') }}"></script>
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
 </head>
 
@@ -27,7 +28,55 @@
 <h1>Query Assistant</h1>
 
 <!--<h3>this UI queries the {{db_name}} database</h3>-->
-<p class="info">Note that this search assistant only performs simple queries; if you wish to perform a nested query or a query with complicated "AND" and "OR" functionality, you are advised to use the DUNEdb python toolkit to query for all records and then filter the records (returned as JSON) as you desire.</p>
+<!--<p class="info">Note that this search assistant only performs simple queries; if you wish to perform a nested query or a query with complicated "AND" and "OR" functionality, you are advised to use the DUNEdb python toolkit to query for all records and then filter the records (returned as JSON) as you desire.</p>-->
+
+<button id="query-help-button" class="normal-button" onclick="showHelp()">show query help</button>
+<div id="query-help" class="section-container">
+    <p class="normal-text">
+        This page allows for assembly multi-term queries where each term describes a condition for a specific field.
+    </p>
+    <ul class="normal-text">
+        <li>Use the <b>field</b> dropdown to select the document field to search on.</li>
+        <li>
+            The options in the <b>comparison</b> dropdown change depending on what field is currently selected, in order to only display valid comparison types for that field.
+            For example, the "grouping" field cannot be compared against a value using the "greater than" comparison because the value should be a word, not a number.
+        </li>
+        <li>Enter any text or numbers into the <b>value</b> field as the value to compare the specified field against using the specified comparison operator.</li>
+        <li>
+            The <b>include synonyms</b> checkbox forces the query to not only search for the exact value in the "value" field, but also for all synonyms of that value that are on record.
+            For example, if "copper" is entered into the "value" textbox and the "include synonyms" box is checked, the query will search for documents containing "copper" or "Cu."
+            This option is checked by default.
+            Deselect this box in order to only search for the exact value in the "value" field.
+        </li>
+        <li>
+            Click on the <b>AND</b> button to add another term to the query using the "and" conjunction. 
+            This causes the query to search for documents where the current term (that was just added) is fulfilled AND the next term (that is about to be added) is also fulfilled.
+        </li>
+        <li>
+            Click on the <b>OR</b> button to add another term to the query using the "or" conjunction. 
+            This causes the query to search for documents where either the next term OR the current term is fulfilled.
+        </li>
+    </ul>
+    <p class="normal-text">
+        Example: search for documents where the sample description contains the word "copper" or "Cu" and the grouping is "ILIAS UKDM" by: 
+    </p>
+    <ol class="normal-text">
+        <li>selecting "sample.description" from the "field" dropdown,</li>
+        <li>selecting "contains" from the "comparison" dropdown,</li>
+        <li>entering the word "copper" into the "value" textbox (do not deselect the "include synonyms" box),</li>
+        <li>pressing the "AND" button,</li>
+        <li>selecting "grouping" from the "field" dropdown,</li>
+        <li>selecting "equals" from the "comparison" dropdown,</li>
+        <li>entering the phrase "ILIAS UKDM" into the "value" field, and</li>
+        <li>pressing the "search" button.</li>
+    </ol>
+    <p class="normal-text">
+        As terms are added to the query, the previously added terms are displayed above the query creation boxes in the "current query" section.
+        Once the <b>search</b> is pressed, the final query is displayed below the creation boxes in the "final query" section and the results are displayed at the bottom of the page as a list of summaries.
+        To view more details on an individual document in the results list, click on its summary.
+        Click on the summary again to hide the full document.
+    </p>
+</div>
 
 <form action="{{ url_for('search_endpoint') }}" method="POST">
     {% if (num_q_lines > 0) %}

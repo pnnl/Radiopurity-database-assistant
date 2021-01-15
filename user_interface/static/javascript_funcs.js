@@ -23,3 +23,13 @@ function validateForm() {
     */
     document.getElementById('submit-record-button').disabled = !validIsotopes; //!(validIsotopes && validUnit);
 }
+
+function showHelp() {
+    var help_div = document.getElementById("query-help");
+    var display_mode = window.getComputedStyle(help_div).display;
+    if (display_mode === "none") {
+        help_div.style.display = "block";
+    } else {
+        help_div.style.display = "none";
+    }
+}
