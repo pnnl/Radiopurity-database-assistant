@@ -90,6 +90,10 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+@app.route('/about', methods=['GET'])
+def about_endpoint():
+    return render_template('about.html')
+
 @app.route('/restricted_page')
 def restricted_page():
     return render_template('restricted_page.html')
