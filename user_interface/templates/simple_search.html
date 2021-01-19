@@ -32,6 +32,13 @@
 <!--<h3>this UI queries the {{db_name}} database</h3>-->
 <!--<p class="info">Note that this search assistant only performs simple queries; if you wish to perform a nested query or a query with complicated "AND" and "OR" functionality, you are advised to use the DUNEdb python toolkit to query for all records and then filter the records (returned as JSON) as you desire.</p>-->
 
+<div>
+    <div class="logo-container right-aligned">
+        <img src="{{ url_for('static', filename='logos/conversion_chart.png') }}"/>
+    </div>
+    <div class="clear-float">
+</div>
+
 <div class="section-container">
     <form action="{{ url_for('simplesearch_endpoint') }}" method="POST">
 

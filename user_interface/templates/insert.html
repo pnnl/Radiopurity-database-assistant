@@ -31,6 +31,12 @@
 <h1>Insertion Assistant</h1>
 
 <!--<h3>documents are inserted into the {{db_name}} database</h3>-->
+<div>
+    <div class="logo-container right-aligned">
+        <img src="{{ url_for('static', filename='logos/conversion_chart.png') }}"/>
+    </div>
+    <div class="clear-float">
+</div>
 
 {% if new_doc_msg|length > 0 %}
     <div class="section-container">

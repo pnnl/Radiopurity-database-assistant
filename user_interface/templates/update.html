@@ -32,6 +32,13 @@
 
 <!--<h3>documents are updated in the {{db_name}} database</h3>-->
 
+<div>
+    <div class="logo-container right-aligned">
+        <img src="{{ url_for('static', filename='logos/conversion_chart.png') }}"/>
+    </div>
+    <div class="clear-float">
+</div>
+
 {% if doc_data == False %}
     {% if message|length %}
         <h3>{{message}}</h3>
