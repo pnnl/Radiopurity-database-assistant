@@ -236,7 +236,6 @@ def update_endpoint():
 
 
 
-
 @app.before_first_request
 def _setup_database():
     global database_name
@@ -244,6 +243,9 @@ def _setup_database():
     #collection_name = 'dune_data'
     #database_name = 'radiopurity_data'
     #collection_name = 'testing'
+#    database_name = 'dune_pytest_data'
+#    collection_name = 'test_data'
+
     successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
         print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
