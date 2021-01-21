@@ -99,7 +99,7 @@ def restricted_page():
     return render_template('restricted_page.html')
 
 @app.route('/search', methods=['GET','POST'])
-#@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
+@requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
 def search_endpoint():
     final_q_lines_list = []
     append_mode = ''
@@ -216,8 +216,6 @@ def update_endpoint():
     return None
 
 
-
-
 @app.before_first_request
 def _setup_database():
     global database_name
@@ -260,6 +258,18 @@ if __name__ == '__main__':
     '''
     database_name = 'dune'
     collection_name = 'dune_data'
+=======
+    
+#    database_name = 'dune'
+#    collection_name = 'dune_data'
+    
+    #database_name = 'radiopurity_data'
+    #collection_name = 'testing'
+    
+    database_name = 'dune_pytest_data'
+    collection_name = 'test_data'
+
+>>>>>>> d438187... Small changes to print statements and test database
     port = 8001
     successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
