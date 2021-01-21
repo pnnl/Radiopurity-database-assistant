@@ -161,6 +161,7 @@ def parse_update(form):
         # check if entire object is to be removed
         if form.get('remove.measurement.results'+str(num_measurement_results)) is not None:
             remove_meas_indices.append(num_measurement_results - 1)
+            continue
 
         for field in ["isotope", "type", "unit"]:
             # get form values

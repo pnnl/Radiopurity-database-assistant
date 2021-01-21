@@ -1,4 +1,6 @@
+import os
 import sys
+import json
 import argparse
 import datetime
 from functools import wraps
@@ -9,12 +11,19 @@ from frontend_helpers import do_q_append, parse_existing_q, perform_search, perf
 from frontend_helpers import _get_user
 
 app = Flask(__name__)
-sk = None
-salt = None
-with open('app_config.txt', 'r') as config:
-    sk = config.readline().strip()
-    salt = config.readline().strip()
-app.config['SECRET_KEY'] = sk
+
+config_name = os.getenv('DUNE_API_CONFIG_NAME')
+if config_name is None:
+    config_name = 'app_config.txt'
+config_dict = None
+
+with open(config_name, 'r') as config:
+    config_dict = json.load(config)
+app.config['SECRET_KEY'] = config_dict['secret_key']
+salt = config_dict['salt']
+database_name = config_dict['database']
+collection_name = config_dict['collection']
+
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
 USER_MODES = ['DUNEwriter']
 
@@ -233,9 +242,8 @@ def _setup_database():
     global database_name
     #database_name = 'dune'
     #collection_name = 'dune_data'
-    database_name = 'radiopurity_data'
-    collection_name = 'testing'
-    port = 8001
+    #database_name = 'radiopurity_data'
+    #collection_name = 'testing'
     successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
         print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
@@ -243,41 +251,4 @@ def _setup_database():
     else:
         print('using mongo database:',database_name)
 
-"""
-if __name__ == '__main__':
-    global database_name
-    '''
-    parser = argparse.ArgumentParser(description='API code for the DUNE project.')
-    parser.add_argument('--port', type=int, default=5000, help='the port number to run the UI on.')
-    parser.add_argument('--db', type=str, choices=['radiopurity', 'dune'], required=False, \
-        help='the type of data to use with the UI. The "radiopurity" option uses the database \
-        containing data extracted from the radiopurity site. The "dune" option uses the database \
-        for data from the DUNE project.')
-    args = parser.parse_args()
-
-    if args.db == 'dune':
-        print('Using dune database')
-        database_name = 'dune'
-        collection_name = 'dune_data'
-    elif args.db == 'radiopurity':
-        print('Using radiopurity database')
-        database_name = 'radiopurity_data'
-        collection_name = 'example_data'
-    else:
-        print('No database specified as argument; using default radiopurity testing database (radiopurity_data.testing).')
-        database_name = 'radiopurity_data'
-        collection_name = 'testing'
-    '''
-    database_name = 'dune'
-    collection_name = 'dune_data'
-    port = 8001
-    successful_change = set_ui_db(database_name, collection_name)
-    if not successful_change:
-        print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
-        sys.exit()
-    else:
-        print('using mongo database:',database_name)
-
-    app.run(host='127.0.0.1', port=port)
-"""
 

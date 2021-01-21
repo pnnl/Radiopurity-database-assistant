@@ -28,7 +28,48 @@
 <p class="normal-text"></p>
 
 <h3>Instructions</h3>
-<p class="normal-text"></p>
+<p class="normal-text">To use the simple search page, simply enter a value that you would like to search for. This search will return all documents from the database where any of the fields contain the search value.</p>
+<br>
+<p class="normal-text">The advanced search page allows for assembly multi-term queries where each term describes a condition for a specific field.</p>
+<ul class="normal-text">
+    <li>Use the <b>field</b> dropdown to select the document field to search on.</li>
+    <li>
+        The options in the <b>comparison</b> dropdown change depending on what field is currently selected, in order to only display valid comparison types for that field.
+        For example, the "grouping" field cannot be compared against a value using the "greater than" comparison because the value should be a word, not a number.
+    </li>
+    <li>Enter any text or numbers into the <b>value</b> field as the value to compare the specified field against using the specified comparison operator.</li>
+    <li>
+        The <b>include synonyms</b> checkbox forces the query to not only search for the exact value in the "value" field, but also for all synonyms of that value that are on record.
+        For example, if "copper" is entered into the "value" textbox and the "include synonyms" box is checked, the query will search for documents containing "copper" or "Cu."
+        This option is checked by default.
+        Deselect this box in order to only search for the exact value in the "value" field.
+    </li>
+    <li>
+        Click on the <b>AND</b> button to add another term to the query using the "and" conjunction. 
+        This causes the query to search for documents where the current term (that was just added) is fulfilled AND the next term (that is about to be added) is also fulfilled.
+    </li>
+    <li>
+        Click on the <b>OR</b> button to add another term to the query using the "or" conjunction. 
+        This causes the query to search for documents where either the next term OR the current term is fulfilled.
+    </li>
+</ul>
+<p class="normal-text">Example: search for documents where the sample description contains the word "copper" or "Cu" and the grouping is "ILIAS UKDM" by: </p>
+<ol class="normal-text">
+    <li>selecting "sample.description" from the "field" dropdown,</li>
+    <li>selecting "contains" from the "comparison" dropdown,</li>
+    <li>entering the word "copper" into the "value" textbox (do not deselect the "include synonyms" box),</li>
+    <li>pressing the "AND" button,</li>
+    <li>selecting "grouping" from the "field" dropdown,</li>
+    <li>selecting "equals" from the "comparison" dropdown,</li>
+    <li>entering the phrase "ILIAS UKDM" into the "value" field, and</li>
+    <li>pressing the "search" button.</li>
+</ol>
+<p class="normal-text">
+    As terms are added to the query, the previously added terms are displayed above the query creation boxes in the "current query" section.
+    Once the <b>search</b> is pressed, the final query is displayed below the creation boxes in the "final query" section and the results are displayed at the bottom of the page as a list of summaries.
+    To view more details on an individual document in the results list, click on its summary.
+    Click on the summary again to hide the full document.
+</p>
 
 <h3>Data</h3>
 <p class="normal-text"></p>
@@ -37,7 +78,8 @@
 <p class="normal-text"></p>
 
 <h3>Citation</h3>
-<p class="normal-text"></p>
+<p class="normal-text">The publication for the original radiopurity database can be found <a href="https://arxiv.org/abs/1604.06169" target="_blank">here</a> and cited as:</p>
+<p class="info">J.C. Loach et al., A Database for Storing the Results of Material Radiopurity Measurements, Nucl. Instr. Meth. A 839 (2016).</p>
 
 <h3>Acknowledgements</h3>
 <p class="normal-text"></p>
