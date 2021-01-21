@@ -23,3 +23,19 @@ function validateForm() {
     */
     document.getElementById('submit-record-button').disabled = !validIsotopes; //!(validIsotopes && validUnit);
 }
+
+function controlDatainputNameRequired(existing_val) {
+    if (document.getElementById('remove-checkbox-ele').checked) {
+        // remove doc box checked --> no new input required
+        document.getElementById('datainput-name-input').required = false;
+    }
+    else if (existing_val.trim() != "") {
+        // remove doc box NOT checked, but we do have existing value for data_input.name --> no new input required
+        document.getElementById('datainput-name-input').required = false;
+    }
+    else {
+        // remove doc box NOT checked, no existing value for data_input.name --> input required
+        document.getElementById('datainput-name-input').required = true;
+    }
+}
+
