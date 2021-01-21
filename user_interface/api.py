@@ -231,34 +231,11 @@ def _setup_database():
     else:
         print('using mongo database:',database_name)
 
-"""
-if __name__ == '__main__':
-    global database_name
-    '''
-    parser = argparse.ArgumentParser(description='API code for the DUNE project.')
-    parser.add_argument('--port', type=int, default=5000, help='the port number to run the UI on.')
-    parser.add_argument('--db', type=str, choices=['radiopurity', 'dune'], required=False, \
-        help='the type of data to use with the UI. The "radiopurity" option uses the database \
-        containing data extracted from the radiopurity site. The "dune" option uses the database \
-        for data from the DUNE project.')
-    args = parser.parse_args()
 
-    if args.db == 'dune':
-        print('Using dune database')
-        database_name = 'dune'
-        collection_name = 'dune_data'
-    elif args.db == 'radiopurity':
-        print('Using radiopurity database')
-        database_name = 'radiopurity_data'
-        collection_name = 'example_data'
-    else:
-        print('No database specified as argument; using default radiopurity testing database (radiopurity_data.testing).')
-        database_name = 'radiopurity_data'
-        collection_name = 'testing'
-    '''
-    database_name = 'dune'
-    collection_name = 'dune_data'
-=======
+
+@app.before_first_request
+def _setup_database():
+    global database_name
     
 #    database_name = 'dune'
 #    collection_name = 'dune_data'
@@ -269,7 +246,6 @@ if __name__ == '__main__':
     database_name = 'dune_pytest_data'
     collection_name = 'test_data'
 
->>>>>>> d438187... Small changes to print statements and test database
     port = 8001
     successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
@@ -278,6 +254,22 @@ if __name__ == '__main__':
     else:
         print('using mongo database:',database_name)
 
-    app.run(host='127.0.0.1', port=port)
-"""
+'''
+@app.route('/change_db', methods=['GET','POST'])
+def change_db():
+    if request.method == 'POST':
+        db_name = request.form.get("database_name", "")
+        coll_name = request.form.get("collection_name", "")
+        database_name = db_name
+        collection_name = coll_name
+        successful_change = set_ui_db(database_name, collection_name)
+        if not successful_change:
+            print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
+        else:
+            print('now using mongo database:',database_name)
+
+    return render_template('change_db.html')
+'''
+
+
 
