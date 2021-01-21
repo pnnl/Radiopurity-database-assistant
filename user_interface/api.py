@@ -1,4 +1,6 @@
+import os
 import sys
+import json
 import argparse
 import datetime
 from functools import wraps
@@ -9,12 +11,19 @@ from frontend_helpers import do_q_append, parse_existing_q, perform_search, perf
 from frontend_helpers import _get_user
 
 app = Flask(__name__)
-sk = None
-salt = None
-with open('app_config.txt', 'r') as config:
-    sk = config.readline().strip()
-    salt = config.readline().strip()
-app.config['SECRET_KEY'] = sk
+
+config_name = os.getenv('DUNE_API_CONFIG_NAME')
+if config_name is None:
+    config_name = 'app_config.txt'
+config_dict = None
+
+with open(config_name, 'r') as config:
+    config_dict = json.load(config)
+app.config['SECRET_KEY'] = config_dict['secret_key']
+salt = config_dict['salt']
+database_name = config_dict['database']
+collection_name = config_dict['collection']
+
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
 USER_MODES = ['DUNEreader', 'DUNEwriter']
 
@@ -221,9 +230,6 @@ def assay_request_endpoint():
         new_doc_msg = 'assay request doc id: '+str(new_doc_id)
         if new_doc_id is None:
             new_doc_msg = "ERROR: record not inserted because "+error_msg
-    else:
-        new_doc_msg = ""
-    return render_template('assay_request.html', new_doc_msg=new_doc_msg)
 
 @app.route('/assay_request_search', methods=['GET','POST'])
 @requires_permissions(['DUNEwriter', 'Admin'])
@@ -346,10 +352,9 @@ def _setup_database():
     #database_name = 'radiopurity_data'
     #collection_name = 'testing'
     
-    database_name = 'dune_pytest_data'
-    collection_name = 'test_data'
+#    database_name = 'dune_pytest_data'
+#    collection_name = 'test_data'
 
-    port = 8001
     successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
         print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
