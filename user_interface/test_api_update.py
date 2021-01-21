@@ -248,16 +248,16 @@ def test_update_new_meas_obj():
     add_meas_button = browser.find_element_by_id('add-meas-button')
     add_meas_button.click()
     
-    browser.find_element_by_name('measurement.results.isotope2').send_keys('U-235')
+    browser.find_element_by_name('new.measurement.results.isotope1').send_keys('U-235')
     
-    meas_type_select = webdriver.support.ui.Select(browser.find_element_by_name('measurement.results.type2'))
+    meas_type_select = webdriver.support.ui.Select(browser.find_element_by_name('new.measurement.results.type1'))
     meas_type_select.select_by_value('range')
 
-    meas_type_select = webdriver.support.ui.Select(browser.find_element_by_name('measurement.results.unit2'))
+    meas_type_select = webdriver.support.ui.Select(browser.find_element_by_name('new.measurement.results.unit1'))
     meas_type_select.select_by_value('g')
 
-    browser.find_element_by_name('measurement.results.valueA2').send_keys('0.3')
-    browser.find_element_by_name('measurement.results.valueB2').send_keys('2.1')
+    browser.find_element_by_name('new.measurement.results.valueA1').send_keys('0.3')
+    browser.find_element_by_name('new.measurement.results.valueB1').send_keys('2.1')
 
     # update doc
     update_button = browser.find_element_by_id('update-doc-button')
@@ -270,10 +270,10 @@ def test_update_new_meas_obj():
     assert new_doc is not None
 
     # ensure updated values are updated
-    assert new_doc['measurement']['results'][1]['isotope'] == 'U-235'
-    assert new_doc['measurement']['results'][1]['unit'] == 'g'
-    assert new_doc['measurement']['results'][1]['type'] == 'range'
-    assert new_doc['measurement']['results'][1]['value'] == [0.3, 2.1]
+    assert new_doc['measurement']['results'][-1]['isotope'] == 'U-235'
+    assert new_doc['measurement']['results'][-1]['unit'] == 'g'
+    assert new_doc['measurement']['results'][-1]['type'] == 'range'
+    assert new_doc['measurement']['results'][-1]['value'] == [0.3, 2.1]
 
     teardown_stuff(browser) 
 
@@ -313,7 +313,7 @@ def test_update_remove_fields():
     assert new_doc['measurement']['results'][0]['isotope'] == 'U-238'
     assert new_doc['measurement']['results'][1]['isotope'] == 'K-40'
     
-    assert new_doc['measurement']['results'][2]['value'] == []
+    assert new_doc['measurement']['results'][-1]['value'] == []
 
     teardown_stuff(browser)
 
@@ -390,9 +390,9 @@ def _logout(browser):
 
 def _setup_browser():
     options = webdriver.ChromeOptions()
-#    options.add_argument('--no-sandbox')
-#    options.add_argument('headless')
-#    options.add_argument('window-size=1200x600')
+    options.add_argument('--no-sandbox')
+    options.add_argument('headless')
+    options.add_argument('window-size=1200x600')
     browser = webdriver.Chrome(ChromeDriverManager().install(), options=options)
     browser.implicitly_wait(10)
     return browser

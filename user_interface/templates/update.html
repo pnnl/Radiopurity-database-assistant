@@ -579,10 +579,10 @@
     var button = document.getElementById("add-meas-button");
     button.addEventListener('click', function () {
         var measStr = '<h5>additional result</h5>'
-        measStr += '<div><span><p class="normal-text">isotope: <input type="text" name="measurement.results.isotope' + counter + '" onKeyup="validateForm()"></p></span></div>'
-        measStr += '<div><span><p class="normal-text">measurement type: <select name="measurement.results.type' + counter + '"><option value="measurement">measurement</option>'
+        measStr += '<div><span><p class="normal-text">isotope: <input type="text" name="new.measurement.results.isotope' + counter + '" onKeyup="validateForm()"></p></span></div>'
+        measStr += '<div><span><p class="normal-text">measurement type: <select name="new.measurement.results.type' + counter + '"><option value="measurement">measurement</option>'
         measStr += '<option value="limit">limit</option><option value="range">range</option></select></p></span></div>'
-        measStr += '<div><span><p class="normal-text">units: <select name="measurement.results.unit' + counter + '">'
+        measStr += '<div><span><p class="normal-text">units: <select name="new.measurement.results.unit' + counter + '">'
         measStr += '<option value="pct">percent by mass</option><option value="g/g">g/g</option><option value="ppm">ppm</option><option value="ppb">ppb</option><option value="ppt">ppt</option><option value="ppq">ppq (quadrillion)</option>'
         measStr += '<option value="g">g</option><option value="mg">mg</option><option value="ug">ug (micrograms)</option><option value="ng">ng</option><option value="pg">pg</option><option value="Bq">Bq</option><option value="mBq">mBq</option>'
         measStr += '<option value="uBq">uBq</option><option value="nBq">nBq</option><option value="pBq">pBq</option><option value="g/kg">g/kg</option><option value="g/cm">g/cm</option><option value="g/m">g/m</option>'
@@ -601,11 +601,11 @@
         measStr += '<option value="pBq/kg">pBq/kg</option><option value="pBq/cm">pBq/cm</option><option value="pBq/m">pBq/m</option><option value="pBq/cm2">pBq/cm2 (squared)</option><option value="pBq/m2">pBq/m2</option>'
         measStr += '<option value="pBq/cm3">pBq/cm3 (cubed)</option><option value="pBq/m3">pBq/m3</option></select></p></span></div>'
         measStr += '<div><span><span class="fourths-container"><p class="normal-text">value(s):</p></span>'
-        measStr += '<span class="fourths-container"><div><input type="text" name="measurement.results.valueA' + counter + '">'
+        measStr += '<span class="fourths-container"><div><input type="text" name="new.measurement.results.valueA' + counter + '">'
         measStr += '<p class="info">if type is "measurement" this is the central value. If type is "limit" this is the upper limit. If type is "range" this is the lower bound. </p></div></span>'
-        measStr += '<span class="fourths-container"><div><input type="text" name="measurement.results.valueB' + counter + '">'
+        measStr += '<span class="fourths-container"><div><input type="text" name="new.measurement.results.valueB' + counter + '">'
         measStr += '<p class="info">if type is "measurement" this is the symmetric error. If type is "limit" this is the confidence level. If type is "range" this is the upper bound. </p></div></span>'
-        measStr += '<span class="fourths-container"><div><input type="text" name="measurement.results.valueC' + counter + '">'
+        measStr += '<span class="fourths-container"><div><input type="text" name="new.measurement.results.valueC' + counter + '">'
         measStr += '<p class="info">if type is "measurement" this is the asymmetric error. If type is "limit" no value is required. If type is "range" this is the confidence level. </p></div></span>'
         measStr += '</span></div>'
         var newMeas = document.createElement('div');
