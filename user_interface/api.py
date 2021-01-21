@@ -276,11 +276,11 @@ def assay_request_update_endpoint():
     elif request.form.get("submit_button") == "find_doc":
         doc_id = request.form.get('doc_id', '')
         doc = search_by_id(doc_id, coll_type='assay_requests')
-        print('ASSAY REQUEST DOC:::',doc)
 
         if doc is None:
             return render_template('assay_request_update.html', doc_data=False, message="No assay request was found with the ID you provided.")
 
+        #TODO: why do we do this?
         for i in range(len(doc['measurement']['results'])):
             num_vals = len(doc['measurement']['results'][i]['value'])
             if num_vals == 0:
@@ -340,14 +340,14 @@ def assay_request_update_endpoint():
 def _setup_database():
     global database_name
     
-    database_name = 'dune'
-    collection_name = 'dune_data'
+#    database_name = 'dune'
+#    collection_name = 'dune_data'
     
     #database_name = 'radiopurity_data'
     #collection_name = 'testing'
     
-#    database_name = 'dune_pytest_data'
-#    collection_name = 'test_data'
+    database_name = 'dune_pytest_data'
+    collection_name = 'test_data'
 
     port = 8001
     successful_change = set_ui_db(database_name, collection_name)
