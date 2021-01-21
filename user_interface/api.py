@@ -1,23 +1,29 @@
+import os
 import sys
-#import json
+import json
 import argparse
 import datetime
 from functools import wraps
 import scrypt
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import set_ui_db, search_by_id, convert_date_to_str
-#from python_mongo_toolkit import set_ui_db, search_by_id, convert_date_to_str
 from frontend_helpers import do_q_append, parse_existing_q, perform_search, perform_insert, parse_update, perform_update
 from frontend_helpers import _get_user
-#from query_class import Query
 
 app = Flask(__name__)
-sk = None
-salt = None
-with open('app_config.txt', 'r') as config:
-    sk = config.readline().strip()
-    salt = config.readline().strip()
-app.config['SECRET_KEY'] = sk
+
+config_name = os.getenv('DUNE_API_CONFIG_NAME')
+if config_name is None:
+    config_name = 'app_config.txt'
+config_dict = None
+
+with open(config_name, 'r') as config:
+    config_dict = json.load(config)
+app.config['SECRET_KEY'] = config_dict['secret_key']
+salt = config_dict['salt']
+database_name = config_dict['database']
+collection_name = config_dict['collection']
+
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
 USER_MODES = ['DUNEreader', 'DUNEwriter']
 
@@ -221,9 +227,8 @@ def _setup_database():
     global database_name
     #database_name = 'dune'
     #collection_name = 'dune_data'
-    database_name = 'radiopurity_data'
-    collection_name = 'testing'
-    port = 8001
+    #database_name = 'radiopurity_data'
+    #collection_name = 'testing'
     successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
         print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
@@ -243,10 +248,9 @@ def _setup_database():
     #database_name = 'radiopurity_data'
     #collection_name = 'testing'
     
-    database_name = 'dune_pytest_data'
-    collection_name = 'test_data'
+#    database_name = 'dune_pytest_data'
+#    collection_name = 'test_data'
 
-    port = 8001
     successful_change = set_ui_db(database_name, collection_name)
     if not successful_change:
         print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
