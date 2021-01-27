@@ -230,6 +230,9 @@ def assay_request_endpoint():
         new_doc_msg = 'assay request doc id: '+str(new_doc_id)
         if new_doc_id is None:
             new_doc_msg = "ERROR: record not inserted because "+error_msg
+    else:
+        new_doc_msg = ''
+    return render_template('assay_request.html', new_doc_msg=new_doc_msg)
 
 @app.route('/assay_request_search', methods=['GET','POST'])
 @requires_permissions(['DUNEwriter', 'Admin'])
