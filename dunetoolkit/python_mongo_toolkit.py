@@ -45,7 +45,6 @@ def set_ui_db(db_name, coll_name):
     assay_requests_coll = client[db_name][assay_requests_coll_name]
     assay_requests_old_versions_coll = client[db_name][assay_requests_old_versions_coll_name]
 
-    print('CHANGING BACKEND TO',db_name, coll_name)
     return True
 
 def _get_specified_collection(collection_name):
@@ -163,6 +162,13 @@ def _update_nonmeas_fields(new_doc, update_pairs_copy):
         update_val = update_pairs_copy[update_key]
         update_keys = update_key.split('.')
 
+        # if one of the elements in the chain of keys should be a list index, make it an int not a string
+        for i, key in enumerate(update_keys):
+            try:
+                num_key = int(key)
+                update_keys[i] = num_key
+            except:
+                pass
         # convert date strings to datetime objects
         if update_keys[-1] == 'date':
             update_val = convert_str_list_to_date(update_val)
@@ -185,12 +191,12 @@ def _update_nonmeas_fields(new_doc, update_pairs_copy):
             if len(update_keys) == 3:
                 new_doc[update_keys[0]][update_keys[1]][update_key_2] = update_val
             elif len(update_keys) == 4:
-                print('"""',update_keys)
                 new_doc[update_keys[0]][update_keys[1]][update_key_2][update_keys[3]] = update_val
 
     return new_doc, ''
 
 def _update_new_doc(new_doc, meas_remove_indices, new_meas_objects, update_pairs_copy):
+    '''
     # validate remove indices, do meas removal - MUST do removal before add/update to keep original indices 
     new_doc, error_msg = _remove_meas_objects(new_doc, meas_remove_indices)
     if new_doc is None:
@@ -203,6 +209,19 @@ def _update_new_doc(new_doc, meas_remove_indices, new_meas_objects, update_pairs
 
     # update existing non-meas_result values
     new_doc, error_msg = _update_nonmeas_fields(new_doc, update_pairs_copy)
+    if new_doc is None:
+        return None, error_msg
+    '''
+    # update existing non-meas_result values
+    new_doc, error_msg = _update_nonmeas_fields(new_doc, update_pairs_copy)
+    if new_doc is None:
+        return None, error_msg
+    # add new measurement result
+    new_doc, error_msg = _add_new_meas_objects(new_doc, new_meas_objects)
+    if new_doc is None:
+        return None, error_msg
+    # validate remove indices, do meas removal
+    new_doc, error_msg = _remove_meas_objects(new_doc, meas_remove_indices)
     if new_doc is None:
         return None, error_msg
 
@@ -234,7 +253,6 @@ def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll_name,
     # clean up database if there is an issue inserting the new doc
     if not update_ok:
         collection.delete_one(new_doc)
-
     else:
         try:
             # add old doc to old versions collection (unless it's an update of an assay request, in which we don't add the old doc to anything, we just get rid of it)
@@ -257,7 +275,6 @@ RETURNS: ObjectId or None (new document ID)
 def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[], is_assay_request_update=False, is_assay_request_verify=False):
     # make copy of update_pairs dict in case values change; don't want that to change values in the func calling this
     update_pairs_copy = deepcopy(update_pairs)
-    print(update_pairs_copy)
 
     # get appropriate database collection names for the situation
     if is_assay_request_verify:
@@ -273,7 +290,7 @@ def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_
         update_to_coll_name = '' # insert updated doc into main colleciton
         old_versions_coll_name = 'old_versions'
 
-    print('UPDATING:','|',update_from_coll_name,'|',update_to_coll_name,'|',old_versions_coll_name,'|')
+    #print('UPDATING:','|',update_from_coll_name,'|',update_to_coll_name,'|',old_versions_coll_name,'|')
 
     # find existing doc to update
     parent_doc = _get_existing_doc(doc_id, update_from_coll_name)
@@ -360,7 +377,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         },
         "_version":1
     }
-    print(doc)
+    print('DOC TO INSERT:',doc)
 
     # validate doc
     validator = DuneValidator("whole_record")
