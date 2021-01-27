@@ -29,16 +29,30 @@
 <h3>this UI uses the {{db_name}} database</h3>
 
 <a href="{{ url_for('search_endpoint') }}">
-    <p class="normal-text">search endpoint</p>
+    <p class="normal-text">search assays</p>
 </a>
 
 <a href="{{ url_for('insert_endpoint') }}">
-    <p class="normal-text">insert endpoint</p>
+    <p class="normal-text">insert assay</p>
 </a>
 
 <a href="{{ url_for('update_endpoint') }}">
-    <p class="normal-text">update endpoint</p>
+    <p class="normal-text">update assay</p>
 </a>
+
+<a href="{{ url_for('assay_request_search_endpoint') }}">
+    <p class="normal-text">search assay requests</p>
+</a>
+
+<a href="{{ url_for('assay_request_endpoint') }}">
+    <p class="normal-text">create assay request</p>
+</a>
+
+<a href="{{ url_for('assay_request_update_endpoint') }}">
+    <p class="normal-text">update/verify assay request</p>
+</a>
+
+
 
 </body>
 </html>
