@@ -1,3 +1,10 @@
+"""
+.. module:: python_mongo_toolkit
+   :synopsis: The main code for the radiopurity database assistant.
+
+.. moduleauthor:: Elise Saxon
+"""
+
 import argparse
 import json
 import re
@@ -5,7 +12,7 @@ from datetime import datetime
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from copy import deepcopy
-from .validate import DuneValidator, validate_meas_remove_indices, validate_query_terms
+from .validate import DuneValidator, validate_meas_remove_indices
 from .query_class import Query
 
 ##########################################
@@ -41,6 +48,14 @@ def _get_specified_collection(collection_name, db_obj):
 
 
 def create_query_object(query_string=None):
+    """Creates a Query object that is used to parse queries, add to queries, and translate between human-readable and pymongo-syntax queries.
+
+    args:
+        * query_string (str) (optional): The human-readable string that represents the query. If no argument query_string is provided, this function returns a Query object with no starting query loaded up. This string MUST be in the format given by the UI's search page. That is, "<field1> <comparison1> <value1>\\n<append_mode>\\n<field2> <comparison2> <value2>\\n<append_mode>\\n..."
+
+    returns:
+        * dunetoolkit.Query. The object that stores and parses a user's query
+    """
     return Query(query_string)
 
 
@@ -116,7 +131,11 @@ def _get_existing_doc(doc_id, db_obj, update_from_coll_name):
         * doc_id (str): The string representation of the MongoDB document ID for the document the user wishes to find.
         * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
         * update_from_coll_name (str): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to old_versions).
+
+    returns:
+        * dict. The document found by in the MongoDB collection with the given document ID. If no document is found with a matching ID, then None is returned.
     """
+    #TODO couldn't we just use "search_by_id" for this?
     parent_q = {'_id':ObjectId(doc_id)}
     collection = _get_specified_collection(update_from_coll_name, db_obj)
     parent_resp = collection.find(parent_q)
@@ -124,7 +143,17 @@ def _get_existing_doc(doc_id, db_obj, update_from_coll_name):
     return parent_doc
 
 def _remove_meas_objects(new_doc, meas_remove_indices):
-    is_valid, error_msg = validate_meas_remove_indices(new_doc, meas_remove_indices) #TODO: should this be "new_doc" not "parent_doc"
+    """This is a helper function for updating documents in the collection. Each document in the database has a list of dictionaries under the top-level field "measurements" and the sub-field "results" where each dict in the list represents the measurement result for a given isotope. One of the updates a user can make to a given document is to remove any of the existing measurement results objects. This function performs the actual removal of those measurement results from the document.
+
+    args:
+        * new_doc (dict): The version of the database document that is in the process of being updated so it can be reinserted into the database as a newer version.
+        * meas_remove_indices (list of int): The list of indices for which elements of new_doc's measurement.results objects will be removed.
+
+    returns:
+        * dict. A new version of new_doc with the measurement objects at the specified meas_remove_indices removed.
+        * str. The error message that arose while trying to update new_doc. This would happen when validating the meas_remove_indices against new_doc to make sure they are not out of bounds or anything.
+    """
+    is_valid, error_msg = validate_meas_remove_indices(new_doc, meas_remove_indices)
     if not is_valid:
         print(error_msg)
         return None, error_msg
@@ -134,6 +163,15 @@ def _remove_meas_objects(new_doc, meas_remove_indices):
     return new_doc, ''
 
 def _validate_new_meas_objects(new_meas_objects):
+    """This is a helper function for updating documents in the collection. Each document in the database has a list of dictionaries under the top-level field "measurements" and the sub-field "results" where each dict in the list represents the measurement result for a given isotope. These measurement result dicts must be in a specific format that this project has defined. This function checks if each of the provided measurement results objects follows the desired format.
+
+    args:
+        * new_meas_objects (list of dict): A list of measurement results dicts that need to be validated.
+
+    returns:
+        * bool. Whether all of the dicts in new_meas_objects are valid or not.
+        * str. The error message that arose while trying to update new_doc. This would happen if any of the given new_meas_objects are not vallid according to this project's specified schema.
+    """
     meas_validator = DuneValidator("measurement_result")
     is_valid = True
     error_message = ''
@@ -145,6 +183,16 @@ def _validate_new_meas_objects(new_meas_objects):
     return is_valid, error_message
 
 def _add_new_meas_objects(new_doc, new_meas_objects):
+    """This is a helper function for updating documents in the collection. Each document in the database has a list of dictionaries under the top-level field "measurements" and the sub-field "results" where each dict in the list represents the measurement result for a given isotope. One of the updates a user can make to a given document is to add new measurement result objects to the existing list of measurement results. This function performs the actual addition of measurement result objects to the document.
+
+    args:
+        * new_doc (dict): The version of the database document that is in the process of being updated so it can be reinserted into the database as a newer version.
+        * new_meas_objects (list of dict): A list of new measurement object dicts to add to the document's measurement results list.
+
+    returns:
+        * dict. A new version of new_doc with the given new measurement objects added to the measurement results list.
+        * str. The error message that arose while trying to update new_doc. This would happen if any of the measurement result objects' "value" field values is not already a valid number or cannot be converted into a number.
+    """
     is_valid, error_msg = _validate_new_meas_objects(new_meas_objects)
     if not is_valid:
         return None, error_msg
@@ -160,6 +208,16 @@ def _add_new_meas_objects(new_doc, new_meas_objects):
     return new_doc, ''
 
 def _update_nonmeas_fields(new_doc, update_pairs_copy):
+    """This is a helper function for updating documents in the collection. It handles the updating of values in the document. Any existing field can have its value changed in this function if the existing field name and the new value are specified in the update_pairs_copy dictionary.
+    
+    args:
+        * new_doc (dict): The version of the database document that is in the process of being updated so it can be reinserted into the database as a newer version.
+        * update_pairs_copy (dict): A set of key-value pairs that represent the fields of the document that need to be updated and the new values that those fields should point to.
+
+    returns:
+        * dict. A new version of new_doc with the given fields in update_pairs_copy updated to correspond to the given values in update_pairs_copy.
+        * str. The error message that arose while trying to update new_doc. This would happen if a date field is specified in update_pairs_copy but the value for that field cannot be converted into a python datetime object. 
+    """
     for update_key in update_pairs_copy:
         update_val = update_pairs_copy[update_key]
         update_keys = update_key.split('.')
@@ -198,30 +256,28 @@ def _update_nonmeas_fields(new_doc, update_pairs_copy):
     return new_doc, ''
 
 def _update_new_doc(new_doc, meas_remove_indices, new_meas_objects, update_pairs_copy):
-    '''
-    # validate remove indices, do meas removal - MUST do removal before add/update to keep original indices 
-    new_doc, error_msg = _remove_meas_objects(new_doc, meas_remove_indices)
-    if new_doc is None:
-        return None, error_msg
+    """This is a helper function for updating documents in the collection. It orchestrates the updating of a document by calling the functions that do the actual updating of the document (_update_nonmeas_fields, _add_new_meas_objects, and _remove_meas_objects) and then validates the fully-updated document against this project's format.
+    
+    args:
+        * new_doc (dict): The non-updated version of the document that will have the specified updates applied.
+        * meas_remove_indices (list of int): The list of indices for which elements of new_doc's measurement.results objects will be removed
+        * new_meas_objects (list of dict): A list of new measurement object dicts to add to the document's measurement results list.
+        * update_pairs_copy (dict): A set of key-value pairs that represent the fields of the document that need to be updated and the new values that those fields should point to.
 
-    # add new measurement result
-    new_doc, error_msg = _add_new_meas_objects(new_doc, new_meas_objects)
-    if new_doc is None:
-        return None, error_msg
-
+    returns:
+        * dict. The version of new_doc with all the given updates applied. This is the version of the doc that will be inserted into the database as the current version.
+        * str. The error message that arose while trying to update new_doc. This would happen if any of the update functions encounter errors or invalid values.
+    """
     # update existing non-meas_result values
     new_doc, error_msg = _update_nonmeas_fields(new_doc, update_pairs_copy)
     if new_doc is None:
         return None, error_msg
-    '''
-    # update existing non-meas_result values
-    new_doc, error_msg = _update_nonmeas_fields(new_doc, update_pairs_copy)
-    if new_doc is None:
-        return None, error_msg
+    
     # add new measurement result
     new_doc, error_msg = _add_new_meas_objects(new_doc, new_meas_objects)
     if new_doc is None:
         return None, error_msg
+    
     # validate remove indices, do meas removal
     new_doc, error_msg = _remove_meas_objects(new_doc, meas_remove_indices)
     if new_doc is None:
@@ -283,6 +339,7 @@ def _update_databases(new_doc, parent_doc, do_remove_doc, db_obj, update_from_co
             removeold_resp = original_collection.delete_one(parent_q)
 
     return new_doc_id
+#'''
 
 def update(doc_id, db_obj=None, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[], is_assay_request_update=False, is_assay_request_verify=False):
     """This is the main function that orchestrates a document update. It uses the is_assay_request_update and is_assay_request_verify args to discern what type of update is happening and uses that knowledge to decide which collections to use to pull the original document from, move the non-updated original document to, and insert the fully-updated document to. It calls the function _update_new_doc to actually update the original doc and then calls _update_databases to perform all aspects of the update in the MongoDB collections.
@@ -341,13 +398,25 @@ def update(doc_id, db_obj=None, remove_doc=False, update_pairs={}, new_meas_obje
 
     return new_doc_id, ''
 
-"""
-RETURNS: str (new version of query string)
-         dict (new version of query in query langage)
-"""
-def add_to_query(field, comparison, value, query_object=None, query_string='', append_mode='', include_synonyms=True):
+
+def add_to_query(field, comparison, value, query_object=None, query_string="", append_mode="", include_synonyms=True):
+    """This function intakes the elements of a new query term (field, comparison, value, and append_mode) and either creates a new query containing that term, or adds the new term to an existing query using the existing query object argument or the existing query string argument.
+
+    args:
+        * field (str): The field name whose value is to be compared.
+        * comparison (str): How to compare the specified value to the existing value for the specified field.
+        * value (str): The value to be compared against.
+        * query_object (dunetoolkit.Query) (optional): A pre-existing Query object that the new query term can be added to.
+        * query_string (str) (optional): A pre-existing human-readable query string that can be loaded into a new Query object. This string MUST be in the format given by the UI's search page. That is, "<field1> <comparison1> <value1>\\n<append_mode>\\n<field2> <comparison2> <value2>\\n<append_mode>\\n..."
+        * append_mode (str) (optional): How this new term should be added to an existing query (can be "AND" or "OR" or "", in which case this is the only term in the query).
+        * include_synonyms (bool) (optional): Specifies whether or not to search for all synonyms of the specified value, in addition to that value, as opposed to searching only for the specified value.
+
+    returns:
+        * str. The human-readable version of the query that can be displayed to the user with the UI.
+        * dict. The query dictionary in pymongo syntax. This dictionary can be directly used as a query for the database.
+    """
     if query_object is None:
-        query_object = Query(query_string) #NOTE: query string must be in the specific format like "field1 compare1 value1\nAND\nfield2 compare2 value2\nOR\n..."
+        query_object = Query(query_string)
     query_object.add_query_term(field, comparison, value, append_mode, include_synonyms)
     query_string = query_object.to_string()
     query_dict = query_object.to_query_language()
@@ -436,6 +505,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     print('DOC TO INSERT:',doc)
 
     # validate doc
+    # TODO: verify that sample.ownder.contact, measurement.requestor.contact, measurement.practitioner.contact, and data_source.input.contact are valid emails
     validator = DuneValidator("whole_record")
     is_valid, error_message = validator.validate(doc) 
     if not is_valid:
@@ -457,10 +527,15 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     return mongo_id, msg
 
 
-'''
-RETURNS: datetime (object representing date) or NONE if error
-'''
 def convert_str_to_date(date_str):
+    """This function intakes a string, tries to convert it into a datetime object, and returns that datetime object.
+
+    args:
+        * date_str (str): The string that will be converted into a datetime object.
+
+    returns:
+        * datetime.datetime. The datetime object that resulted from the string. If the string could not be converted into a datetime object, then this returns None.
+    """
     new_date_obj = None
     date_formats = ["%Y-%m-%d", "%Y/%m/%d", "%m-%d-%Y", "%m/%d/%Y", "%Y-%d-%m", "%Y/%d/%m", "%d-%m-%Y", "%d/%m/%Y"]
     for date_format in date_formats:
@@ -472,20 +547,31 @@ def convert_str_to_date(date_str):
     return new_date_obj
 
 
-'''
-RETURNS: str (datetime obj converted to str) EMPTY if error
-'''
 def convert_date_to_str(date_obj):
+    """This function intakes a datetime object, tries to convert it into a string, and returns that string.
+
+    args:
+        * date_obj (datetime.datetime): The datetime object that will be converted into a string.
+
+    returns:
+        * str. The string that resulted from the datetime object. If the datetime object could not be converted into a string, then this returns an empty string.
+    """
     try:
         new_date_str = date_obj.strftime("%Y-%m-%d")
     except:
         new_date_str = ''
     return new_date_str
 
-'''
-RETURNS: list (strings converted to datetime objects) or NONE if error
-'''
+
 def convert_str_list_to_date(str_list):
+    """This function intakes a list of strings, tries to convert each one into a datetime object, and returns the list of datetime objects.
+
+    args:
+        * str_list (lit of str): The list of strings that will be converted into datetime objects.
+
+    returns:
+        * list of datetime.datetime. The list of datetime objects that each resulted from their corresponding strings. If any of the strings cannot be converted into datetime objects, then this function returns None.
+    """
     date_objects = []
     for date_str in str_list:
         date_obj = convert_str_to_date(date_str)

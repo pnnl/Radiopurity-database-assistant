@@ -1,3 +1,10 @@
+"""
+.. module:: query_class
+   :synopsis: The class that defines a Query object, which is used to parse sepcifically formatted strings into pymongo query dicts and vice versa. This class also keeps track of an existing query and can add to it.
+
+.. moduleauthor:: Elise Saxon
+"""
+
 import os
 import re
 import json
@@ -5,13 +12,30 @@ import datetime
 from copy import deepcopy
 
 class Query():
+    """This class enables the database toolkit to form complicated queries that will return expectable results.
+    """
     def __init__(self, query_str=None):
-        # terms is a list of dicts with the following structure:
-        #   {"field":str, "comparison":str, "value":int|str|float|list}
+        """The Query class can be instantiated from scratch with no existing query, or it can be instantiated with existing query text, where that query text will be loaded up and stored in this class so future query terms will be added to it.
+
+        args:
+            * query_str (str) (optional): If provided, this string will be parsed and loaded into the Query class's "terms" and "appends" lists so that future query terms can be added to it. This string MUST be in the format given by the UI's search page. That is, "<field1> <comparison1> <value1>\\n<append_mode>\\n<field2> <comparison2> <value2>\\n<append_mode>\\n..."
+
+        :ivar terms (list of dict): The current set of query terms that this the Query object is keeping track of. As terms get added to this Query object, the field, comparison, and value get added to this list. Each dictionary element of this list should have the following structure: {"field":str, "comparison":str, "value":int/str/float/list}. 
+        :ivar appends (list of str): The current set of append modes ("AND" or "OR") that combine query terms from the terms field. As query terms get added to the Query object, the append mode that adds a new term to the existing list gets added to this list. For the append mode in this list at index i, that append mode will combine the query term in the terms list at index i and the term in the terms list at index i+1. There should always be len(terms)-1 in the appends list.
+        :ivar all_fields (list of str): A list of all the fields that are being compared in the terms list. This list helps keep track of which fields already exist in the query so that the terms can be combined if applicable. For example, two terms like "all contains testing" and "all contains example" can be combined into something like "all contains ['testing', 'example'].
+        :ivar synonyms (list of list of str): Stores the contents of synonyms.txt as a lookup table.
+        :ivar valid_append_modes (list of str): List of the valid values for append_mode variables. Valid values are "AND" and "OR".
+        :ivar valid_field_names (list of str): A list of all the valid values for query fields. These are essentially all the valid fields in an assay document.
+        :ivar str_fields (list of str): A list of all the field names whose values should always be of type string. This list is used in order to assemble query terms where strings are being compared.
+        :ivar num_fields (list of str): A list of all the field names whose values should always be numberic types (or lists of numeric types). This list is used in order to assemble query terms where numbers are being compared. These terms will only be measurement result values, and due to the nature of the assay document format, queries of the measurement result values are complex.
+        :ivar date_fields (list of str): A list of all the field names whose values should always be lists of datetime.datetime objects. This list is used in order to assemble query terms where datetime objects are being compared, as this happens differently from other queries.
+        :ivar str_comparisons (list of str): A list of all the valid comparison operators that can be used to compare strings in a query.
+        :ivar num_comparisons (list of str): A list of all the valid comparison operators that can be used to compare numbers in a query.
+        :ivar date_comparisons (list of str): A list of all the valid comparison operators that can be used to compare dates in a query.
+        """
         self.terms = []
         self.appends = []
         self.all_fields = []
-        self.current_meas_results_obj = {}
 
         synonyms_filepath = os.path.dirname(os.path.abspath(__file__)) + '/synonyms.txt'
         self.synonyms = self._load_synonyms(synonyms_filepath)
@@ -28,14 +52,15 @@ class Query():
         if query_str is not None and query_str != '':
             self._load_from_str(query_str)
 
-        '''
-        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        print('TERMS:',self.terms)
-        print('APNDS:',self.appends)
-        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        '''
-
     def _load_synonyms(self, filepath):
+        """This function reads in the path to a text file where synonyms are stored and returns a list of lists of strings, which will be set to the "synonyms" class variable.
+
+        args:
+            * filepath (str): The absolute path to the file where the synonyms lists are stored. The file should be a text file where each line is a comma-separated list of strings where each string is a synonym for the others in the line.
+
+        returns:
+            * list of list of str. The list of the lists of synnonyms for each word on record.
+        """
         synonyms_list = []
         with open(filepath, 'r') as read_file:
             for line in read_file:
@@ -44,11 +69,29 @@ class Query():
         return synonyms_list
 
     def _get_field_from_str(self, line):
+        """This function identifies the first space in the input string that represents a human-readable query string (this space should separate the field from the comparison) and pulls all the characters from the start of the string until that first space, setting those characters to be the field in the string.
+
+        args:
+            * line (str): A query string that must be in the human-readable format: "<field1> <comparison1> <value1>"
+
+        return:
+            * str. The characters from the line variable identified to be the field.
+            * str. The modified line with the characters of the field removed. This means the string now starts with the comparison operator.
+        """
         end_idx = line.find(' ')
         field = line[:end_idx]
         line = line[end_idx+1:]
         return field, line
     def _get_comparison_from_str(self, line):
+        """This function tries to match the beginning of the line with any of the possible human-readable comparison strings. After identifying a comparison string, that comparison is translated into a more query-friendly version and returned.
+
+        args:
+            * line (str): The modified human-readable query line that starts with the comparison operator. The line must now start with one of "is less than or equal to", "is greater than or equal to", "equals", "contains", "is less than", or "is greater than".
+
+        returns:
+            * str. The comparison operator converted into query syntax, based on the characters of the line variable that were identified to be the comparison operator string.
+            * str. The modified line with the characters of the comparison (and field) removed. This means that the string now only contains the value.
+        """
         # order matters here because "less than" and "greater than" will always match before "less than or equal to" and "greater than or equal to"
         human_to_raw = {
             "is less than or equal to":"lte",
@@ -70,7 +113,16 @@ class Query():
             #TODO: error handling
             print('BAD COMPARISON:::',line)
         return comparison, line
-    def _get_value_from_str(self, field, comparison, line):
+    def _get_value_from_str(self, field, line):
+        """This function assumes that the contents of the line variable is just the value. It tries to convert the rest of the contents of the line into the appropriate type based on the field that it corresponds to. 
+
+        args:
+            * field (str): The field of the term that was identified from the line. This is used to decide what type of value the text of the line is. E.g. If the field is known to correspond to values that are numerical, then this function will try and convert the text of the line into a number.
+            * line (str): The rest of the original line, which now should only contain the value, since the text for the field and the comparison have been removed.
+
+        returns:
+            * str or float or int. The value, in its appropriate type, that was found in the line.
+        """
         if field == 'all':
             value = line.replace('["', '').replace('"]', '').split('", "')
             if len(value) < 1:
@@ -97,6 +149,15 @@ class Query():
             value = None
         return value
     def _load_from_str(self, query):
+        """This function orchestrates the parsing of a human-readable string into this Query object's "terms" and "appends" lists. It calls the _get_field_from_str, _get_comparison_from_str, and _get_value_from_str functions to get the field, comparison, and value variables, then passes those to the add_query_term function, which validates the variables and adds them to the Query object's "terms" and "appends" lists.
+
+        args:
+            * query (str): A human-readable string in the format "<field1> <comparison1> <value1>\\n<append_mode>\\n<field2> <comparison2> <value2>\\n<append_mode>\\n...".
+
+        returns:
+            * bool. Whether the process of parsing and loading the string was successful.
+            * str. An empty string.
+        """
         lines = query.split('\n')
         append_type = ''
         for line in lines:
@@ -106,11 +167,20 @@ class Query():
             else:
                 field, line = self._get_field_from_str(line)
                 comparison, line = self._get_comparison_from_str(line)
-                value = self._get_value_from_str(field, comparison, line)
+                value = self._get_value_from_str(field, line)
                 self.add_query_term(field, comparison, value, append_type, include_synonyms=False)
+        #TODO: remove this return statement and its documentation.
         return True, ''
 
     def _find_synonyms(self, value):
+        """This function iterates through the list of synonyms, searching for the specified value. If the value is found in any of the lists, the entire list in which the value was found contains all the synonyms for that value.
+
+        args:
+            * value (str): The string to find synonyms for.
+
+        returns:
+            * list of str. The list of synonyms that was found for the given value. If no synonyms were found, this function returns None.
+        """
         for word_list in self.synonyms:
             for word in word_list:
                 if re.match(value, word, re.IGNORECASE):
@@ -118,6 +188,12 @@ class Query():
         return None
 
     def _add_query_term_all(self, value, append_type):
+        """This function adds a query term whose field is "all" to the Query object's lists of terms and appends. The "all" query term must be handled differently from other terms due to the nature of MongoDB (the "all" search is enabled by the use of $text indices in the MongoDB collections, so any questions can be answered by looking at the MongoDB $text index documentation). There can only be one "all" comparison in an entire query, so if the user tries to enter multiple terms whose field is "all", the values for each of those terms will be combined into one list and be searched for in one term. The comparison for the "all" field is always "contains" (again, due to the nature of the MongoDB $text index). Since there can only be one "all" term in a given query, the append mode that is used on the general "all" term in the final query is the append mode that was passed for the first "all" term.
+
+        args:
+            * value (str or list): The value or values of the query term. If "value" is a list, it is converted into a space-separated string (this will only happen if the field is "all").
+            * append_type (str): Must be one of "AND" or "OR". This value is the append type for the given term. This is only used for the first "all" term of the query.
+        """
         if type(value) is list:
             value = ' '.join(value) #separate words by space so that they can be searched for individually by the text index. This would only be for the field=="all" case
         if 'all' in self.all_fields:
@@ -131,12 +207,29 @@ class Query():
                 self.appends.append(append_type)
             self.all_fields.append('all')
     def _add_query_term_nonall(self, field, comparison, value, append_type):
+        """This function adds a query term to the Query object's lists of terms and appends (unless the field is "all", in which case the _add_query_term_all function will handle it). A term dictionary is created from the field, comparison, and value, and it is added to the Query object's list of terms. The append_type is added to the Query object's list of appends.
+
+        args: 
+            * field (str): The field whose value will be compared in the query term.
+            * comparison (str): The comparison operator that will be used to compare field values against the provided value.
+            * value (str or int or float): The value that will be compared against.
+            * append_type (str): Must be one of "AND" or "OR". This is the append type for the given term. It will be the conjunction between the last-added query term and this (about to be added) query term.
+        """
         term = {"field":field, "comparison":comparison, "value":value}
         self.terms.append(term)
         if append_type != '':
             self.appends.append(append_type)
         self.all_fields.append(field)
     def add_query_term(self, field, comparison, value, append_type='', include_synonyms=True):
+        """This is the main function that orchestrates adding a query term to the Query object's lists of terms and appends. This function first validates the arguments, then gathers the specified value's synonyms if include_synonyms is True, then adds the new query term and append mode to the terms and appends lists based on whether the field is "all" or not. The _add_query_term_all function documentation describes more on why the "all" terms must be handled separately.
+
+        args:
+            * field (str): The field whose value to compare.
+            * comparison (str): The comparison to use to compare the field's value against the specified value.
+            * value (str or int or float): The value to compare against.
+            * append_type (str): The append mode to use for this query term. Must be one of "AND" or "OR" or "". If append_type is an empty string, this is the first/only term in the Query object.
+            * include_synonyms (bool): whether or not to include the value's synonyms in the query term or to only search for the value itself.
+        """
         is_valid, error_msg = self._validate_term(field, comparison, value, append_type) #this validates the field, comparison, value, and append_type
         if is_valid:
             if include_synonyms and value != '' and type(value) is str:
@@ -151,6 +244,14 @@ class Query():
             print(error_msg)
 
     def _convert_str_to_date(self, date_str):
+        """This function intakes a string, tries to convert it into a datetime object, and returns that datetime object.
+
+        args:
+            * date_str (str): The string that will be converted into a datetime object.
+
+        returns:
+            * datetime.datetime. The datetime object that resulted from the string. If the string could not be converted into a datetime object, then this returns None.
+        """
         new_date_obj = None
         date_formats = ["%Y-%m-%d", "%Y/%m/%d", "%m-%d-%Y", "%m/%d/%Y", "%Y-%d-%m", "%Y/%d/%m", "%d-%m-%Y", "%d/%m/%Y"]
         for date_format in date_formats:
@@ -161,6 +262,14 @@ class Query():
                 pass
         return new_date_obj
     def _convert_str_list_to_date(self, str_list):
+        """This function intakes a list of strings, tries to convert each one into a datetime object, and returns the list of datetime objects.
+
+        args:
+            * str_list (lit of str): The list of strings that will be converted into datetime objects.
+
+        returns:
+            * list of datetime.datetime. The list of datetime objects that each resulted from their corresponding strings. If any of the strings cannot be converted into datetime objects, then this function returns None.
+        """
         date_objects = []
         for date_str in str_list:
             date_obj = convert_str_to_date(date_str)
@@ -171,6 +280,16 @@ class Query():
         return date_objects
 
     def _assemble_qterm_all(self, field, comparison, value):
+        """This function creates a pymongo query language dictionary out of a given field, comparison, and value where the field is "all".
+
+        args:
+            * field (str): The field to query for
+            * comparison (str): The comparison operator to use to compare the field's value against the specified value.
+            * value (str): The value to compare against.
+
+        returns:
+            * dict. The query term in pymongo query language.
+        """
         # douple quotes around value indicate that it is a phrase and each word should not be searched for separately
         # space-separated words in string are searched for separately
         if value == '':
@@ -179,6 +298,16 @@ class Query():
             term = {"$text":{"$search":value}}
         return term
     def _assemble_qterm_date(self, field, comparison, value):
+        """This function creates a pymongo query language dictionary out of a given field, comparison, and value where the field is one of the date fields, meaning that term does a date comparison. To do date comparison, the string date value must be converted into a datetime.datetime object (all dates in the database are datetime.datetime objects).
+
+        args:
+            * field (str): The field to query for
+            * comparison (str): The comparison operator to use to compare the field's value against the specified value.
+            * value (str): The value to compare against.
+
+        returns:
+            * dict. The query term in pymongo query language.
+        """
         #TODO: implement date comparison taking second value into account (aka range)
         field += '.0' # only look at first date
         
@@ -191,6 +320,16 @@ class Query():
         term = {field:{comparison:search_val}}
         return term
     def _assemble_qterm_str(self, field, comparison, value):
+        """This function creates a pymongo query language dictionary out of a given field, comparison, and value where the field is one of the string fields, meaning that term does a string comparison. To do string comparisons, the Query class uses pre-compiled regex statements. The comparison operator dictates how the regex statement is formed. For example, if the comparison is "contains", then the regex pattern would have the value surrounded by ".*" to indicate that any characters can come before or after the value, so long as the value is in there.
+
+        args:
+            * field (str): The field to query for
+            * comparison (str): The comparison operator to use to compare the field's value against the specified value.
+            * value (str or list): The value(s) to compare against.
+
+        returns:
+            * dict. The query term in pymongo query language.
+        """
         def _create_contains_regex(token):
             return re.compile('^.*'+token+'.*$', re.IGNORECASE)
         def _create_equals_regex(token):
@@ -198,12 +337,12 @@ class Query():
         def _create_regex(token, comparison):
             if comparison == 'contains':
                 #search_val  = _create_contains_regex(token)
-                search_val = {"$regex":_create_contains_regex(token)} # NOTE ELISE Dec 8
+                search_val = {"$regex":_create_contains_regex(token)}
             elif comparison == 'notcontains':
                 search_val = {'$not':_create_equals_regex(token)}
             else: #equals
                 #search_val = _create_equals_regex(token)
-                search_val = {"$regex":_create_equals_regex(token)} #NOTE: ELISE Dec 8
+                search_val = {"$regex":_create_equals_regex(token)}
             return search_val
         def _assemble_list_search_term(field, comparison, value): # this is only for synonyms
             # looking for a field that does not equal/contain any of (A, B, C) --> "not A and not B and not C"
@@ -229,11 +368,29 @@ class Query():
 
         return term
     def _assemble_qterm_num(self, field, comparison, value):
+        """This function assembles a pymongo query language dictionary out of a given field, comparison, and value where the field is a numeric field, meaning that term does a number comparison.
+
+        args:
+            * field (str): The field to query for
+            * comparison (str): The comparison operator to use to compare the field's value against the specified value.
+            * value (str): The value to compare against.
+
+        returns:
+            * dict. The query term in pymongo query language.
+        """
         # comparison values in raw form are already in pymongo form, except the leading "$"
         comparison = '$' + comparison
         return {field:{comparison:value}}
 
     def _convert_append_str_to_q_operator(self, append_str):
+        """Converts a human-readable append mode string into its pymongo query language counterpart.
+
+        args:
+            * append_str (str): The human-readable string that corresponds to the append mode. Must be one of "AND" or "OR".
+
+        returns:
+            * str. The append mode in pymongo query language.
+        """
         if append_str == 'AND':
             operator = '$and'
         else:
@@ -241,6 +398,12 @@ class Query():
         return operator
 
     def _consolidate_measurement_results(self):
+        """Measurement result objects are elements in a list. To search for one element of a list that satisfies multiple criteria, MongoDB provides an `$elemMatch operator <https://docs.mongodb.com/manual/tutorial/query-arrays/#query-for-an-array-element-that-meets-multiple-criteria>`_. To use $elemMatch, all the criteria (terms) must be combined into one query term under $elemMatch. To do this, this function separates the list of terms into sections where each term in the section is appended with "AND" and each section is appended to to the next section with "OR" (splitting the list on "OR"s). All the terms in a section that query a measurement results field get combined into one element that will eventually be queried with $elemMatch. Once the terms list copy is separated into sections, the measurement results query terms are identified and combinedinto one term. The combined term should have the following format: {"field":"measurement.results", "comparison":None, "value":[{"field":<one of isotope, type, unit, value>, "comparison":<the original comparison for this term>, "value":<the original value for this term>}, ...]}
+
+        returns:
+            * list of dict. A possibly modified copy of the terms list after consolidating all query terms that deal with measurement results.
+            * list of str. A possibly modified copy of the appends list after consolidating all query terms that compare measurement results.
+        """
         # don't want to alter the persisting terms/appends objects
         terms = deepcopy(self.terms)
         appends = deepcopy(self.appends)
@@ -282,6 +445,15 @@ class Query():
         return terms, appends
 
     def _get_valid_meas_types(self, val_terms, specified_meas_type):
+        """There are three different "type"s of measurements that a measurement result object could have: "measurement", "range", and "limit". The type of the measurement dictates what the numbers in the "value" field represent. If the type is "measurement" there should be two or three values: [central value, symmetric error] or [central value, positive asymmetric error, negative asymmetric error]. If the type is "range" there should be tow or three values: [lower limit, upper limit] or [lower limit, upper limit, confidence level]. If the type is "limit" there shoul be one to two values: [upper limit] or [upper limit, confidence level]. This means that if a user searched for a measurement result where the value equals x, no results of type "range" or "limit" should be returned because measurement results with these types contain values that are limits, not exact values. Thus, this function uses the comparison types of the value terms to determine how to constrain the "type" field in order to only return accurate results.
+
+        args:
+            * val_terms (list of dict): The list of terms, for a given group of consolidated measurement results terms, where the field is "value". 
+            * specified_meas_type (str): The value specified for "type" if given in one of the terms in the group of consolidated measurement results terms (must be one of "measurement", "range", "limit", or None).
+
+        returns:
+            * list of str. The list of all "type" values that can be queried for.
+        """
         if specified_meas_type is not None:
             # if the query specifies to search for docs with a specific measurement type, then we only want to use that one
             valid_meas_types = [specified_meas_type]
@@ -303,8 +475,26 @@ class Query():
         return valid_meas_types
 
     def _get_meas_value_variations(self, valid_meas_types, val_terms):
+        """
+
+        args:
+            * valid_meas_types (list of str):
+            * val_terms (list of dict):
+
+        returns:
+            
+        """
         # add terms to the meas_obj according to their appropriate measurement type
         def _gather_value_variations(meas_obj, term):
+            """This function creates a pymongo query dict for each of the valid measurement types, where the type and the comparison dictate which index of the "value" array should be compared.
+
+            args:
+                * meas_obj (dict): The object that will be filled with pymongo query dicts for each measurement type. The top-level fields of this dict are each of the valid measurement types for this group of value terms.
+                * term (dict): An individual term that queries for a measurement result object's value.
+
+            returns:
+                * dict. The meas_obj that was passed in, now containing lists of pymongo query dicts for each of the valid measurement types.
+            """
             comparison = term['comparison']
             value = term['value']
 
@@ -315,11 +505,11 @@ class Query():
             # the "lt"/"lte" comparison can be done with any of the three measurement types
             elif comparison == 'lt':
                 if 'measurement' in valid_meas_types:
-                    meas_obj['measurement'].append({'value.0':{'$lt':value}})
+                    meas_obj['measurement'].append({'value.0':{'$lt':value}}) # value 0 is the central value
                 if 'range' in valid_meas_types:
-                    meas_obj['range'].append({'value.1':{'$lt':value}})
+                    meas_obj['range'].append({'value.1':{'$lt':value}}) # value 1 is the upper bound
                 if 'limit' in valid_meas_types:
-                    meas_obj['limit'].append({'value.0':{'$lt':value}})
+                    meas_obj['limit'].append({'value.0':{'$lt':value}}) # value 0 is the upper bound
             elif comparison == 'lte':
                 if 'measurement' in valid_meas_types:
                     meas_obj['measurement'].append({'value.0':{'$lte':value}})
@@ -333,7 +523,7 @@ class Query():
                 if 'measurement' in valid_meas_types:
                     meas_obj['measurement'].append({'value.0':{'$gt':value}})
                 if 'range' in valid_meas_types:
-                    meas_obj['range'].append({'value.0':{'$gt':value}})
+                    meas_obj['range'].append({'value.0':{'$gt':value}}) # value 0 is the lower bound
             elif comparison == 'gte':
                 if 'measurement' in valid_meas_types:
                     meas_obj['measurement'].append({'value.0':{'$gte':value}})
@@ -344,15 +534,24 @@ class Query():
 
         # convert the variations into actual mongodb query language format
         def _aggregate_value_variations(meas_obj):
+            """This function converts the lists of queries for each of the valid measurement types into one valid pymongo query. For each measurement type in the list of valid measurement types, it creates a pymongo query that searches for the given measurement type. It then iterates over the list of query dicts for each of the measurement types and adds those query dicts to the term that queries for the measurement type. In this way, there is one query term for each of the valid measurement types which contains a query for the measurement type and the corresponding values.
+
+            args:
+                * meas_obj (dict): Each field is one of the valid measurement types and the values for each field are the pymongo query dicts that query for value.
+
+            returns:
+                * list of dict. One pymongo query for each of the valid measurement types. Each query queries for the value and the measurement type.
+            """
             aggregated_terms = []
             for meas_type in list(meas_obj.keys()):
                 term = self._assemble_qterm_str('type', 'equals', meas_type) # this func will return a dictionary we can add fields and their comparisons/values to
 
                 for val_ele in meas_obj[meas_type]:
                     val_field = list(val_ele.keys())[0] # we expect field to be one of: "value.0" or "value.1"
-                    val_comp = list(val_ele[val_field].keys())[0] # we expect the comparison to be the first sub-field
-                    val_val = val_ele[val_field][val_comp]
+                    val_comp = list(val_ele[val_field].keys())[0] # we expect the first sub-field to be the comparison operator
+                    val_val = val_ele[val_field][val_comp] # we expect the sub-sub field to be the number to compare against
 
+                    # add value query to measurement type query
                     if val_field in list(term.keys()):
                         term[val_field][val_comp] = val_val
                     else:
@@ -361,13 +560,28 @@ class Query():
 
             return aggregated_terms
 
+        # create a dict where the keys are the valid measurement types found in _get_valid_meas_types
         meas_obj = { meas_type:[] for meas_type in valid_meas_types }
+
+        # fill meas_obj dict with lists of pymongo query dicts for each valid type
         for val_term in val_terms:
             meas_obj = _gather_value_variations(meas_obj, val_term)
+
+        # combine 
         aggregated_terms = _aggregate_value_variations(meas_obj)
         return aggregated_terms
 
     def _assemble_meas_result_terms(self, val_terms, isotope_terms, unit_term):
+        """
+
+        args:
+            * val_terms (list of dict): 
+            * isotope_terms (dict): A valid pymongo query that queries for the measurement isotope.
+            * unit_term (dict): A valid pymongo query that queries for the measurement unit.
+
+        returns:
+            
+        """
         combined_terms = []
         if len(val_terms) > 0 and len(isotope_terms) > 0:
             for val_term in val_terms:
@@ -391,10 +605,19 @@ class Query():
         return combined_terms
 
     def _assemble_qterm_meas_results(self, terms):
+        """This function orchestrates the conversion of one consolidated group of measurement results query terms into a valid pymongo query. It iterates over the each term in the consolidated group and consolidates them based on the field they compare. This is because, in MongoDB, if multiple query terms compare the same field, they can be consolidated into one sub-term within the $elemMatch operator. This function assumes a user may specify multiple terms comparing a measurement result object's value. It also assumes that only one measurement type, isotope, and unit is specified. 
+
+This function assumes a user may specify multiple terms comparing a measurement result object's value and that only one measurement type, isotope, and unit are specified. It iterates over each term in the terms list and consolidates terms whose field is "value". If a term queries on the "unit" field, that term is converted into a valid pymongo query. If a term queries on the "isotope" field, that term is converted into a valid pymongo query. If a term queries on the "type" field, the value is stored as specified_measurement_type (which will be used when assembling the query for the "values" field). Once all the terms have been handled and sorted, the value terms are converted into 
+
+        args:
+            * terms (list of dict): 
+
+        returns:
+            * dict. 
+        """
         val_terms_raw = []
         isotope_terms = []
         unit_term = {}
-
         specified_measurement_type = None
 
         # the terms object is the list of all consolidated meas results terms in an "and"ed list of terms
@@ -418,7 +641,7 @@ class Query():
             elif field == 'unit':
                 unit_term = self._assemble_qterm_str(field, comparison, value)
             else:
-                print('field wasnt in [value, type, isotope, unit]')
+                print("field wasn't in [value, type, isotope, unit]")
                 terms = None
 
         valid_meas_types = self._get_valid_meas_types(val_terms_raw, specified_measurement_type)
@@ -427,6 +650,11 @@ class Query():
         return term
 
     def to_query_language(self):
+        """This function converts the terms and appends lists into a valid pymongo query. It starts by consolidating the query terms that deal with measurement results dicts (for a description of why we do this, see the documentation for _consolidate_measurement_results). The order of the terms and appends lists matter when assembling the final query, since the Query class creates the query in the order in which the terms were added. For each query term (where some terms are now consolidated), the field, comparison, and value are converted into a valid pymongo query based on the type of the query ("all", measurement results, date comparison, string comparison, number comparison). Then the query created for the given term is added, using the corresponding append mode, to the main query.
+
+        returns:
+            * dict. The query dict in pymongo query language.
+        """
         query = {}
 
         # preprocess all measurement.results terms 
@@ -509,6 +737,7 @@ class Query():
 
         return query 
 
+    #'''
     def _validate_append_mode(self, append_type):
         msg = ''
         is_valid = True
@@ -516,6 +745,8 @@ class Query():
             msg = 'Error: append mode '+str(append_type)+' not one of: '+str(self.valid_append_modes)
             is_valid = False
         return is_valid, msg
+    '''
+    '''
     def _validate_field_name(self, field):
         msg = ''
         is_valid = True
@@ -523,6 +754,8 @@ class Query():
             msg = 'Error: field name '+str(field)+' is not a valid field name. Must be one of: '+str(self.valid_field_names)
             is_valid = False
         return is_valid, msg
+    '''
+    '''
     def _validate_comparison(self, field, comparison):
         msg = ''
         is_valid = True
@@ -536,6 +769,8 @@ class Query():
             msg = 'Error: when comparing date values, the comparison operator must be one of: '+str(self.date_comparisons)
             is_valid = False
         return is_valid, msg
+    '''
+    '''
     def _validate_value(self, field, value):
         msg = ''
         is_valid = True
@@ -563,6 +798,7 @@ class Query():
         #    msg = 'Error: field name '+str(field)+' is not a valid field name. Must be one of:'+str(self.valid_field_names)
         #    is_valid = False
         return is_valid, msg
+    #'''
     def _validate_term_against_other_terms(self, field, comparison, value):
         is_valid = True
         msg = ''
@@ -588,7 +824,7 @@ class Query():
                         is_valid, msg = self._validate_term_against_other_terms(field, comparison, value)
         #TODO validate that if someone has searched for 'all contains ""' AKA empty query, that we don't let them add to it
         return is_valid, msg
-
+    #'''
 
 if __name__ == '__main__':
     #q_str = 'all contains '
