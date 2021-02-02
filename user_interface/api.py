@@ -5,10 +5,11 @@ import argparse
 import datetime
 from functools import wraps
 import scrypt
-from flask import Flask, request, session, url_for, redirect, render_template
-from dunetoolkit import set_ui_db, search_by_id, convert_date_to_str
+from flask import Flask, request, session, url_for, redirect, render_template, current_app
+from dunetoolkit import search_by_id, convert_date_to_str
 from frontend_helpers import do_q_append, parse_existing_q, perform_search, perform_insert, parse_update, perform_update
 from frontend_helpers import _get_user
+from pymongo import MongoClient
 
 app = Flask(__name__)
 
@@ -23,6 +24,7 @@ app.config['SECRET_KEY'] = config_dict['secret_key']
 salt = config_dict['salt']
 database_name = config_dict['database']
 collection_name = config_dict['collection']
+db_obj = MongoClient('localhost', 27017)[database_name]
 
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
 USER_MODES = ['DUNEreader', 'DUNEwriter']
@@ -113,20 +115,17 @@ def search_endpoint():
     results_str = []
 
     if request.form.get("append_button") == "do_and":
-        print('and...')
         q_dict, q_str, num_q_lines, error_msg = do_q_append(request.form)
         append_mode = "AND"
 
     elif request.form.get("append_button") == "do_or":
-        print('or...')
         q_dict, q_str, num_q_lines, error_msg = do_q_append(request.form)
         append_mode = "OR"
  
     elif request.method == "POST":
-        print('search...')
         final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
 
-        results, error_msg = perform_search(final_q)
+        results, error_msg = perform_search(final_q, db_obj)
         
         final_q_lines_list = []
         if final_q_str != '':
@@ -141,22 +140,15 @@ def search_endpoint():
         q_dict = {}
         q_str = ''
         num_q_lines = 0
-        #append_mode = ''
-        #final_q_lines_list = []
-        #results = []
-        #results_str = []
         error_msg = ''
 
-    #q_dict = json.dumps(q_dict)
-
-    print('num q lines:',num_q_lines)
     return render_template('search.html', existing_query=q_str, append_mode=append_mode, error_msg=error_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
 @requires_permissions(['DUNEwriter', 'Admin'])
 def insert_endpoint():
     if request.method == "POST":
-        new_doc_id, error_msg = perform_insert(request.form)
+        new_doc_id, error_msg = perform_insert(request.form, db_obj)
         new_doc_msg = 'new doc id: '+str(new_doc_id)
         if new_doc_id is None:
             new_doc_msg = "ERROR: record not inserted because "+error_msg
@@ -172,8 +164,7 @@ def update_endpoint():
 
     elif request.form.get("submit_button") == "find_doc":
         doc_id = request.form.get('doc_id', '')
-        doc = search_by_id(doc_id)
-        print('DOC:::',doc)
+        doc = search_by_id(doc_id, db_obj)
 
         if doc is None:
             return render_template('update.html', doc_data=False, message="No document was found with the ID you provided.")
@@ -213,31 +204,20 @@ def update_endpoint():
 
     elif request.form.get("submit_button") == "update_doc":
         doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form)
-        new_doc_id, error_msg = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles)
+        new_doc_id, error_msg = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles, db_obj)
         if new_doc_id != None:
             message = "update success. New doc version ID: "+str(new_doc_id)
         else:
-            message = 'error: '+error_msg
+            message = 'Error: '+error_msg
         return render_template('update.html', doc_data=False, message=message)
     return None
 
+# asasys
+# assays_old_versions
+# assay_requests
+# assay_requests_old_versions
 
-@app.before_first_request
-def _setup_database():
-    global database_name
-    #database_name = 'dune'
-    #collection_name = 'dune_data'
-    #database_name = 'radiopurity_data'
-    #collection_name = 'testing'
-    successful_change = set_ui_db(database_name, collection_name)
-    if not successful_change:
-        print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
-        sys.exit()
-    else:
-        print('using mongo database:',database_name)
-
-
-
+'''
 @app.before_first_request
 def _setup_database():
     global database_name
@@ -257,23 +237,5 @@ def _setup_database():
         sys.exit()
     else:
         print('using mongo database:',database_name)
-
 '''
-@app.route('/change_db', methods=['GET','POST'])
-def change_db():
-    if request.method == 'POST':
-        db_name = request.form.get("database_name", "")
-        coll_name = request.form.get("collection_name", "")
-        database_name = db_name
-        collection_name = coll_name
-        successful_change = set_ui_db(database_name, collection_name)
-        if not successful_change:
-            print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
-        else:
-            print('now using mongo database:',database_name)
-
-    return render_template('change_db.html')
-'''
-
-
 
