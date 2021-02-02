@@ -1,11 +1,10 @@
 import re
-#import json
 from pymongo import MongoClient
 from dunetoolkit import Query, add_to_query, search, insert, update, convert_date_to_str
 
 def _get_user(user, db_name):
-    client = MongoClient('localhost', 27017)
-    coll = client[db_name]['users']
+    db_client = MongoClient('localhost', 27017)
+    coll = db_client[db_name]['users']
 
     find_user_q = {'user_mode':{'$eq':user}}
     find_user_resp = coll.find(find_user_q)
@@ -17,8 +16,8 @@ def _get_user(user, db_name):
     return user_obj
 
 def _add_user(user, encrypted_pw, db_name):
-    client = MongoClient('localhost', 27017)
-    coll = client[db_name]['users']
+    db_client = MongoClient('localhost', 27017)
+    coll = db_client[db_name]['users']
 
     db_new_user = {'user_mode':user, 'password_hashed':encrypted_pw}
     insert_resp = coll.insert_one(db_new_user)
@@ -46,7 +45,6 @@ def convert_str_to_float(value):
 
 def parse_existing_q(form_obj):
     existing_q = form_obj.get('existing_query', '').strip()
-    print("EXISTING Q...",type(existing_q),existing_q)
     field = form_obj.get('query_field', '').strip()
     comparison = form_obj.get('comparison_operator', '').strip()
     value = form_obj.get('query_value', '').strip()
@@ -56,11 +54,9 @@ def parse_existing_q(form_obj):
     append_mode = form_obj.get('append_mode', '').strip()
     return existing_q, field, comparison, value, append_mode, include_synonyms
 
-def perform_search(curr_q, coll_type=''):
-    print('QUERY:::::',curr_q)
-
+def perform_search(curr_q, db_obj, coll_type=''):
     # query for results
-    results = search(curr_q, coll_type)
+    results = search(curr_q, db_obj, coll_type)
 
     # convert datetime objects to strings for UI display
     for i in range(len(results)):
@@ -72,7 +68,7 @@ def perform_search(curr_q, coll_type=''):
     return results, ''
 
 
-def perform_insert(form, coll_type=''):
+def perform_insert(form, db_obj, coll_type=''):
     meas_results = []
     i = 1
     form_keys = list(form.to_dict().keys())
@@ -271,8 +267,8 @@ def parse_update(form):
     return doc_id, remove_doc, update_pairs, remove_meas_indices, add_eles
 
 
-def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles, is_assay_request_update=False, is_assay_request_verify=False):
-    new_doc_id, error_msg = update(doc_id, remove_doc, update_pairs, meas_add_eles, meas_remove_indices, is_assay_request_update=is_assay_request_update, is_assay_request_verify=is_assay_request_verify)
+def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles, db_obj, is_assay_request_update=False, is_assay_request_verify=False):
+    new_doc_id, error_msg = update(doc_id, db_obj, remove_doc, update_pairs, meas_add_eles, meas_remove_indices, is_assay_request_update=is_assay_request_update, is_assay_request_verify=is_assay_request_verify)
     return new_doc_id, error_msg
 
 

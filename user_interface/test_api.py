@@ -41,9 +41,6 @@ restricted_endpoints = [
     '/search',
     '/insert',
     '/update',
-    '/assay_request',
-    '/assay_request_search',
-    '/assay_request_update',
 ]
 @pytest.mark.parametrize('endpoint', restricted_endpoints)
 def test_restricted_pages_are_restricted(endpoint):
@@ -56,7 +53,6 @@ def test_restricted_pages_are_restricted(endpoint):
 
 read_endpoints = [
     '/search',
-    '/assay_request',
 ]
 @pytest.mark.parametrize('endpoint', read_endpoints)
 def test_readonly_endpoints_work_when_logged_in(endpoint):
@@ -90,9 +86,6 @@ write_endpoints = [
     '/search',
     '/insert',
     '/update',
-    '/assay_request',
-    '/assay_request_search',
-    '/assay_request_update',
 ]
 @pytest.mark.parametrize('endpoint', write_endpoints)
 def test_readwrite_endpoints_work_when_logged_in(endpoint):

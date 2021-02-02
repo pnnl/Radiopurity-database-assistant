@@ -1,16 +1,11 @@
 import re
 import pytest
-#from query_class import Query
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import datetime
 
-#from python_mongo_toolkit import set_ui_db
-#from python_mongo_toolkit import search
-
-#from dunetoolkit import Query, set_ui_db, search
-from dunetoolkit import Query, set_ui_db, search
+from dunetoolkit import Query, search
 
 #'''
 data_load_from_str = [
@@ -41,27 +36,25 @@ def test_load_from_str(base_str, correct_q_dict):
 def test_query_results_1():
     # set up database to be updated
     teardown_db_for_test()
-    set_up_db_for_test()
-    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+    db_obj = set_up_db_for_test()
 
     query_str = "all contains "
     num_expected_docs = 45 # all docs returned
 
     q = Query(query_str=query_str).to_query_language()
-    docs = search(q)
+    docs = search(q, db_obj=db_obj)
 
     assert len(docs) == num_expected_docs
 
 def test_query_results_2():
     # set up database to be updated
     teardown_db_for_test()
-    set_up_db_for_test()
-    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+    db_obj = set_up_db_for_test()
 
     query_str = "all contains testing"
 
     q = Query(query_str=query_str).to_query_language()
-    docs = search(q)
+    docs = search(q, db_obj=db_obj)
 
     found_ids = []
     for doc in docs:
@@ -79,7 +72,7 @@ def test_query_results_2():
         assert datasource_input_notes or datasource_reference or grouping or measurement_description or measurement_technique or sample_description or sample_id or sample_name or sample_source
 
     # check that none are missing (query for all docs, go through them, and make sure none of them meets all the criteria)
-    for doc in search({}):
+    for doc in search({}, db_obj=db_obj):
         if doc['_id'] not in found_ids:
             datasource_input_notes = 'test' in doc['data_source']['input']['notes'].lower()
             datasource_reference = 'test' in doc['data_source']['reference'].lower()
@@ -95,27 +88,25 @@ def test_query_results_2():
 def test_query_results_3():
     # set up database to be updated
     teardown_db_for_test()
-    set_up_db_for_test()
-    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+    db_obj = set_up_db_for_test()
 
     query_str = 'grouping equals '
     num_expected_docs = 0
 
     q = Query(query_str=query_str).to_query_language()
-    docs = search(q)
+    docs = search(q, db_obj=db_obj)
 
     assert len(docs) == num_expected_docs
 
 def test_query_results_5():
     # set up database to be updated
     teardown_db_for_test()
-    set_up_db_for_test()
-    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+    db_obj = set_up_db_for_test()
 
     query_str = 'measurement.results.value is less than 10\nAND\nmeasurement.results.value is greater than or equal to 5'
 
     q = Query(query_str=query_str).to_query_language()
-    docs = search(q)
+    docs = search(q, db_obj=db_obj)
 
     # check that all found docs meet the criteria
     found_ids = []
@@ -133,7 +124,7 @@ def test_query_results_5():
         assert found_valid
 
     # check that none are missing (query for all docs, go through them, and make sure none of them meets all the criteria)
-    for doc in search({}):
+    for doc in search({}, db_obj=db_obj):
         if doc['_id'] not in found_ids:
             found_valid = False
             for meas_ele in doc['measurement']['results']:
@@ -149,13 +140,12 @@ def test_query_results_5():
 def test_query_results_6():
     # set up database to be updated
     teardown_db_for_test()
-    set_up_db_for_test()
-    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+    db_obj = set_up_db_for_test()
 
     query_str = 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1\nOR\nmeasurement.results.unit equals ppb\nAND\nmeasurement.results.value is greater than 100\nAND\nmeasurement.results.value is less than or equal to 1000'
 
     q = Query(query_str=query_str).to_query_language()
-    docs = search(q)
+    docs = search(q, db_obj=db_obj)
 
     found_ids = []
     for doc in docs:
@@ -180,7 +170,7 @@ def test_query_results_6():
         assert found_isotope
 
     # check that none are missing (query for all docs, go through them, and make sure none of them meets all the criteria)
-    for doc in search({}):
+    for doc in search({}, db_obj=db_obj):
         if doc['_id'] not in found_ids:
             found_isotope = False
             for meas_ele in doc['measurement']['results']:
@@ -207,13 +197,12 @@ def test_query_results_6():
 def test_query_results_10():
     # set up database to be updated
     teardown_db_for_test()
-    set_up_db_for_test()
-    successful_db_change = set_ui_db('dune_pytest_data', 'test_data')
+    db_obj = set_up_db_for_test()
 
     query_str = "grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt"
 
     q = Query(query_str=query_str).to_query_language()
-    docs = search(q)
+    docs = search(q, db_obj=db_obj)
 
     found_ids = []
     for doc in docs:
@@ -234,7 +223,7 @@ def test_query_results_10():
         assert found_isotope
 
     # check that none are missing (query for all docs, go through them, and make sure none of them meets all the criteria)
-    for doc in search({}):
+    for doc in search({}, db_obj=db_obj):
         if doc['_id'] not in found_ids:
             found_majorana = 'majorana' in doc['grouping'].lower()
             found_isotope = False
@@ -255,7 +244,8 @@ def test_query_results_10():
 
 def set_up_db_for_test():
     client = MongoClient('localhost', 27017)
-    coll = client.dune_pytest_data.test_data
+    db_obj = client.dune_pytest_data
+    coll = db_obj.assays
     coll.insert_one({ "_id" : ObjectId("000000000000000000000002"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA", "results" : [ { "unit" : "ppb", "value" : [ 0.18, 2 ], "isotope" : "U-238", "type" : "measurement" }, { "unit" : "ppb", "value" : [ 59, 2 ], "isotope" : "Th-232", "type" : "measurement" }, { "unit" : "ppm", "value" : [ 0.78, 0.02 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "Majorana (2016)", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "we are performing a test right now" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Resin, Magnex, 2:1 Thiokol 308, RAL", "id" : "ILIAS UKDM #249", "owner" : { "name" : "", "contact" : "" }, "name" : "Resin, Magnex, 2:1 Thiokol 308", "source" : "" }, "type" : "measurement", "_version" : 1 })
     coll.insert_one({ "_id" : ObjectId("000000000000000000000003"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA testing", "results" : [ { "unit" : "ppb", "value" : [ 3 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.89, 0.2 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Rexalite, copper removed", "id" : "ILIAS UKDM #266", "owner" : { "name" : "", "contact" : "" }, "name" : "Rexalite, copper removed", "source" : "" }, "type" : "measurement", "_version" : 1 })
     coll.insert_one({ "_id" : ObjectId("000000000000000000000004"), "measurement" : { "description" : "", "practitioner" : { "name" : "RAL", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "AA", "results" : [ { "unit" : "ppb", "value" : [ 150 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Salt, ICI, pure dried vacuum TESTING", "id" : "ILIAS UKDM #273", "owner" : { "name" : "", "contact" : "" }, "name" : "Salt, ICI, pure dried vacuum", "source" : "" }, "type" : "measurement", "_version" : 1 })
@@ -302,12 +292,12 @@ def set_up_db_for_test():
     coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb862a1'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, plate stock, saw cut', 'source': '', 'description': 'Copper, C10100, 1 in. plate stock, saw cut (same stock #019)', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #018'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [10.2, 1.0], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [6.62, 0.58], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
     coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb862a2'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, plate stock, machined surfaces', 'source': '', 'description': 'Copper, C10100, 1 in. plate stock, machined surfaces', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #019'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [1.88, 0.45], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [3.11, 0.39], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
     coll.insert_one({'_id': ObjectId('5f18a7020a51fbd22bb862a3'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, bar stock, machined surfaces', 'source': '', 'description': 'Copper, C10100, 1 in. x 2 in. bar stock, machined surfaces', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #020'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [2.12, 0.39], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [2.25, 0.15], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1})
-
+    return db_obj
 
 def teardown_db_for_test():
     client = MongoClient('localhost', 27017)
-    coll = client.dune_pytest_data.test_data
-    old_versions_coll = client.dune_pytest_data.test_data_oldversions
+    coll = client.dune_pytest_data.assays
+    old_versions_coll = client.dune_pytest_data.assays_old_versions
     remove_resp = coll.delete_many({})
     resmove_oldversions_resp = old_versions_coll.delete_many({})
 
