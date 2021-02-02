@@ -20,64 +20,36 @@ from .query_class import Query
 # ssh -L 27017:localhost:27017 bgtest01
 ##########################################
 
-client = MongoClient('localhost', 27017)
 
-# set default database
-coll = client.radiopurity_data.testing
-old_versions_coll = client.radiopurity_data.testing_oldversions
-
-def set_ui_db(db_name, coll_name):
-    """Sets the global variables "coll", "old_versions_coll", "assay_requests_coll", and "assay_requests_old_versions_coll" to the proper pymongo.collection.Collection object according to the input arguments.
-
-    args:
-        * db_name (str): The name of the MongoDB database to use.
-        * coll_name (str): The name of the MongoDB collection with in the database to use.
+def _create_db_obj():
+    """This function is useful when the python toolkit is being used directly by the user, instead of in conjunction with the UI. The UI is responsible for creating a persisting, shared database connection and passing it to functions as needed. When the search, insert, and update python functions are being called directly, no existing database connection is required, so this function gets called to set one up.
 
     returns:
-        * bool. Represents whether the setting of global database collection variables was successful.
+        pymongo.database.Database. A pymongo database object that, once a collection has been selected, can be used to query.
     """
-    global coll
-    global old_versions_coll
-    global assay_requests_coll
-    global assay_requests_old_versions_coll
+    client = MongoClient('localhost', 27017)
+    db_obj = client.dune
+    return db_obj
 
-    valid_dbs = [ ele['name'] for ele in list(client.list_databases()) ]
-    if db_name not in valid_dbs:
-        return False
 
-    valid_colls = [ ele['name'] for ele in list(client[db_name].list_collections()) ]
-    if coll_name not in valid_colls:
-        return False
-
-    old_versions_coll_name = coll_name + '_oldversions'
-    assay_requests_coll_name = coll_name + '_assay_requests'
-    assay_requests_old_versions_coll_name = coll_name + '_assay_requests_old_versions'
-
-    coll = client[db_name][coll_name]
-    old_versions_coll = client[db_name][old_versions_coll_name]
-    assay_requests_coll = client[db_name][assay_requests_coll_name]
-    assay_requests_old_versions_coll = client[db_name][assay_requests_old_versions_coll_name]
-
-    return True
-
-def _get_specified_collection(collection_name):
+def _get_specified_collection(collection_name, db_obj):
     """Selects the proper MongoDB collection object based on the collection type specified by the user (collection_name is not the full collection name, just the suffix. E.g. if the actual collection name is "dune_data", then passing "assay_requests" as the collection_name would cause this function to return the collection object with name "dune_data_assay_requests")
 
     args:
         * collection_name (str): The type of the database collection to use.
+        * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
 
     returns:
         * pymongo.collection.Collection. The MongoDB collection specified by the user.
     """
-    collection = coll
     if collection_name == 'old_versions':
-        collection = old_versions_coll
+        collection = db_obj.assays_old_versions
     elif collection_name == 'assay_requests':
-        collection = assay_requests_coll
+        collection = db_obj.assay_requests
     elif collection_name == 'assay_requests_old_versions':
-        collection = assay_requests_old_versions_coll
+        collection = db_obj.assay_requests_old_versions
     else:
-        pass # don't change the collection
+        collection = db_obj.assays
     return collection
 
 
@@ -93,11 +65,12 @@ def create_query_object(query_string=None):
     return Query(query_string)
 
 
-def search(query, coll_type=""):
+def search(query, db_obj=None, coll_type=""):
     """Queries the specified MongoDB collection in order to find the documents that fit the given query
 
     args:
         * query (str or dict): If "query" is a string, it is translated into a pymongo query dict. Otherwise, it is assumed to be a pymongo query dict that can be used as-is to query the collection.
+        * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
         * coll_type (str) (optional): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to the corresponding old_versions, assay_requests, or assay_requests_old_versions collections).
 
     returns:
@@ -112,7 +85,10 @@ def search(query, coll_type=""):
         print("Error: the query argument must be a dictionary.")
         return None
     '''
-    collection = _get_specified_collection(coll_type)
+    if db_obj is None:
+        db_obj = _create_db_obj()
+    collection = _get_specified_collection(coll_type, db_obj)
+    
     resp = collection.find(query)
     resp = list(resp)
     for i, ele in enumerate(resp):
@@ -121,11 +97,12 @@ def search(query, coll_type=""):
     return resp
 
 
-def search_by_id(doc_id, coll_type=""):
+def search_by_id(doc_id, db_obj=None, coll_type=""):
     """Queries the specified MongoDB collection in order to find the document with the specified doc_id.
     
     args:
         * doc_id (str): The string representation of the MongoDB document ID for the document the user wishes to find.
+        * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
         * coll_type (str) (optional): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to the corresponding old_versions, assay_requests, or assay_requests_old_versions collections).
 
     returns:
@@ -138,7 +115,9 @@ def search_by_id(doc_id, coll_type=""):
         return None
     q = {'_id':id_obj}
 
-    collection = _get_specified_collection(coll_type)
+    if db_obj is None:
+        db_obj = _create_db_obj()
+    collection = _get_specified_collection(coll_type, db_obj)
     resp = collection.find(q)
     resp = list(resp)
 
@@ -152,11 +131,12 @@ def search_by_id(doc_id, coll_type=""):
     return ret_doc
 
 #'''
-def _get_existing_doc(doc_id, update_from_coll_name):
+def _get_existing_doc(doc_id, db_obj, update_from_coll_name):
     """This is a helper function for updating documents in the collection. It queries the database in order to find the document with the specified doc_id.
 
     args:
         * doc_id (str): The string representation of the MongoDB document ID for the document the user wishes to find.
+        * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
         * update_from_coll_name (str): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to the corresponding old_versions, assay_requests, or assay_requests_old_versions collections).
 
     returns:
@@ -164,7 +144,7 @@ def _get_existing_doc(doc_id, update_from_coll_name):
     """
     #TODO couldn't we just use "search_by_id" for this?
     parent_q = {'_id':ObjectId(doc_id)}
-    collection = _get_specified_collection(update_from_coll_name)
+    collection = _get_specified_collection(update_from_coll_name, db_obj)
     parent_resp = collection.find(parent_q)
     parent_doc = list(parent_resp)[0]
     return parent_doc
@@ -319,13 +299,14 @@ def _update_new_doc(new_doc, meas_remove_indices, new_meas_objects, update_pairs
 
     return new_doc, ''
 
-def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll_name, old_versions_coll_name, move_to_coll_name):
+def _update_databases(new_doc, parent_doc, do_remove_doc, db_obj, update_from_coll_name, old_versions_coll_name, move_to_coll_name):
     """This is a helper function for updating documents in the collection. It performs the insertion of the new (updated) doc into the main collection that holds the most current versions of the docs. This function also moves the original version of the doc to the "old-versions" collection for archival purposes. This function is used for any type of update a user might make to the radiopurity database: updating a normal assay doc, updating an assay request doc, or validating an assay request doc. Below in the arg definitions are examples of how each type of update might be specified.
 
     args: 
         * new_doc (dict): The fully updated verision of the document. This dict will become the new "current" version of the doc in the main collection.
         * parent_doc (dict): The "original" version of the document that does not have the specified updates applied.
         * do_remove_doc (bool): This option would be true if the user wishes to remove this assay doc from the database entirely. In this case, the current version in the main collection would be moved to the old_versions collection but no updated doc would be inserted into the main collection.
+        * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
         * update_from_coll_name (str): This arg helps orchestrate what kind of update is happening. It dictates what collection the "original" document was pulled from. If it is a normal update, this would be the main collection. If it is an assay request update/validation, this would be the assay_requests collection.
         * old_versions_coll_name (str): This arg helps orchestrate what kind of update is happening. It dictates what collection the "original" (unupdated) document will be added to once the updated version gets added to the main collection. If it is a normal update, this would be the old versions database. If it is an assay request update/validation, this would be the assay requests old version.
         * move_to_coll_name (str): This arg helps orchestrate what kind of update is happening. It dictates what collection the fully updated document will be added to. If it is a normal update, this would be the main collection. If it is an assay request update, this would be the assay requests database. If it is an assay request validation, this would be the main database (as a validated assay request is ready to be inserted as a normal assay).
@@ -336,9 +317,9 @@ def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll_name,
     new_doc_id = None
     update_ok = True
 
-    collection = _get_specified_collection(move_to_coll_name)
-    old_versions_collection = _get_specified_collection(old_versions_coll_name)
-    original_collection = _get_specified_collection(update_from_coll_name)
+    collection = _get_specified_collection(move_to_coll_name, db_obj)
+    old_versions_collection = _get_specified_collection(old_versions_coll_name, db_obj)
+    original_collection = _get_specified_collection(update_from_coll_name, db_obj)
 
     # if the action is not to remove the entire doc, try to insert it into current versions collection
     if not do_remove_doc:
@@ -367,11 +348,12 @@ def _update_databases(new_doc, parent_doc, do_remove_doc, update_from_coll_name,
     return new_doc_id
 #'''
 
-def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[], is_assay_request_update=False, is_assay_request_verify=False):
+def update(doc_id, db_obj=None, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_remove_indices=[], is_assay_request_update=False, is_assay_request_verify=False):
     """This is the main function that orchestrates a document update. It uses the is_assay_request_update and is_assay_request_verify args to discern what type of update is happening and uses that knowledge to decide which collections to use to pull the original document from, move the non-updated original document to, and insert the fully-updated document to. It calls the function _update_new_doc to actually update the original doc and then calls _update_databases to perform all aspects of the update in the MongoDB collections.
 
     args:
         * doc_id (str): The string representation of the MongoDB document ID for the document that the user wishes to update. This will be used to find the original doc (in the database collection) that will be copied and have updates applied.
+        * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
         * remove_doc (bool): This option would be true if the user wishes to remove this assay doc from the database entirely. In this case, the current version in the main collection would be moved to the old_versions collection but no updated doc would be inserted into the main collection.
         * update_pairs (dict): A set of key-value pairs that represent the fields of the document that need to be updated and the new values that those fields should point to.
         * new_meas_objects (list of dict): A list of new measurement object dicts to add to the document's measurement results list.
@@ -400,10 +382,11 @@ def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_
         update_to_coll_name = '' # insert updated doc into main colleciton
         old_versions_coll_name = 'old_versions'
 
-    #print('UPDATING:','|',update_from_coll_name,'|',update_to_coll_name,'|',old_versions_coll_name,'|')
+    if db_obj is None:
+        db_obj = _create_db_obj()
 
     # find existing doc to update
-    parent_doc = _get_existing_doc(doc_id, update_from_coll_name)
+    parent_doc = _get_existing_doc(doc_id, db_obj, update_from_coll_name)
 
     # create child (new record) based off of parent doc
     new_doc = deepcopy(parent_doc)
@@ -417,7 +400,7 @@ def update(doc_id, remove_doc=False, update_pairs={}, new_meas_objects=[], meas_
         return None, error_msg
 
     # do update in database, move old version, etc.
-    new_doc_id = _update_databases(new_doc, parent_doc, remove_doc, update_from_coll_name, old_versions_coll_name, update_to_coll_name)
+    new_doc_id = _update_databases(new_doc, parent_doc, remove_doc, db_obj, update_from_coll_name, old_versions_coll_name, update_to_coll_name)
 
     return new_doc_id, ''
 
@@ -446,7 +429,7 @@ def add_to_query(field, comparison, value, query_object=None, query_string="", a
     return query_string, query_dict
 
 
-def insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
+def insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj=None, \
     grouping="", sample_source="", sample_id="", sample_owner_name="", sample_owner_contact="", \
     measurement_results=[], measurement_practitioner_name="", measurement_practitioner_contact="", \
     measurement_technique="", measurement_institution="", measurement_date=[], measurement_description="", \
@@ -460,6 +443,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         * data_input_name (str): Name of the person/people who performed data input.
         * data_input_contact (str): Email of the person who performed the data input (must be a valid email address).
         * data_input_date (list of str): A list of strings that can be converted into datetime objects. This represents the date or date range when the data was input.
+        * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
         * grouping (str) (optional): Experiment name.
         * sample_source (str) (optional): Where the sample came from.
         * sample_id (str) (optional): Sample identification number or string.
@@ -525,7 +509,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         },
         "_version":1
     }
-    print('DOC TO INSERT:',doc)
+    #print('DOC TO INSERT:',doc)
 
     # validate doc
     # TODO: verify that sample.ownder.contact, measurement.requestor.contact, measurement.practitioner.contact, and data_source.input.contact are valid emails
@@ -535,14 +519,16 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         return None, error_message
 
     # perform doc insert
-    collection = _get_specified_collection(coll_type)
-    mongo_id = collection.insert_one(doc).inserted_id
+    if db_obj is None:
+        db_obj = _create_db_obj()
+    collection = _get_specified_collection(coll_type, db_obj)
 
     try:
-        print("Successfully inserted doc with id:",mongo_id)
+        mongo_id = collection.insert_one(doc).inserted_id
+        #print("Successfully inserted doc with id:",mongo_id)
         msg = ''
     except:
-        print("Error inserting doc")
+        #print("Error inserting doc")
         msg = 'unsuccessful insert into mongodb'
 
     return mongo_id, msg
