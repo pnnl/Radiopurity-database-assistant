@@ -132,6 +132,7 @@ def perform_insert(form, db_obj, coll_type=''):
         measurement_requestor_name=form.get('measurement.requestor.name',''), \
         measurement_requestor_contact=form.get('measurement.requestor.contact',''), \
         data_input_notes=form.get('data_source.input.notes',''),
+        db_obj=db_obj,
         coll_type=coll_type
     )
     

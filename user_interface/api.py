@@ -5,10 +5,9 @@ import argparse
 import datetime
 from functools import wraps
 import scrypt
-from flask import Flask, request, session, url_for, redirect, render_template, current_app
+from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
-from frontend_helpers import do_q_append, parse_existing_q, perform_search, perform_insert, parse_update, perform_update
-from frontend_helpers import _get_user
+from frontend_helpers import _get_user, do_q_append, parse_update, perform_search, perform_insert, perform_update
 from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -23,7 +22,6 @@ with open(config_name, 'r') as config:
 app.config['SECRET_KEY'] = config_dict['secret_key']
 salt = config_dict['salt']
 database_name = config_dict['database']
-collection_name = config_dict['collection']
 db_obj = MongoClient('localhost', 27017)[database_name]
 
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
@@ -214,28 +212,5 @@ def update_endpoint():
 
 # asasys
 # assays_old_versions
-# assay_requests
-# assay_requests_old_versions
 
-'''
-@app.before_first_request
-def _setup_database():
-    global database_name
-    
-#    database_name = 'dune'
-#    collection_name = 'dune_data'
-    
-    #database_name = 'radiopurity_data'
-    #collection_name = 'testing'
-    
-#    database_name = 'dune_pytest_data'
-#    collection_name = 'test_data'
-
-    successful_change = set_ui_db(database_name, collection_name)
-    if not successful_change:
-        print('error: unable to change mongodb to database:',database_name,'and collection:',collection_name)
-        sys.exit()
-    else:
-        print('using mongo database:',database_name)
-'''
 

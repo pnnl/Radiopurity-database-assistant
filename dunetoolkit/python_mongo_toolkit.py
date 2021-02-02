@@ -44,10 +44,6 @@ def _get_specified_collection(collection_name, db_obj):
     """
     if collection_name == 'old_versions':
         collection = db_obj.assays_old_versions
-    elif collection_name == 'assay_requests':
-        collection = db_obj.assay_requests
-    elif collection_name == 'assay_requests_old_versions':
-        collection = db_obj.assay_requests_old_versions
     else:
         collection = db_obj.assays
     return collection
@@ -71,7 +67,7 @@ def search(query, db_obj=None, coll_type=""):
     args:
         * query (str or dict): If "query" is a string, it is translated into a pymongo query dict. Otherwise, it is assumed to be a pymongo query dict that can be used as-is to query the collection.
         * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
-        * coll_type (str) (optional): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to the corresponding old_versions, assay_requests, or assay_requests_old_versions collections).
+        * coll_type (str) (optional): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to old_versions).
 
     returns:
         * list of dict. The documents found by in the MongoDB collection using the provided query.
@@ -88,6 +84,7 @@ def search(query, db_obj=None, coll_type=""):
     if db_obj is None:
         db_obj = _create_db_obj()
     collection = _get_specified_collection(coll_type, db_obj)
+    
     resp = collection.find(query)
     resp = list(resp)
     for i, ele in enumerate(resp):
@@ -102,7 +99,7 @@ def search_by_id(doc_id, db_obj=None, coll_type=""):
     args:
         * doc_id (str): The string representation of the MongoDB document ID for the document the user wishes to find.
         * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
-        * coll_type (str) (optional): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to the corresponding old_versions, assay_requests, or assay_requests_old_versions collections).
+        * coll_type (str) (optional): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to old_versions).
 
     returns:
         * dict. The document found by in the MongoDB collection with the given document ID. If no document is found with a matching ID, then None is returned.
@@ -136,7 +133,7 @@ def _get_existing_doc(doc_id, db_obj, update_from_coll_name):
     args:
         * doc_id (str): The string representation of the MongoDB document ID for the document the user wishes to find.
         * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
-        * update_from_coll_name (str): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to the corresponding old_versions, assay_requests, or assay_requests_old_versions collections).
+        * update_from_coll_name (str): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to old_versions).
 
     returns:
         * dict. The document found by in the MongoDB collection with the given document ID. If no document is found with a matching ID, then None is returned.
@@ -381,7 +378,6 @@ def update(doc_id, db_obj=None, remove_doc=False, update_pairs={}, new_meas_obje
         update_to_coll_name = '' # insert updated doc into main colleciton
         old_versions_coll_name = 'old_versions'
 
-    #print('UPDATING:','|',update_from_coll_name,'|',update_to_coll_name,'|',old_versions_coll_name,'|')
     if db_obj is None:
         db_obj = _create_db_obj()
 
@@ -509,7 +505,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         },
         "_version":1
     }
-    print('DOC TO INSERT:',doc)
+    #print('DOC TO INSERT:',doc)
 
     # validate doc
     # TODO: verify that sample.ownder.contact, measurement.requestor.contact, measurement.practitioner.contact, and data_source.input.contact are valid emails
@@ -522,13 +518,13 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     if db_obj is None:
         db_obj = _create_db_obj()
     collection = _get_specified_collection(coll_type, db_obj)
-    mongo_id = collection.insert_one(doc).inserted_id
 
     try:
-        print("Successfully inserted doc with id:",mongo_id)
+        mongo_id = collection.insert_one(doc).inserted_id
+        #print("Successfully inserted doc with id:",mongo_id)
         msg = ''
     except:
-        print("Error inserting doc")
+        #print("Error inserting doc")
         msg = 'unsuccessful insert into mongodb'
 
     return mongo_id, msg
