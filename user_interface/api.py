@@ -114,7 +114,7 @@ def simplesearch_endpoint():
         comparison = "contains"
         q_dict, q_str, _, error_msg = do_q_append(request.form)
 
-        results, error_msg = perform_search(q_dict)
+        results, error_msg = perform_search(q_dict, db_obj)
         results_str = [ str(r) for r in results ]
 
     else:
