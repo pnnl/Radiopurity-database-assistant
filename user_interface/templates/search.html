@@ -32,9 +32,6 @@
 
 <h1>Query Assistant</h1>
 
-<!--<h3>this UI queries the {{db_name}} database</h3>-->
-<p class="info">Note that this search assistant only performs simple queries; if you wish to perform a nested query or a query with complicated "AND" and "OR" functionality, you are advised to use the DUNEdb python toolkit to query for all records and then filter the records (returned as JSON) as you desire.</p>
-
 <form action="{{ url_for('search_endpoint') }}" method="POST">
     {% if (num_q_lines > 0) %}
         <div class="section-container">
