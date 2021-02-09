@@ -19,13 +19,25 @@
 </div>
 
 <div>
-    <a href="{{ url_for('logout') }}">
-        <p class="logout-link">logout</p>
+    <a class="github-link" href="https://github.com/pnnl/Radiopurity-database-assistant" target="_blank" rel="noopener noreferrer">
+        <img class="github-logo" src="{{ url_for('static', filename='logos/github_logo.png') }}" alt="GitHub logo">
     </a>
+</div>
+<div class="clear-float"></div>
+
+<!-- links to other pages on the site -->                                             
+<div>                                                                                 
+    <a href="{{ url_for('about_endpoint') }}"><button class="logout-link">about</button></a>
+    <a href="{{ url_for('simplesearch_endpoint') }}"><button class="pages">search</button></a>
+    <a href="{{ url_for('search_endpoint') }}"><button class="pages">advanced search</button></a>
+    <a href="{{ url_for('insert_endpoint') }}"><button class="pages">insert</button></a>   
+    <a href="{{ url_for('update_endpoint') }}"><button class="pages">update</button></a>
+    <a href="{{ url_for('logout') }}"><button class="logout-link">logout</button></a> 
 </div>
 
 <h1>About</h1>
 <p class="normal-text"></p>
+<p class="normal-text">View the <a href="https://github.com/pnnl/Radiopurity-database-assistant" target="_blank" rel="noopener noreferrer">open source code</a> for this project.</p>
 
 <h3>Instructions</h3>
 <p class="normal-text">To use the simple search page, simply enter a value that you would like to search for. This search will return all documents from the database where any of the fields contain the search value.</p>
