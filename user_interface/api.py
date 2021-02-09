@@ -50,7 +50,7 @@ def requires_permissions(permissions_levels):
 @app.route('/', methods=['GET', 'POST'])
 @requires_permissions(['DUNEreader', 'DUNEwriter', 'Admin'])
 def reference_endpoint():
-    return render_template('index.html')
+    return redirect(url_for('search_endpoint'))
 
 
 @app.route('/register', methods=['GET', 'POST'])
