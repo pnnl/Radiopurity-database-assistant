@@ -56,7 +56,7 @@ select {
 }
 
 .pages, .logout-link {
-  width: 16%;
+  width: 24%;
   background-color: #e1e3e6;
   display: inline-block;
   color: black;

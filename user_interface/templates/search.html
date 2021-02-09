@@ -18,13 +18,6 @@
     <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
 </div>
 
-<div>
-    <a class="github-link" href="https://github.com/pnnl/Radiopurity-database-assistant" target="_blank" rel="noopener noreferrer">
-        <img class="github-logo" src="{{ url_for('static', filename='logos/github_logo.png') }}" alt="GitHub logo">
-    </a>
-</div>
-<div class="clear-float"></div>
-
 <!-- links to other pages on the site -->
 <div>
     <a href="{{ url_for('search_endpoint') }}"><button class="pages">search</button></a>
@@ -35,9 +28,6 @@
 
 
 <h1>Query Assistant</h1>
-
-<!--<h3>this UI queries the {{db_name}} database</h3>-->
-<p class="info">Note that this search assistant only performs simple queries; if you wish to perform a nested query or a query with complicated "AND" and "OR" functionality, you are advised to use the DUNEdb python toolkit to query for all records and then filter the records (returned as JSON) as you desire.</p>
 
 <form action="{{ url_for('search_endpoint') }}" method="POST">
     {% if (num_q_lines > 0) %}
