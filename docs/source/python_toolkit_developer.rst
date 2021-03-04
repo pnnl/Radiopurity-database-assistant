@@ -32,7 +32,7 @@ helper functions for update
 
 general helper functions
 ========================
-.. autofunction:: set_ui_db
+.. autofunction:: _configure
 .. autofunction:: _get_specified_collection
 .. autofunction:: convert_date_to_str
 .. autofunction:: convert_str_to_date

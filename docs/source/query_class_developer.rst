@@ -1,3 +1,6 @@
+
+.. _query-class-developer-docs:
+
 ***********
 Query class
 ***********
