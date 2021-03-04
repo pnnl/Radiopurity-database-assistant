@@ -1,3 +1,10 @@
+"""
+.. module:: validate
+   :synopsis: The class that defines a DuneValidator object, which uses the python jsonschema package to verify whether assay documents (dicts) or elements (dicts) of assay documents are in the proper format. The valid schema of a full assay document is the format that all documents in the databases have. This module also contains functions to validate individual elements of queries (e.g. a term's field, comparison, and value)
+
+.. moduleauthor:: Elise Saxon
+"""
+
 import os
 from datetime import datetime
 import json
@@ -5,7 +12,11 @@ import jsonschema
 from jsonschema import validate, ValidationError
 
 class DuneValidator:
+    """This class performs the validation of dictionary "documents" and partial documents according to the Material Assay Data Format (MADF) (https://www.sciencedirect.com/science/article/pii/S0168900216309639). All documents that are stored in the radiopurity database must adhere to this format, and this validator class facilitates that.
+    """
     def __init__(self, schema_type, datetime_str=False):
+        """The DuneValidator class can be instantiated with a string "schema_type", which dictates what type of document or partial document the DuneValidator instance will be validating. It could be a full document, just the list of measurement result objects, the sub-document that only contains fields pertaining to the measurement, the sub-document that only contains fields pertaining to the sample, or the sub-document that only contains fields pertaining to the data source.
+        """
         if schema_type == 'measurement_result':
             self.schema = self._load_meas_result_schema()
         elif schema_type == 'measurement':
@@ -224,19 +235,40 @@ def validate_meas_remove_indices(existing_doc, remove_indices):
 def _validate_field_name(field):
     is_valid = True
     error_msg = ''
-    valid_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.results.isotope", "measurement.results.type", "measurement.results.unit", "measurement.results.value", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
+    valid_fields = ["all", "grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.results.isotope", "measurement.results.type", "measurement.results.unit", "measurement.results.value", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
     if field not in valid_fields:
-        error_msg = 'the "field" argument must be one of: '+', '.join(valid_fields)+' and you entered: '+field
+        error_msg = 'Error: the "field" argument must be one of: '+', '.join(valid_fields)+' and you entered: '+field
         is_valid = False
     return is_valid, error_msg
 
-def _validate_query_appendmode(append_mode):
+def _validate_append_mode(append_mode):
     is_valid = True
     error_msg = ''
-    if append_mode.upper() not in ['AND', 'OR']:
+    valid_append_modes = ['AND', 'OR']
+    if append_mode.upper() not in valid_append_modes:
         is_valid = False
-        error_msg = 'the "append_mode" argument must be one of: AND, OR and you entered: '+append_mode.upper()
+        error_msg = 'Error: the "append_mode" argument must be one of: ['+', '.join(valid_append_modes)+'] and you entered: '+append_mode.upper()
     return is_valid, error_msg
+
+def _validate_comparison(field, comparison):
+    msg = ''
+    is_valid = True
+    valid_str_fields = []
+    valid_str_comparisons = []
+    valid_num_fields = []
+    valid_num_comparisons = []
+    valid_date_fields = []
+    valid_date_comparisons = []
+    if field in self.str_fields and comparison not in self.str_comparisons:
+        msg = 'Error: when comparing string values, the comparison operator must be one of: '+str(self.str_comparisons)
+        is_valid = False
+    elif field in self.num_fields and comparison not in self.num_comparisons:
+        msg = 'Error: when comparing numerical values, the comparison operator must be one of: '+str(self.num_comparisons)
+        is_valid = False
+    elif field in self.date_fields and comparison not in self.date_comparisons:
+        msg = 'Error: when comparing date values, the comparison operator must be one of: '+str(self.date_comparisons)
+        is_valid = False
+    return is_valid, msg
 
 def _validate_query_numeric_comparison(value, comparison):
     if type(value) in [int, float] and comparison in ["eq", "lt", "lte", "gt", "gte"]:

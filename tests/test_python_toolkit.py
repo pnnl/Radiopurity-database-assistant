@@ -1,3 +1,4 @@
+import os
 import pytest
 import datetime
 from pymongo import MongoClient
@@ -34,12 +35,14 @@ testing search_by_id
     ('000000000000000000000001', { "_id" : ObjectId("000000000000000000000001"), "type" : "testing_doc" }), # valid doc
 ])
 def test_search_by_id(id_str, expected_resp):
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
     
     #successful_db_change = set_ui_db('dune_pytest_data', db_obj, coll_type='test_data')
-    resp = search_by_id(id_str, db_obj)
+    resp = search_by_id(id_str) #, db_obj)
     assert resp == expected_resp
 
 

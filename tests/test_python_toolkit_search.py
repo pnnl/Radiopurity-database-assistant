@@ -1,3 +1,4 @@
+import os
 import pytest
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -7,24 +8,28 @@ import re
 from dunetoolkit import search
 
 def test_search():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     q = {'measurement.technique': re.compile('^NAA$', re.IGNORECASE)}
-    docs = search(q, db_obj=db_obj)
+    docs = search(q) #, db_obj=db_obj)
 
     for doc in docs:
         assert doc['measurement']['technique'] == 'NAA'
 
 
 def test_search_isotope():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     q = {'$and': [{'measurement.results': {'$elemMatch': {'$and': [{'isotope': re.compile('^Th-232$', re.IGNORECASE)}, {'type': re.compile('^limit$', re.IGNORECASE)}]}}}]}
-    docs = search(q, db_obj=db_obj)
+    docs = search(q) #, db_obj=db_obj)
 
     for doc in docs:
         isotopes_and_their_meas_types = [ (ele['isotope'], ele['type']) for ele in doc['measurement']['results'] ]
@@ -32,12 +37,14 @@ def test_search_isotope():
 
 
 def test_search_all():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     q = {'$or': [{'grouping': re.compile('^.*COPPEr.*$', re.IGNORECASE)}, {'sample.name': re.compile('^.*COPPEr.*$', re.IGNORECASE)}, {'sample.description': re.compile('^.*COPPEr.*$', re.IGNORECASE)}, {'sample.source': re.compile('^.*COPPEr.*$', re.IGNORECASE)}, {'sample.id': re.compile('^.*COPPEr.*$', re.IGNORECASE)}, {'measurement.technique': re.compile('^.*COPPEr.*$', re.IGNORECASE)}, {'measurement.description': re.compile('^.*COPPEr.*$', re.IGNORECASE)}, {'data_source.reference': re.compile('^.*COPPEr.*$', re.IGNORECASE)}, {'data_source.input.notes': re.compile('^.*COPPEr.*$', re.IGNORECASE)}]}
-    docs = search(q, db_obj=db_obj)
+    docs = search(q) #, db_obj=db_obj)
 
     for doc in docs:
         copper_found = False

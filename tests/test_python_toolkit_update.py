@@ -1,3 +1,4 @@
+import os
 import pytest
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -14,28 +15,32 @@ from dunetoolkit import search_by_id, update, convert_str_to_date
 testing update
 '''
 def test_update_remove_doc():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     # perform update
     doc_id = '000000000000000000000002'
-    doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=True, db_obj=db_obj)
+    doc = search_by_id(doc_id) #, db_obj=db_obj)
+    new_doc_id, error_msg = update(doc_id, remove_doc=True) #, db_obj=db_obj)
     assert new_doc_id == None
 
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert doc == oldversion_doc
 
 def test_update_nochange():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     # perform update
     doc_id = '000000000000000000000002'
-    doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, \
+    doc = search_by_id(doc_id) #, db_obj=db_obj)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, \
         update_pairs={}, \
         new_meas_objects=[], \
         meas_remove_indices=[] \
@@ -45,11 +50,11 @@ def test_update_nochange():
     new_doc_id = str(new_doc_id)
 
     # test value in oldversion database
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert doc == oldversion_doc
 
     # test currversion doc
-    currversion_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    currversion_doc = search_by_id(new_doc_id) #, db_obj=db_obj)
 
     # test version num
     doc.pop('_version')
@@ -70,14 +75,16 @@ def test_update_nochange():
 
 
 def test_update_bad_field():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     # perform update
     doc_id = '000000000000000000000002'
-    doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, \
+    doc = search_by_id(doc_id)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, \
         update_pairs={'bad_field':'val'}, \
         new_meas_objects=[], \
         meas_remove_indices=[] \
@@ -85,7 +92,7 @@ def test_update_bad_field():
     assert new_doc_id == None
 
     # test that doc did not get transferred
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert oldversion_doc == None
 
     #test that currversion doc was not inserted
@@ -95,13 +102,15 @@ def test_update_bad_field():
 
 
 def test_update_update_pairs_all():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     # perform update
     doc_id = '000000000000000000000002'
-    doc = search_by_id(doc_id, db_obj=db_obj)
+    doc = search_by_id(doc_id)
     update_pairs={
         'grouping':'new test value', 
         'sample.name':'testing sample name',
@@ -128,7 +137,7 @@ def test_update_update_pairs_all():
         'data_source.input.date':['2010/18/02','2020-10-21'],
         'data_source.input.notes':'test test test',
     }
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, \
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, \
         update_pairs=update_pairs, \
         new_meas_objects=[], \
         meas_remove_indices=[] \
@@ -137,11 +146,11 @@ def test_update_update_pairs_all():
     new_doc_id = str(new_doc_id)
 
     # test value in oldversion database
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert(doc == oldversion_doc)
 
     # test currversion doc
-    currversion_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    currversion_doc = search_by_id(new_doc_id)
 
     # test version num
     doc.pop('_version')
@@ -188,15 +197,17 @@ def test_update_update_pairs_all():
 
 
 def test_update_update_pairs_update_twice():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     # PERFORM AND TEST FIRST UPDATE
     u1_doc_id = '000000000000000000000002'
-    u1_doc = search_by_id(u1_doc_id, db_obj=db_obj)
+    u1_doc = search_by_id(u1_doc_id)
     u1_update_pairs={'grouping':'new test value', 'data_source.input.contact':'testing@test.org', 'measurement.results.0.unit':'g', 'measurement.date':['2020-10-21']}
-    u1_new_doc_id, u1_error_msg = update(u1_doc_id, remove_doc=False, db_obj=db_obj, \
+    u1_new_doc_id, u1_error_msg = update(u1_doc_id, remove_doc=False, \
         update_pairs=u1_update_pairs, \
         new_meas_objects=[], \
         meas_remove_indices=[] \
@@ -205,11 +216,11 @@ def test_update_update_pairs_update_twice():
     u1_new_doc_id = str(u1_new_doc_id)
 
     # test value in oldversion database
-    u1_oldversion_doc = search_by_id(u1_doc_id, db_obj=db_obj, coll_type='old_versions')
+    u1_oldversion_doc = search_by_id(u1_doc_id, coll_type='old_versions')
     assert(u1_doc == u1_oldversion_doc)
 
     # test new (current version) doc
-    u1_new_doc = search_by_id(u1_new_doc_id, db_obj=db_obj)
+    u1_new_doc = search_by_id(u1_new_doc_id)
 
     # test version num
     u1_doc.pop('_version')
@@ -238,16 +249,16 @@ def test_update_update_pairs_update_twice():
 
     # PERFORM AND TEST SECOND UPDATE
     u2_doc_id = u1_new_version_doc_id
-    u2_doc = search_by_id(u2_doc_id, db_obj=db_obj)
+    u2_doc = search_by_id(u2_doc_id)
     u2_update_pairs = {'grouping':'test value two'}
-    u2_new_doc_id, u2_error_msg = update(u2_doc_id, remove_doc=False, db_obj=db_obj, update_pairs=u2_update_pairs)
+    u2_new_doc_id, u2_error_msg = update(u2_doc_id, remove_doc=False, update_pairs=u2_update_pairs)
     assert u2_new_doc_id != None
     u2_new_doc_id = str(u2_new_doc_id)
 
-    u2_oldversion_doc = search_by_id(u2_doc_id, db_obj=db_obj, coll_type='old_versions')
+    u2_oldversion_doc = search_by_id(u2_doc_id, coll_type='old_versions')
     assert u2_doc == u2_oldversion_doc
 
-    u2_new_doc = search_by_id(u2_new_doc_id, db_obj=db_obj)
+    u2_new_doc = search_by_id(u2_new_doc_id)
 
     u2_doc.pop('_version')
     u2_new_version = u2_new_doc.pop('_version')
@@ -263,6 +274,8 @@ def test_update_update_pairs_update_twice():
 
 
 def test_update_new_meas_objects_bad_object():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -271,11 +284,11 @@ def test_update_new_meas_objects_bad_object():
         {'bad_field':1}
     ]
     doc_id = '000000000000000000000002'
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, new_meas_objects=new_meas_objects)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
     assert new_doc_id == None
 
     # test that doc did not get transferred
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert oldversion_doc == None
 
     #test that currversion doc was not inserted
@@ -285,6 +298,8 @@ def test_update_new_meas_objects_bad_object():
 
 
 def test_update_new_meas_objects():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -294,17 +309,17 @@ def test_update_new_meas_objects():
         {'isotope':'U-235', 'type':'range', 'unit':'g', 'value':[0.3, 2.1]}
     ]
     doc_id = '000000000000000000000002'
-    orig_doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, new_meas_objects=new_meas_objects)
+    orig_doc = search_by_id(doc_id)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
     assert new_doc_id != None
     new_doc_id = str(new_doc_id)
 
     # test that doc got transferred
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert oldversion_doc == orig_doc
 
     # test new (current version) doc
-    new_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    new_doc = search_by_id(new_doc_id)
 
     # test version num
     orig_doc.pop('_version')
@@ -330,6 +345,8 @@ def test_update_new_meas_objects():
 #  of strings (i.e. 0.3 instead of '0.3') because I decided we should always be able to expect
 #  that the incoming doc to an update or insert should have proper formatting, other than dates
 def test_update_new_meas_objects_str_for_val_a():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -338,17 +355,17 @@ def test_update_new_meas_objects_str_for_val_a():
         {'isotope':'U-235', 'type':'range', 'unit':'g', 'value':[0.3, 2.1]}
     ]
     doc_id = '000000000000000000000002'
-    orig_doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, new_meas_objects=new_meas_objects)
+    orig_doc = search_by_id(doc_id)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
     assert new_doc_id != None
     new_doc_id = str(new_doc_id)
 
     # test that doc got transferred
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert oldversion_doc == orig_doc
 
     # test new (current version) doc
-    new_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    new_doc = search_by_id(new_doc_id)
 
     # test version num
     orig_doc.pop('_version')
@@ -373,6 +390,8 @@ def test_update_new_meas_objects_str_for_val_a():
 
 
 def test_update_new_meas_objects_str_for_val_b():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -381,40 +400,44 @@ def test_update_new_meas_objects_str_for_val_b():
         {'isotope':'U-235', 'type':'range', 'unit':'g', 'value':['a', 'b']}
     ]
     doc_id = '000000000000000000000002'
-    orig_doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, new_meas_objects=new_meas_objects)
+    orig_doc = search_by_id(doc_id)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, new_meas_objects=new_meas_objects)
     assert new_doc_id == None
 
     # test that doc got transferred
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert oldversion_doc == None
 
     # test no change to original doc
-    new_doc = search_by_id(doc_id, db_obj=db_obj)
+    new_doc = search_by_id(doc_id)
     assert len(new_doc['measurement']['results']) == len(orig_doc['measurement']['results'])
 
 
 def test_update_meas_remove_indices_bad_idx():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
 
     remove_indices = [4] # list len is 3
     doc_id = '000000000000000000000002'
-    orig_doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, meas_remove_indices=remove_indices)
+    orig_doc = search_by_id(doc_id)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, meas_remove_indices=remove_indices)
     assert new_doc_id == None
 
     # test that doc did not get transferred
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert oldversion_doc == None
 
     # test no change to original doc
-    new_doc = search_by_id(doc_id, db_obj=db_obj)
+    new_doc = search_by_id(doc_id)
     assert len(new_doc['measurement']['results']) == len(orig_doc['measurement']['results'])
 
 
 def test_update_meas_remove_indices():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -422,16 +445,16 @@ def test_update_meas_remove_indices():
     remove_indices = [0, 2] # list len is 3
     doc_id = '000000000000000000000002'
     orig_doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, meas_remove_indices=remove_indices)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, meas_remove_indices=remove_indices)
     assert new_doc_id != None
     new_doc_id = str(new_doc_id)
 
     # test that doc got transferred
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert oldversion_doc == orig_doc
 
     # test new (current version) doc
-    new_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    new_doc = search_by_id(new_doc_id)
 
     # test version num
     orig_doc.pop('_version')
@@ -456,6 +479,8 @@ def test_update_meas_remove_indices():
 
 
 def test_update_all():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -467,17 +492,17 @@ def test_update_all():
     ]
     remove_indices = [1, 2]
     doc_id = '000000000000000000000002'
-    orig_doc = search_by_id(doc_id, db_obj=db_obj)
-    new_doc_id, error_msg = update(doc_id, remove_doc=False, db_obj=db_obj, update_pairs=update_pairs, new_meas_objects=new_meas_objects, meas_remove_indices=remove_indices)
+    orig_doc = search_by_id(doc_id)
+    new_doc_id, error_msg = update(doc_id, remove_doc=False, update_pairs=update_pairs, new_meas_objects=new_meas_objects, meas_remove_indices=remove_indices)
     assert new_doc_id != None
     new_doc_id = str(new_doc_id)
 
     # test that doc got transferred
-    oldversion_doc = search_by_id(doc_id, db_obj=db_obj, coll_type='old_versions')
+    oldversion_doc = search_by_id(doc_id, coll_type='old_versions')
     assert oldversion_doc == orig_doc
 
     # test new (current version) doc
-    new_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    new_doc = search_by_id(new_doc_id)
 
     # test version num
     orig_doc.pop('_version')
