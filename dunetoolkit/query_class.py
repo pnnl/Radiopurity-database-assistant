@@ -614,7 +614,7 @@ class Query():
 This function assumes a user may specify multiple terms comparing a measurement result object's value and that only one measurement type, isotope, and unit are specified. It iterates over each term in the terms list and consolidates terms whose field is "value". If a term queries on the "unit" field, that term is converted into a valid pymongo query. If a term queries on the "isotope" field, that term is converted into a valid pymongo query. If a term queries on the "type" field, the value is stored as specified_measurement_type (which will be used when assembling the query for the "values" field). Once all the terms have been handled and sorted, the value terms are converted into 
 
         args:
-            * terms (list of dict): The list of consolidated measurement.results query terms which will be further-consolidated into one MongoDB query term..
+            * terms (list of dict): The list of consolidated measurement.results query terms which will be further-consolidated into one MongoDB query term.
 
         returns:
             * dict. The fully-consolidated query term in MongoDB query format.
