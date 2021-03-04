@@ -4,15 +4,14 @@
    contain the root `toctree` directive.
 
 Welcome to Radiopurity Database Assistant's developer documentation!
-==========================================================
+====================================================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-   python_toolkit
-   query_class
-   validator_class
+   user_docs
+   developer_docs
 
 Indices and tables
 ==================
