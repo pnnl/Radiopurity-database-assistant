@@ -1,3 +1,4 @@
+import os
 import pytest
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -6,6 +7,8 @@ import datetime
 from dunetoolkit import search_by_id, insert
 
 def test_insert_partial_doc():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+    
     # set up database
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -20,11 +23,11 @@ def test_insert_partial_doc():
     measurement_description = 'testing measurement description'
     data_input_notes = 'testing data input notes'
 
-    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj=db_obj, \
+    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
     measurement_description=measurement_description, data_input_notes=data_input_notes)
     assert new_doc_id != None, error_msg
 
-    new_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    new_doc = search_by_id(new_doc_id)#, db_obj=db_obj)
     assert new_doc['sample']['name'] == sample_name
     assert new_doc['sample']['description'] == sample_description
     assert new_doc['data_source']['reference'] == data_reference
@@ -49,6 +52,8 @@ def test_insert_partial_doc():
 
 
 def test_insert_complete_doc():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+    
     # set up database
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -76,14 +81,14 @@ def test_insert_complete_doc():
     measurement_requestor_contact = 'testing measurement requestor contact'
     data_input_notes = 'testing data input notes'
 
-    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj, \
-    grouping, sample_source, sample_id, sample_owner_name, sample_owner_contact, \
-    measurement_results, measurement_practitioner_name, measurement_practitioner_contact, \
-    measurement_technique, measurement_institution, measurement_date, measurement_description, \
-    measurement_requestor_name, measurement_requestor_contact, data_input_notes)
+    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
+    grouping=grouping, sample_source=sample_source, sample_id=sample_id, sample_owner_name=sample_owner_name, sample_owner_contact=sample_owner_contact, \
+    measurement_results=measurement_results, measurement_practitioner_name=measurement_practitioner_name, measurement_practitioner_contact=measurement_practitioner_contact, \
+    measurement_technique=measurement_technique, measurement_institution=measurement_institution, measurement_date=measurement_date, measurement_description=measurement_description, \
+    measurement_requestor_name=measurement_requestor_name, measurement_requestor_contact=measurement_requestor_contact, data_input_notes=data_input_notes)
     assert new_doc_id != None, error_msg
 
-    new_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    new_doc = search_by_id(new_doc_id) #, db_obj=db_obj)
     assert new_doc['sample']['name'] == sample_name
     assert new_doc['sample']['description'] == sample_description
     assert new_doc['data_source']['reference'] == data_reference
@@ -109,6 +114,8 @@ def test_insert_complete_doc():
 
 #meas values are strings (string numbers, string alpha)
 def test_insert_meas_values_strings_a():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+    
     # set up database
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -122,11 +129,11 @@ def test_insert_meas_values_strings_a():
     data_input_date = ['2020-02-20']
     measurement_results = [{'isotope':'K-40', 'type':'measurement', 'unit':'ppm', 'value':[1.3,3.1]}]
 
-    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj=db_obj, \
+    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
     measurement_results=measurement_results)
     assert new_doc_id != None, error_msg
 
-    new_doc = search_by_id(new_doc_id, db_obj=db_obj)
+    new_doc = search_by_id(new_doc_id) #, db_obj=db_obj)
     assert new_doc['sample']['name'] == sample_name
     assert new_doc['sample']['description'] == sample_description
     assert new_doc['data_source']['reference'] == data_reference
@@ -137,6 +144,8 @@ def test_insert_meas_values_strings_a():
 
 
 def test_insert_meas_values_strings_b():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+    
     # set up database
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -150,12 +159,14 @@ def test_insert_meas_values_strings_b():
     data_input_date = ['2020-02-20']
     measurement_results = [{'isotope':'K-40', 'type':'measurement', 'unit':'ppm', 'value':['a','b']}]
 
-    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj=db_obj, \
+    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
     measurement_results=measurement_results)
     assert new_doc_id == None
 
 
 def test_insert_bad_date_a():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+    
     # set up database
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -168,11 +179,13 @@ def test_insert_bad_date_a():
     data_input_contact = 'testing data input contact'
     data_input_date = ['testing']
 
-    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj=db_obj)
+    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date) #, db_obj=db_obj)
     assert new_doc_id == None
 
 
 def test_insert_bad_date_b():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+    
     # set up database
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -185,11 +198,13 @@ def test_insert_bad_date_b():
     data_input_contact = 'testing data input contact'
     data_input_date = '2020-02-20'
 
-    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj=db_obj)
+    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date) #, db_obj=db_obj)
     assert new_doc_id == None
 
 
 def test_insert_bad_date_c():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+    
     # set up database
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -203,12 +218,14 @@ def test_insert_bad_date_c():
     data_input_date = ['2020-02-20']
     measurement_date = ['testing']
 
-    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj=db_obj, \
+    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
     measurement_date=measurement_date)
     assert new_doc_id == None
 
 
 def test_insert_bad_date_d():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+    
     # set up database
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -222,7 +239,7 @@ def test_insert_bad_date_d():
     data_input_date = ['2020-02-20']
     measurement_date = '2020-02-20'
 
-    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, db_obj=db_obj, \
+    new_doc_id, error_msg = insert(sample_name, sample_description, data_reference, data_input_name, data_input_contact, data_input_date, \
     measurement_date=measurement_date)
     assert new_doc_id == None
 

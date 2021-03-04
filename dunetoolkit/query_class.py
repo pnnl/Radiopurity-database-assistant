@@ -228,7 +228,7 @@ class Query():
             * comparison (str): The comparison to use to compare the field's value against the specified value.
             * value (str or int or float): The value to compare against.
             * append_type (str): The append mode to use for this query term. Must be one of "AND" or "OR" or "". If append_type is an empty string, this is the first/only term in the Query object.
-            * include_synonyms (bool): whether or not to include the value's synonyms in the query term or to only search for the value itself.
+            * include_synonyms (bool): Whether or not to include the value's synonyms in the query term or to only search for the value itself.
         """
         is_valid, error_msg = self._validate_term(field, comparison, value, append_type) #this validates the field, comparison, value, and append_type
         if is_valid:
@@ -444,11 +444,11 @@ class Query():
 
         return terms, appends
 
-    def _get_valid_meas_types(self, val_terms, specified_meas_type):
+    def _get_valid_meas_types(self, meas_val_terms, specified_meas_type):
         """There are three different "type"s of measurements that a measurement result object could have: "measurement", "range", and "limit". The type of the measurement dictates what the numbers in the "value" field represent. If the type is "measurement" there should be two or three values: [central value, symmetric error] or [central value, positive asymmetric error, negative asymmetric error]. If the type is "range" there should be tow or three values: [lower limit, upper limit] or [lower limit, upper limit, confidence level]. If the type is "limit" there shoul be one to two values: [upper limit] or [upper limit, confidence level]. This means that if a user searched for a measurement result where the value equals x, no results of type "range" or "limit" should be returned because measurement results with these types contain values that are limits, not exact values. Thus, this function uses the comparison types of the value terms to determine how to constrain the "type" field in order to only return accurate results.
 
         args:
-            * val_terms (list of dict): The list of terms, for a given group of consolidated measurement results terms, where the field is "value". 
+            * meas_val_terms (list of dict): The list of terms, for a given group of consolidated measurement results terms, where the field is "value". 
             * specified_meas_type (str): The value specified for "type" if given in one of the terms in the group of consolidated measurement results terms (must be one of "measurement", "range", "limit", or None).
 
         returns:
@@ -459,30 +459,34 @@ class Query():
             valid_meas_types = [specified_meas_type]
         else:
             # certain measurement types only support certain comparison types
-            val_comparisons = [ term['comparison'] for term in val_terms if term['field'] == 'value' ]
+            val_comparisons = [ term['comparison'] for term in meas_val_terms if term['field'] == 'value' ]
+
             if 'eq' in val_comparisons:
                 # the "measurement" type is the only one with a single value that we can compare "eq" against
                 valid_meas_types = ['measurement']
+
             elif 'gt' in val_comparisons or 'gte' in val_comparisons:
                 # the "limit" type only has an upper bound, so we have to exclude it from queries that include a "eq"/"gt"/"gte" comparison
                 valid_meas_types = ['measurement', 'range']
+
             elif 'lt' in val_comparisons or 'lte' in val_comparisons:
                 # the "lt"/"lte" comparison can be done with any of the three measurement types
                 valid_meas_types = ['measurement', 'range', 'limit']
+
             else:
                 valid_meas_types = []
 
         return valid_meas_types
 
     def _get_meas_value_variations(self, valid_meas_types, val_terms):
-        """
+        """The type of value (e.g. central value, upper limit, confidence, etc.) in the measurement value list for each measurement results object for a document in the database depends on the measurement type ("measurement", "limit", "range") for the corresponding measurement results object ("measurement", "limit", "range"). For example, if one of the measurement results objects for a document has a "value" of [1, 2], then 1 is the upper limit and 2 is the confidence if the "type" of the measurement results object is "limit". But if the "type" is "measurement", then 1 is the central value and 2 is the symmetric error. Thus, we must assemble sub-terms for the query where the measurement type is specified along with the corresponding value comparison. This function facilitates the assembly of sub-terms for each measurement type, and the corresponding value comparisons for each of those measurement type terms.
 
         args:
-            * valid_meas_types (list of str):
-            * val_terms (list of dict):
+            * valid_meas_types (list of str): The list of measurement types that were determined to be applicable to this query, given the measurement value comparisons and whether the user specified one measurement type.
+            * val_terms (list of dict): A list of individual terms that each query for a measurement result object's value.
 
         returns:
-            
+            * list of dict. One pymongo query for each of the valid measurement types. Each query queries for the value and the measurement type.
         """
         # add terms to the meas_obj according to their appropriate measurement type
         def _gather_value_variations(meas_obj, term):
@@ -572,15 +576,15 @@ class Query():
         return aggregated_terms
 
     def _assemble_meas_result_terms(self, val_terms, isotope_terms, unit_term):
-        """
+        """This function combines all the separately assembled sub-terms for this measurement result query term. Each sub-term is a valid pymongo query dictionary on its own, so all the dictionaries are combined together to be used in the final query.
 
         args:
-            * val_terms (list of dict): 
+            * val_terms (list of dict): A list of valid pymongo queries for the value and the measurement type.
             * isotope_terms (dict): A valid pymongo query that queries for the measurement isotope.
             * unit_term (dict): A valid pymongo query that queries for the measurement unit.
 
         returns:
-            
+            * dict or list of dict. A valid pymongo query which is the result of combining the sub-terms which specify the isotope, unit, and values to search for.
         """
         combined_terms = []
         if len(val_terms) > 0 and len(isotope_terms) > 0:
@@ -610,10 +614,10 @@ class Query():
 This function assumes a user may specify multiple terms comparing a measurement result object's value and that only one measurement type, isotope, and unit are specified. It iterates over each term in the terms list and consolidates terms whose field is "value". If a term queries on the "unit" field, that term is converted into a valid pymongo query. If a term queries on the "isotope" field, that term is converted into a valid pymongo query. If a term queries on the "type" field, the value is stored as specified_measurement_type (which will be used when assembling the query for the "values" field). Once all the terms have been handled and sorted, the value terms are converted into 
 
         args:
-            * terms (list of dict): 
+            * terms (list of dict): The list of consolidated measurement.results query terms which will be further-consolidated into one Mongo query term..
 
         returns:
-            * dict. 
+            * dict. The fully-consolidated query term in MongoDB query format.
         """
         val_terms_raw = []
         isotope_terms = []
@@ -628,17 +632,26 @@ This function assumes a user may specify multiple terms comparing a measurement 
 
             # assemble query term
             if field == 'value':
-                val_terms_raw.append(raw_term) #format --> [{'field':}, ...]
+                val_terms_raw.append(raw_term)
             elif field == 'type':
+                # we expect at most one term specifying a measurement type
+                # "value" should be one of "measurement", "limit", or "range"
                 specified_measurement_type = value
             elif field == 'isotope':
+                # we expect at most one term specifying an isotope symbol
+                # "value" should be an isotope symbol, e.g. "K-40"
                 isotope_terms = self._assemble_qterm_str(field, comparison, value)
                 term_keys = list(isotope_terms.keys())
                 if len(term_keys) == 1 and term_keys[0] in ['$and', '$or']:
+                    # term would start with "$and" or "$or" if the value is a list of terms (e.g. synonyms: ['K-40', "potassium'])
+                    # we want the list of terms that are being "and"ed or "or"ed together, e.g. {'$or': [{'isotope':{'$eq':'K-40'}}, {'isotope':{'$eq':'potassium'}}]}
                     isotope_terms = isotope_terms.pop(term_keys[0])
                 else:
+                    # in _assemble_meas_result_terms, the isotope_terms field is expected to be a list, so we convert this into a one-element list, e.g. {'isotope':{'$eq':'K-40'}} ==> [{'isotope':{'$eq':'K-40'}}]
                     isotope_terms = [isotope_terms]
             elif field == 'unit':
+                # we expect at most one term specifying a measuremennt unit
+                # "value" should be a measurement unit, e.g. "g" or "ppm"
                 unit_term = self._assemble_qterm_str(field, comparison, value)
             else:
                 print("field wasn't in [value, type, isotope, unit]")
@@ -695,6 +708,14 @@ This function assumes a user may specify multiple terms comparing a measurement 
         return query
 
     def _comparison_to_human(self, comparison):
+        """Converts the query term comparison operator from internal Query class format to human-readable format. This uses a dictionary as a lookup table, where the keys are comparison operators in internal Query class format, and the values are the corresponding comparison operators in human-readable format.
+
+        args:
+            * comparison (str): The comparison operator for this query term.
+
+        returns:
+            str. The human-readable version of the query operator for this query term.
+        """
         raw_to_human = {
             "eq":"equals",
             "contains":"contains",
@@ -707,6 +728,15 @@ This function assumes a user may specify multiple terms comparing a measurement 
         human = raw_to_human[comparison]
         return human
     def _value_to_human(self, field, value):
+        """Converts a query term value to a human-readable string. All query term values whose query term field is not "all" are simply cast to a string type and returned. Query term values where the query term field is "all" are split on whitespaces, where each individual element is treated as one value. Due to the nature of the MongoDB $text query, we can only have one $text term per query and the value of the $text term must be one string where each space-separated token is searched for on its own. We cannot search for more than one multi-token phrases in one $text query. This should not affect most queries, as we anticipate that much of the querying people will be doing will be quite simple.
+
+        args:
+            * field (str): The field name for this query term.
+            * value (str or float): The value for this query term.
+
+        returns:
+            * str. The stringified value for this query term.
+        """
         if field == 'all':
             value = value.split()
         if type(value) is list:
@@ -721,6 +751,11 @@ This function assumes a user may specify multiple terms comparing a measurement 
             human = str(value)
         return human
     def to_string(self):
+        """This function converts the query terms and appends lists into a human-readable string and returns it. It does this by iterating over the query terms and append modes, converts the fields, comparisons, and values into human-readable strings, and appends them to a cumulative query string.
+
+        returns:
+            * str. The query in human-readable format.
+        """
         query = ''
         for i, ele in enumerate(self.terms):
             field = ele['field']

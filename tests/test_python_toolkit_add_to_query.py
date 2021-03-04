@@ -1,3 +1,4 @@
+import os
 import pytest
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -18,6 +19,8 @@ from dunetoolkit import search, add_to_query
 
 
 def test_add_to_query_with_search_a():
+    os.environ['TOOLKIT_CONFIG_NAME'] = '../dunetoolkit/toolkit_config_test.json'
+
     # set up database to be updated
     teardown_db_for_test()
     db_obj = set_up_db_for_test()
@@ -49,7 +52,7 @@ def test_add_to_query_with_search_a():
     q_string, q_dict = add_to_query(field=field, comparison=comp, value=val, query_string=q_string, append_mode=append_mode)
     assert q_dict == {'$or': [{'grouping': {'$regex': re.compile('^.*testing.*$', re.IGNORECASE)}}, {'$or': [{'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^Uranium$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^measurement$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^U$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^Uranium$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'type': {'$regex': re.compile('^range$', re.IGNORECASE)}, 'value.0': {'$gte': 100.0}, 'isotope': {'$regex': re.compile('^U$', re.IGNORECASE)}, 'unit': {'$regex': re.compile('^ppt$', re.IGNORECASE)}}}}]}]}
 
-    search_resp = search(q_dict, db_obj)
+    search_resp = search(q_dict) #, db_obj)
     # NOTE: no docs match this at the moment
     for doc in search_resp:
         grouping = doc['grouping']

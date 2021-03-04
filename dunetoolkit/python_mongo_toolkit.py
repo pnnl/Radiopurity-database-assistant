@@ -5,6 +5,7 @@
 .. moduleauthor:: Elise Saxon
 """
 
+import os
 import argparse
 import json
 import re
@@ -12,8 +13,8 @@ from datetime import datetime
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from copy import deepcopy
-from .validate import DuneValidator, validate_meas_remove_indices
-from .query_class import Query
+from dunetoolkit.validate import DuneValidator, validate_meas_remove_indices
+from dunetoolkit.query_class import Query
 
 ##########################################
 # IN ORDER TO CONNECT TO DB:
@@ -21,14 +22,35 @@ from .query_class import Query
 ##########################################
 
 
+def _configure():
+    """Reads the contents of the config JSON file at the path specified in the environment variable named `TOOLKIT_CONFIG_NAME`, then parses out the information and returns it. If no ppath is specified with the environment variable `TOOLKIT_CONFIG_NAME`, then this defaults to a file named toolkit_config.json in the dunetoolkit directory.
+
+    returns:
+        * str. The hostname of the machine where MongoDB is running.
+        * str. The port number that can be used to connect to MongoDB on the host.
+        * str. The name of the MongoDB database to use for queries.
+    """
+    config_name = os.getenv('TOOLKIT_CONFIG_NAME')
+    if config_name is None:
+        config_name = os.path.dirname(os.path.abspath(__file__)) + '/toolkit_config.json'
+    config_dict = None
+
+    with open(config_name, 'r') as config:
+        config_dict = json.load(config)
+
+    return config_dict['mongodb_host'], config_dict['mongodb_port'], config_dict['database']
+
 def _create_db_obj():
     """This function is useful when the python toolkit is being used directly by the user, instead of in conjunction with the UI. The UI is responsible for creating a persisting, shared database connection and passing it to functions as needed. When the search, insert, and update python functions are being called directly, no existing database connection is required, so this function gets called to set one up.
 
     returns:
         pymongo.database.Database. A pymongo database object that, once a collection has been selected, can be used to query.
     """
-    client = MongoClient('localhost', 27017)
-    db_obj = client.dune
+    # TODO: use a config object, access it with an environment variable (just like with the UI). If scripting, create a configure() function
+    mongo_host, mongo_port, db_name = configure()
+
+    client = MongoClient(mongo_host, mongo_port)
+    db_obj = client[db_name]
     return db_obj
 
 
@@ -74,12 +96,12 @@ def search(query, db_obj=None, coll_type=""):
         * coll_type (str) (optional): Dictates which database collection will queried. If no value is provided, this function queries the main assay collection by default (as opposed to the corresponding old_versions, assay_requests, or assay_requests_old_versions collections).
 
     returns:
-        * list of dict. The documents found by in the MongoDB collection using the provided query.
+        * list of dict. The documents found in the MongoDB collection using the provided query.
     """
     # user can enter a string or dict query. If string, we parse it into a dict.
     if type(query) is str:
         q_obj = Query(query)
-        query = q_obj.to_query_lang()
+        query = q_obj.to_query_language()
     '''
     if type(query) is not dict:
         print("Error: the query argument must be a dictionary.")
@@ -312,7 +334,7 @@ def _update_databases(new_doc, parent_doc, do_remove_doc, db_obj, update_from_co
         * move_to_coll_name (str): This arg helps orchestrate what kind of update is happening. It dictates what collection the fully updated document will be added to. If it is a normal update, this would be the main collection. If it is an assay request update, this would be the assay requests database. If it is an assay request validation, this would be the main database (as a validated assay request is ready to be inserted as a normal assay).
 
     returns:
-        * str. The string representation of the MongoDB document ID of the new, fully-updated document that was added into the specified collection.
+        * bson.objectid.ObjectId. The MongoDB document ID of the new, fully-updated document that was added into the specified collection.
     """
     new_doc_id = None
     update_ok = True
@@ -362,8 +384,8 @@ def update(doc_id, db_obj=None, remove_doc=False, update_pairs={}, new_meas_obje
         * is_assay_request_verify (bool): This arg specifies what type of update should happen. If this is False and is_assay_request_update is False, the update will happen within the main collection. If is_assay_request_update is False and this is True, the update will move a document from the assay requests collection to the main collection.
 
     returns:
-        * str: The string representation of the MongoDB document ID of the new, fully-updated document that was added into the specified collection.
-        * str: The error message that arose while trying to update new_doc. This would happen if any of the updates to the document resulted in errors or if an invalid format/value was found.
+        * bson.objectid.ObjectId. The MongoDB document ID of the new, fully-updated document that was added into the specified collection.
+        * stE: The error message that arose while trying to update new_doc. This would happen if any of the updates to the document resulted in errors or if an invalid format/value was found.
     """
     # make copy of update_pairs dict in case values change; don't want that to change values in the func calling this
     update_pairs_copy = deepcopy(update_pairs)
@@ -456,8 +478,8 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         * measurement_institution (str) (optional): Institution name.
         * measurement_date (list of str) (optional): A list of strings that can be converted into datetime objects. This represents the date or date range when the measurements happened.
         * measurement_description (str) (optional): Detailed measurement description.
-        * measurement_requestor_name (str) (optional): Name of the person/people who coordinated the measurement
-        * measurement_requestor_contact (str) (optional): email of the person who coordinated the measurement (must be a valid email).
+        * measurement_requestor_name (str) (optional): Name of the person/people who coordinated the measurement.
+        * measurement_requestor_contact (str) (optional): Email of the person who coordinated the measurement (must be a valid email).
         * data_input_notes (str) (optional): Data input notes (simplifications, assumptions).
         * coll_type (str) (optional): The type of the collection where the new doc should be inserted. If no value is specified, it is inserted into the main assay collection. If this argument is "assay_requests" then this doc is inserted as an assay request into the asasy requests collection.
 
@@ -468,8 +490,10 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     # convert date string lists to date object lists
     data_input_date = convert_str_list_to_date(data_input_date)
     measurement_date = convert_str_list_to_date(measurement_date)
-    if data_input_date is None or measurement_date is None:
-        return None, 'a value in one of the date arguments could not be converted to a datetime object'
+    if data_input_date is None:
+        return None, 'a value in the data_input_date argument could not be converted to a datetime object'
+    if measurement_date is None:
+        return None, 'a value in the measurement_date argument could not be converted to a datetime object'
 
     # assemble insertion object
     doc = {"specification":"3.00", "grouping":grouping, "type":"assay", 
@@ -529,6 +553,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         msg = ''
     except:
         #print("Error inserting doc")
+        mongo_id = None
         msg = 'unsuccessful insert into mongodb'
 
     return mongo_id, msg
@@ -546,7 +571,7 @@ def convert_str_to_date(date_str):
     new_date_obj = None
     date_formats = ["%Y-%m-%d", "%Y/%m/%d", "%m-%d-%Y", "%m/%d/%Y", "%Y-%d-%m", "%Y/%d/%m", "%d-%m-%Y", "%d/%m/%Y"]
     for date_format in date_formats:
-        try:
+        try: 
             new_date_obj = datetime.strptime(date_str, date_format)
             break
         except:
@@ -599,47 +624,47 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='A python toolkit for interfacing with the radiopurity_example MongoDB.')
     subparsers = parser.add_subparsers(help='options for which function to run', dest='subparser_name')
 
-    search_parser = subparsers.add_parser('search', help='execute search function')
-    search_parser.add_argument('--q', type=json.loads, required=True, help='query to execute. *must be surrounded with single quotes, and use double quotes within dict*')
+    search_parser = subparsers.add_parser('search', help='search for an assay in the database')
+    search_parser.add_argument('--q', required=True, help='query to execute. *must be surrounded with single quotes, and use double quotes within dict*')
 
-    query_append_parser = subparsers.add_parser('add_query_term', help='execute append function (add new query term to query)')
+    query_append_parser = subparsers.add_parser('add_query_term', help='adds a new query term to an existing query')
     query_append_parser.add_argument('--field', type=str, required=True, choices=valid_fields, help='the field to compare the value of')
     query_append_parser.add_argument('--compare', type=str, required=True, choices=list(set(valid_str_comparisons+valid_num_comparisons)), \
         help='comparison operator to use to compare actual field value to given value')
     query_append_parser.add_argument('--val', type=str, required=True, help='the value to compare against. Can be a string or numeric')
-    query_append_parser.add_argument('--mode', type=str, choices=["OR", "AND"], default="AND", help='optional argument to define append mode. If not present, defaults to "AND"')
+    query_append_parser.add_argument('--mode', type=str, choices=["OR", "AND"], default="", required=False, help='optional argument to define append mode. If not present, defaults to "AND"')
     query_append_parser.add_argument('--q', type=str, default='', \
-        help='*must be surrounded with single quotes, and use double quotes within dict* existing query dictionary to add a new term to. If not present, creates a new query')
+        help='existing query dictionary to add a new term to. If not present, creates a new query *must be surrounded with single quotes, and use double quotes within dict*')
 
-    insert_parser = subparsers.add_parser('insert', help='execute document insert function')
+    insert_parser = subparsers.add_parser('insert', help='inserts a new assay into the database')
     insert_parser.add_argument('--sample_name', type=str, required=True, help='concise sample description')
     insert_parser.add_argument('--sample_description', type=str, required=True, help='detailed sample description')
     insert_parser.add_argument('--data_reference', type=str, required=True, help='where the data came from')
     insert_parser.add_argument('--data_input_name', type=str, required=True, help='name of the person/people who performed data input')
-    insert_parser.add_argument('--data_input_contact', type=str, required=True, help='email or telephone of the person/people who performed data input')
-    insert_parser.add_argument('--data_input_date', nargs='*', required=True, help='list of date strings for dates of input')
+    insert_parser.add_argument('--data_input_contact', type=str, required=True, help='email of the person/people who performed data input')
+    insert_parser.add_argument('--data_input_date', nargs='*', required=True, help='series of date strings for dates of input')
     insert_parser.add_argument('--data_input_notes', type=str, default='', help='input simplifications, assumptions')
     insert_parser.add_argument('--grouping', type=str, default='', help='experiment name or similar')
     insert_parser.add_argument('--sample_source', type=str, default='', help='where the sample came from')
     insert_parser.add_argument('--sample_id', type=str, default='', help='identification number')
     insert_parser.add_argument('--sample_owner_name', type=str, default='', help='name of who owns the sample')
-    insert_parser.add_argument('--sample_owner_contact', type=str, default='', help='email or telephone of who owns the sample')
-    insert_parser.add_argument('--measurement_results', nargs='*', default=[], help='list of measurements')
+    insert_parser.add_argument('--sample_owner_contact', type=str, default='', help='email of who owns the sample')
+    insert_parser.add_argument('--measurement_results', type=json.loads, nargs='*', default=[], help='series of measurement dictionaries (each must have the following fields: "type", "unit", "value", "isotope")')
     insert_parser.add_argument('--measurement_practitioner_name', type=str, default='', help='name of who did the measurement')
-    insert_parser.add_argument('--measurement_practitioner_contact', type=str, default='', help='email or telephone of who did the measurement')
+    insert_parser.add_argument('--measurement_practitioner_contact', type=str, default='', help='email of who did the measurement')
     insert_parser.add_argument('--measurement_technique', type=str, default='', help='technique name')
     insert_parser.add_argument('--measurement_institution', type=str, default='', help='institution name')
-    insert_parser.add_argument('--measurement_date', nargs='*', default=[], help='list of date strings for dates of measurement')
+    insert_parser.add_argument('--measurement_date', nargs='*', default=[], help='series of date strings for dates of measurement')
     insert_parser.add_argument('--measurement_description', type=str, default='', help='detailed description')
     insert_parser.add_argument('--measurement_requestor_name', type=str, default='', help='name of who coordinated the measurement')
-    insert_parser.add_argument('--measurement_requestor_contact', type=str, default='', help='email or telephone of who coordinated the measurement')
+    insert_parser.add_argument('--measurement_requestor_contact', type=str, default='', help='email of who coordinated the measurement')
 
-    update_parser = subparsers.add_parser('update', help='execute document update function')
-    update_parser.add_argument('--doc_id', type=str, required=True, help='the id of the document in the database to update')
-    update_parser.add_argument('--remove_doc', action='store_true', default=False, help='Remove the entire document from the database')
-    update_parser.add_argument('--update_pairs', nargs='*', default=[], help='list of keys to update and the new values to use')
-    update_parser.add_argument('--new_meas_objects', nargs='*', default=[], help='list of measurement results dictionaries to add to the document')
-    update_parser.add_argument('--meas_remove_indices', nargs='*', default=[], help='list of indices (zero-indexed) corresponding to the document measurement result object to remove')
+    update_parser = subparsers.add_parser('update', help='updates an existing assay in the database')
+    update_parser.add_argument('--doc_id', type=str, required=True, help='the MongoDB id of the document in the database to update')
+    update_parser.add_argument('--remove_doc', action='store_true', default=False, help='if present, remove the entire document from the database')
+    update_parser.add_argument('--update_pairs', type=json.loads, default=[], help='series of keys to update and the new values to use')
+    update_parser.add_argument('--new_meas_objects', type=json.loads, nargs='*', default=[], help='series of measurement results dictionaries to add to the document')
+    update_parser.add_argument('--meas_remove_indices', nargs='*', default=[], help='series of indices (zero-indexed) corresponding to the document measurement result object to remove')
 
     args = vars(parser.parse_args())
 
@@ -647,17 +672,20 @@ if __name__ == '__main__':
         result = search(args['q'])
     elif args['subparser_name'] == 'add_query_term':
         #TODO: add "include_synonyms" field
-        result = add_to_query(args['field'], args['compare'], args['val'], query_string=args['q'], append_mode=args['mode'])
+        q_str, q_dict = add_to_query(args['field'], args['compare'], args['val'], query_string=args['q'], append_mode=args['mode'])
+        result = "QUERY STRING: "+str(q_str.replace('\n', '\\n'))+"\nQUERY DICT:   "+str(q_dict)
     elif args['subparser_name'] == 'insert':
+        '''
         for i in range(len(args['measurement_results'])):
             args['measurement_results'][i] = json.loads(args['measurement_results'][i])
+        '''
         result, error_msg = insert(args['sample_name'], \
             args['sample_description'], \
             args['data_reference'], \
             args['data_input_name'], \
             args['data_input_contact'], \
             args['data_input_date'], \
-            datas_input_notes=args['data_input_notes'], \
+            data_input_notes=args['data_input_notes'], \
             grouping=args['grouping'], \
             sample_source=args['sample_source'], \
             sample_id=args['sample_id'], \
@@ -673,19 +701,30 @@ if __name__ == '__main__':
             measurement_requestor_name=args['measurement_requestor_name'], \
             measurement_requestor_contact=args['measurement_requestor_contact']
         )
+        if error_msg != '':
+            print(error_msg)
+        result = 'NEW DOC ID: '+str(result)
     elif args['subparser_name'] == 'update':
+        '''
         update_keyval_pairs = {}
         for i in range(len(args['update_pairs'])):
             if i%2 == 0:
                 update_key = args['update_pairs'][i]
                 update_val = args['update_pairs'][i+1]
                 update_keyval_pairs[update_key] = update_val
+        '''
         result, error_msg = update(args['doc_id'], \
             remove_doc=args['remove_doc'], \
-            update_pairs=update_keyval_pairs, \
+            update_pairs=args['update_pairs'], \
             new_meas_objects=args['new_meas_objects'], \
-            meas_remove_indices=args['meas_remove_indices']
+            meas_remove_indices=[ int(i) for i in args['meas_remove_indices'] ]
         )
+        if result is None and error_msg == '':
+            result = 'REMOVED.'
+        elif result is not None:
+            result = 'UPDATED DOC ID: '+str(result)
+        else:
+            result = error_msg
     else:
         print('You must enter an action to perform: search, insert, update, or add_query_term')
         result = None
