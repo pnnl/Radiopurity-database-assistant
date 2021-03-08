@@ -35,7 +35,7 @@ USER_MODES = ['DUNEreader', 'DUNEwriter']
 
 
 def requires_permissions(permissions_levels):
-    """This defines a custom decorator for other endpoints which specifies which users can access a given endpoint. This decorator checks if the user that is currently logged in has permissions in the group of permissions_levels that are permitted to access the given endpoint. If permission is granted, the user is taken to the requested endpoint. Otherise, they are taken to the "login" page if the user mode was None, or to the "restricted" page if their user mode does not have access.
+    """This defines a custom decorator for other endpoints which specifies which users can access a given endpoint. This decorator checks if the user that is currently logged in has permissions in the group of permissions_levels that are permitted to access the given endpoint. If permission is granted, the user is taken to the requested endpoint. Otherwise, they are taken to the "login" page if the user mode was None, or to the "restricted" page if their user mode does not have access.
 
     args:
         * permissions_levels (list of str): The user modes (user names) that are allowed to access this endpoint
@@ -303,7 +303,7 @@ def update_endpoint():
             * remove.measurement.institution (str): if present and not an empty string, remove the current value for the measurement.institution field
             * remove.measurement.description (str): if present and not an empty string, remove the current value for the measurement.description field
             * remove.measurement.date (str): if present and not an empty string, remove the current value for the measurement.date field
-            * remove.measurement.resultsX (str): if present and not an empty string, remove the entire measurement result at position X in the documents measurement results list where X is a postive integer
+            * remove.measurement.resultsX (str): if present and not an empty string, remove the entire measurement result at position X in the documents measurement results list where X is a positive integer
             * remove.measurement.results.isotopeX (str): if present and not an empty string, remove the current value for the measurement.results.isotopeX field
             * remove.measurement.results.typeX (str): if present and not an empty string, remove the current value for the measurement.results.typeX field
             * remove.measurement.results.unitX (str): if present and not an empty string, remove the current value for the measurement.results.unitX field

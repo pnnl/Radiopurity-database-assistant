@@ -23,7 +23,7 @@ from dunetoolkit.query_class import Query
 
 
 def _configure():
-    """Reads the contents of the config JSON file at the path specified in the environment variable named `TOOLKIT_CONFIG_NAME`, then parses out the information and returns it. If no ppath is specified with the environment variable `TOOLKIT_CONFIG_NAME`, then this defaults to a file named toolkit_config.json in the dunetoolkit directory.
+    """Reads the contents of the config JSON file at the path specified in the environment variable named `TOOLKIT_CONFIG_NAME`, then parses out the information and returns it. If no path is specified with the environment variable `TOOLKIT_CONFIG_NAME`, then this defaults to a file named toolkit_config.json in the dunetoolkit directory.
 
     returns:
         * str. The hostname of the machine where MongoDB is running.
@@ -199,7 +199,7 @@ def _validate_new_meas_objects(new_meas_objects):
 
     returns:
         * bool. Whether all of the dicts in new_meas_objects are valid or not.
-        * str. The error message that arose while trying to update new_doc. This would happen if any of the given new_meas_objects are not vallid according to this project's specified schema.
+        * str. The error message that arose while trying to update new_doc. This would happen if any of the given new_meas_objects are not valid according to this project's specified schema.
     """
     meas_validator = DuneValidator("measurement_result")
     is_valid = True
@@ -325,12 +325,12 @@ def _update_databases(new_doc, parent_doc, do_remove_doc, db_obj, update_from_co
     """This is a helper function for updating documents in the collection. It performs the insertion of the new (updated) doc into the main collection that holds the most current versions of the docs. This function also moves the original version of the doc to the "old-versions" collection for archival purposes. This function is used for any type of update a user might make to the radiopurity database: updating a normal assay doc, updating an assay request doc, or validating an assay request doc. Below in the arg definitions are examples of how each type of update might be specified.
 
     args: 
-        * new_doc (dict): The fully updated verision of the document. This dict will become the new "current" version of the doc in the main collection.
+        * new_doc (dict): The fully updated version of the document. This dict will become the new "current" version of the doc in the main collection.
         * parent_doc (dict): The "original" version of the document that does not have the specified updates applied.
         * do_remove_doc (bool): This option would be true if the user wishes to remove this assay doc from the database entirely. In this case, the current version in the main collection would be moved to the old_versions collection but no updated doc would be inserted into the main collection.
         * db_obj (pymongo.database.Database): A pymongo database object that, once a collection has been selected, can be used to query.
         * update_from_coll_name (str): This arg helps orchestrate what kind of update is happening. It dictates what collection the "original" document was pulled from. If it is a normal update, this would be the main collection. If it is an assay request update/validation, this would be the assay_requests collection.
-        * old_versions_coll_name (str): This arg helps orchestrate what kind of update is happening. It dictates what collection the "original" (unupdated) document will be added to once the updated version gets added to the main collection. If it is a normal update, this would be the old versions database. If it is an assay request update/validation, this would be the assay requests old version.
+        * old_versions_coll_name (str): This arg helps orchestrate what kind of update is happening. It dictates what collection the "original" (un-updated) document will be added to once the updated version gets added to the main collection. If it is a normal update, this would be the old versions database. If it is an assay request update/validation, this would be the assay requests old version.
         * move_to_coll_name (str): This arg helps orchestrate what kind of update is happening. It dictates what collection the fully updated document will be added to. If it is a normal update, this would be the main collection. If it is an assay request update, this would be the assay requests database. If it is an assay request validation, this would be the main database (as a validated assay request is ready to be inserted as a normal assay).
 
     returns:
@@ -401,7 +401,7 @@ def update(doc_id, db_obj=None, remove_doc=False, update_pairs={}, new_meas_obje
         old_versions_coll_name = 'assay_requests_old_versions'
     else:
         update_from_coll_name = '' # find old doc in main collection
-        update_to_coll_name = '' # insert updated doc into main colleciton
+        update_to_coll_name = '' # insert updated doc into main collection
         old_versions_coll_name = 'old_versions'
 
     if db_obj is None:
@@ -456,7 +456,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     measurement_results=[], measurement_practitioner_name="", measurement_practitioner_contact="", \
     measurement_technique="", measurement_institution="", measurement_date=[], measurement_description="", \
     measurement_requestor_name="", measurement_requestor_contact="", data_input_notes="", coll_type=''):
-    """This function intakes all the individual fields that make up an assay document in the database, combines them into a dictionary document, validates that dict, and inserts it into the specified colletion.
+    """This function intakes all the individual fields that make up an assay document in the database, combines them into a dictionary document, validates that dict, and inserts it into the specified collection.
 
     args:
         * sample_name (str): A concise description of the sample.
@@ -471,7 +471,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         * sample_id (str) (optional): Sample identification number or string.
         * sample_owner_name (str) (optional): Name of the person/people who own(s) the sample.
         * sample_owner_contact (str) (optional): Email of the person who owns the sample (must be a valid email address).
-        * measurement_results (list of dict) (optional): List of measurement dictionaries that MUST contain the following fields: isotope, unit, type, value. The isotope field must be a (str) valid isotope name (e.g. K or Th). The unit must be a (str) valid unit type (e.g. ppm or g). The type must be a (str) representing the type of measurement, which must be one of: "measurement", "range", or "limit". The value must be a (list of str, int, or float) list of values that can ve converted into a float, which represent the values of the measurement. For a measurement of type "measurement" there should be two or three values: [central value, symmetric error] or [central value, positive asymmetric error, negative asymmetric error]. For a measurement of type "range" there should be tow or three values: [lower limit, upper limit] or [lower limit, upper limit, confidence level]. For a measurement of type "limit" there shoul be one to two values: [upper limit] or [upper limit, confidence level].
+        * measurement_results (list of dict) (optional): List of measurement dictionaries that MUST contain the following fields: isotope, unit, type, value. The isotope field must be a (str) valid isotope name (e.g. K or Th). The unit must be a (str) valid unit type (e.g. ppm or g). The type must be a (str) representing the type of measurement, which must be one of: "measurement", "range", or "limit". The value must be a (list of str, int, or float) list of values that can ve converted into a float, which represent the values of the measurement. For a measurement of type "measurement" there should be two or three values: [central value, symmetric error] or [central value, positive asymmetric error, negative asymmetric error]. For a measurement of type "range" there should be tow or three values: [lower limit, upper limit] or [lower limit, upper limit, confidence level]. For a measurement of type "limit" there should be one to two values: [upper limit] or [upper limit, confidence level].
         * measurement_practitioner_name (str) (optional): Name of the person/people who performed the measurement.
         * measurement_practitioner_contact (str) (optional): Email of the person who performed the measurement (must be a valid email address).
         * measurement_technique (str) (optional): Measurement technique.
@@ -481,7 +481,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
         * measurement_requestor_name (str) (optional): Name of the person/people who coordinated the measurement.
         * measurement_requestor_contact (str) (optional): Email of the person who coordinated the measurement (must be a valid email).
         * data_input_notes (str) (optional): Data input notes (simplifications, assumptions).
-        * coll_type (str) (optional): The type of the collection where the new doc should be inserted. If no value is specified, it is inserted into the main assay collection. If this argument is "assay_requests" then this doc is inserted as an assay request into the asasy requests collection.
+        * coll_type (str) (optional): The type of the collection where the new doc should be inserted. If no value is specified, it is inserted into the main assay collection. If this argument is "assay_requests" then this doc is inserted as an assay request into the assay requests collection.
 
     returns:
         * bson.objectid.ObjectId. The MongoDB ID of the new document that was added into the database. If the insertion was unsuccessful, this value is None.
@@ -536,7 +536,7 @@ def insert(sample_name, sample_description, data_reference, data_input_name, dat
     #print('DOC TO INSERT:',doc)
 
     # validate doc
-    # TODO: verify that sample.ownder.contact, measurement.requestor.contact, measurement.practitioner.contact, and data_source.input.contact are valid emails
+    # TODO: verify that sample.owner.contact, measurement.requestor.contact, measurement.practitioner.contact, and data_source.input.contact are valid emails
     validator = DuneValidator("whole_record")
     is_valid, error_message = validator.validate(doc) 
     if not is_valid:
