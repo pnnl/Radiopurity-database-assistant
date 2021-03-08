@@ -19,6 +19,7 @@ Requirements
 ------------
 * A JSON file (preferrably in the "user_interface" directory) containing one JSON object with the following keys and values types: "mongodb_host" (a string with the IP or name of the machine where MongoDB is running), "mongodb_port" (an integer that corresponds to the port that MongoDB is listening on), "database" (the name of the MongoDB database to use for the back-end of the app), "secret_key" (a string that is used to initiate sessions for users; set the value to whatever you perfer), and "salt" (a string that is used with encryption to make password hashes unpredictable).
 * An `environment variable <https://www.schrodinger.com/kb/1842>`_ named ``DUNE_API_CONFIG_NAME`` whose value is the path to the app config json file
+* If you want to host the documentation along with the user interface, create a directory called "docs" in the user_interface/static directory. Then create a `symbolic link <https://www.freecodecamp.org/news/symlink-tutorial-in-linux-how-to-create-and-remove-a-symbolic-link/>`_ from the sphinx docs build to the newly created docs directory by running a command like this: ``ln -s dune/docs/build/html docs`` (this will keep the code in "docs" up to date with the code in "dune/docs/build/html" if it gets rebuilt). Then when you run the user interface, access the docs in your browser at: `HOSTNAME:PORT/static/docs/html/index.html`. 
 
 Instructions
 ------------

@@ -10,6 +10,10 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://gitlab.pnnl.gov/saxo675/dune",
     packages=setuptools.find_packages(),
-    license="BSD License",
+    license="BSD",
     python_requires='>=3.6',
+    install_requires=[
+        'jsonschema',
+        'pymongo'
+    ],
 )

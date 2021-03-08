@@ -30,7 +30,7 @@ def _get_user(user, db_obj):
     return user_obj
 
 def _add_user(user, encrypted_pw, db_obj):
-    """Creates a dict out of the provided username and password and addes it as a user document in the "users" collection of the mongodb.
+    """Creates a dict out of the provided username and password and adds it as a user document in the "users" collection of the mongodb.
 
     args:
         * user (str): the plaintext username to add.
