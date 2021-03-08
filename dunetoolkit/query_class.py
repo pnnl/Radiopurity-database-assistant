@@ -1,6 +1,6 @@
 """
 .. module:: query_class
-   :synopsis: The class that defines a Query object, which is used to parse sepcifically formatted strings into pymongo query dicts and vice versa. This class also keeps track of an existing query and can add to it.
+   :synopsis: The class that defines a Query object, which is used to parse specifically formatted strings into pymongo query dicts and vice versa. This class also keeps track of an existing query and can add to it.
 
 .. moduleauthor:: Elise Saxon
 """
@@ -27,7 +27,7 @@ class Query():
         :ivar valid_append_modes (list of str): List of the valid values for append_mode variables. Valid values are "AND" and "OR".
         :ivar valid_field_names (list of str): A list of all the valid values for query fields. These are essentially all the valid fields in an assay document.
         :ivar str_fields (list of str): A list of all the field names whose values should always be of type string. This list is used in order to assemble query terms where strings are being compared.
-        :ivar num_fields (list of str): A list of all the field names whose values should always be numberic types (or lists of numeric types). This list is used in order to assemble query terms where numbers are being compared. These terms will only be measurement result values, and due to the nature of the assay document format, queries of the measurement result values are complex.
+        :ivar num_fields (list of str): A list of all the field names whose values should always be numeric types (or lists of numeric types). This list is used in order to assemble query terms where numbers are being compared. These terms will only be measurement result values, and due to the nature of the assay document format, queries of the measurement result values are complex.
         :ivar date_fields (list of str): A list of all the field names whose values should always be lists of datetime.datetime objects. This list is used in order to assemble query terms where datetime objects are being compared, as this happens differently from other queries.
         :ivar str_comparisons (list of str): A list of all the valid comparison operators that can be used to compare strings in a query.
         :ivar num_comparisons (list of str): A list of all the valid comparison operators that can be used to compare numbers in a query.
@@ -59,7 +59,7 @@ class Query():
             * filepath (str): The absolute path to the file where the synonyms lists are stored. The file should be a text file where each line is a comma-separated list of strings where each string is a synonym for the others in the line.
 
         returns:
-            * list of list of str. The list of the lists of synnonyms for each word on record.
+            * list of list of str. The list of the lists of synonyms for each word on record.
         """
         synonyms_list = []
         with open(filepath, 'r') as read_file:
@@ -398,7 +398,7 @@ class Query():
         return operator
 
     def _consolidate_measurement_results(self):
-        """Measurement result objects are elements in a list. To search for one element of a list that satisfies multiple criteria, MongoDB provides an `$elemMatch operator <https://docs.mongodb.com/manual/tutorial/query-arrays/#query-for-an-array-element-that-meets-multiple-criteria>`_. To use $elemMatch, all the criteria (terms) must be combined into one query term under $elemMatch. To do this, this function separates the list of terms into sections where each term in the section is appended with "AND" and each section is appended to to the next section with "OR" (splitting the list on "OR"s). All the terms in a section that query a measurement results field get combined into one element that will eventually be queried with $elemMatch. Once the terms list copy is separated into sections, the measurement results query terms are identified and combinedinto one term. The combined term should have the following format: {"field":"measurement.results", "comparison":None, "value":[{"field":<one of isotope, type, unit, value>, "comparison":<the original comparison for this term>, "value":<the original value for this term>}, ...]}
+        """Measurement result objects are elements in a list. To search for one element of a list that satisfies multiple criteria, MongoDB provides an `$elemMatch operator <https://docs.mongodb.com/manual/tutorial/query-arrays/#query-for-an-array-element-that-meets-multiple-criteria>`_. To use $elemMatch, all the criteria (terms) must be combined into one query term under $elemMatch. To do this, this function separates the list of terms into sections where each term in the section is appended with "AND" and each section is appended to to the next section with "OR" (splitting the list on "OR"s). All the terms in a section that query a measurement results field get combined into one element that will eventually be queried with $elemMatch. Once the terms list copy is separated into sections, the measurement results query terms are identified and combined into one term. The combined term should have the following format: {"field":"measurement.results", "comparison":None, "value":[{"field":<one of isotope, type, unit, value>, "comparison":<the original comparison for this term>, "value":<the original value for this term>}, ...]}
 
         returns:
             * list of dict. A possibly modified copy of the terms list after consolidating all query terms that deal with measurement results.
@@ -445,7 +445,7 @@ class Query():
         return terms, appends
 
     def _get_valid_meas_types(self, meas_val_terms, specified_meas_type):
-        """There are three different "type"s of measurements that a measurement result object could have: "measurement", "range", and "limit". The type of the measurement dictates what the numbers in the "value" field represent. If the type is "measurement" there should be two or three values: [central value, symmetric error] or [central value, positive asymmetric error, negative asymmetric error]. If the type is "range" there should be tow or three values: [lower limit, upper limit] or [lower limit, upper limit, confidence level]. If the type is "limit" there shoul be one to two values: [upper limit] or [upper limit, confidence level]. This means that if a user searched for a measurement result where the value equals x, no results of type "range" or "limit" should be returned because measurement results with these types contain values that are limits, not exact values. Thus, this function uses the comparison types of the value terms to determine how to constrain the "type" field in order to only return accurate results.
+        """There are three different "type"s of measurements that a measurement result object could have: "measurement", "range", and "limit". The type of the measurement dictates what the numbers in the "value" field represent. If the type is "measurement" there should be two or three values: [central value, symmetric error] or [central value, positive asymmetric error, negative asymmetric error]. If the type is "range" there should be tow or three values: [lower limit, upper limit] or [lower limit, upper limit, confidence level]. If the type is "limit" there should be one to two values: [upper limit] or [upper limit, confidence level]. This means that if a user searched for a measurement result where the value equals x, no results of type "range" or "limit" should be returned because measurement results with these types contain values that are limits, not exact values. Thus, this function uses the comparison types of the value terms to determine how to constrain the "type" field in order to only return accurate results.
 
         args:
             * meas_val_terms (list of dict): The list of terms, for a given group of consolidated measurement results terms, where the field is "value". 
@@ -614,7 +614,7 @@ class Query():
 This function assumes a user may specify multiple terms comparing a measurement result object's value and that only one measurement type, isotope, and unit are specified. It iterates over each term in the terms list and consolidates terms whose field is "value". If a term queries on the "unit" field, that term is converted into a valid pymongo query. If a term queries on the "isotope" field, that term is converted into a valid pymongo query. If a term queries on the "type" field, the value is stored as specified_measurement_type (which will be used when assembling the query for the "values" field). Once all the terms have been handled and sorted, the value terms are converted into 
 
         args:
-            * terms (list of dict): The list of consolidated measurement.results query terms which will be further-consolidated into one Mongo query term..
+            * terms (list of dict): The list of consolidated measurement.results query terms which will be further-consolidated into one MongoDB query term..
 
         returns:
             * dict. The fully-consolidated query term in MongoDB query format.
@@ -650,7 +650,7 @@ This function assumes a user may specify multiple terms comparing a measurement 
                     # in _assemble_meas_result_terms, the isotope_terms field is expected to be a list, so we convert this into a one-element list, e.g. {'isotope':{'$eq':'K-40'}} ==> [{'isotope':{'$eq':'K-40'}}]
                     isotope_terms = [isotope_terms]
             elif field == 'unit':
-                # we expect at most one term specifying a measuremennt unit
+                # we expect at most one term specifying a measurement unit
                 # "value" should be a measurement unit, e.g. "g" or "ppm"
                 unit_term = self._assemble_qterm_str(field, comparison, value)
             else:
