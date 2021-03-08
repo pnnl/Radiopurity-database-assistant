@@ -13,7 +13,7 @@ setuptools.setup(
     license="BSD",
     python_requires='>=3.6',
     install_requires=[
-        'jsonschema',
+        'jsonschema==2.6.0',
         'pymongo'
     ],
 )
