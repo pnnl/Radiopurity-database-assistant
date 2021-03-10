@@ -10,6 +10,8 @@ import re
 import json
 import datetime
 from copy import deepcopy
+import importlib.resources as pkg_resources
+import dunetoolkit
 
 class Query():
     """This class enables the database toolkit to form complicated queries that will return expectable results.
@@ -37,7 +39,7 @@ class Query():
         self.appends = []
         self.all_fields = []
 
-        synonyms_filepath = os.path.dirname(os.path.abspath(__file__)) + '/synonyms.txt'
+        synonyms_filepath = 'synonyms.txt'
         self.synonyms = self._load_synonyms(synonyms_filepath)
 
         self.valid_append_modes = ['AND', 'OR']
@@ -61,11 +63,7 @@ class Query():
         returns:
             * list of list of str. The list of the lists of synonyms for each word on record.
         """
-        synonyms_list = []
-        with open(filepath, 'r') as read_file:
-            for line in read_file:
-                line_elements = line.strip().split(',')
-                synonyms_list.append(line_elements)
+        synonyms_list = [ line.strip().split(',') for line in  pkg_resources.read_text(dunetoolkit, 'synonyms.txt').split('\n') ]
         return synonyms_list
 
     def _get_field_from_str(self, line):

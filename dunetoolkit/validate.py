@@ -10,6 +10,8 @@ from datetime import datetime
 import json
 import jsonschema
 from jsonschema import validate, ValidationError
+import importlib.resources as pkg_resources
+import dunetoolkit
 
 class DuneValidator:
     """This class performs the validation of dictionary "documents" and partial documents according to the Material Assay Data Format (MADF) (https://www.sciencedirect.com/science/article/pii/S0168900216309639). All documents that are stored in the radiopurity database must adhere to this format, and this validator class facilitates that.
@@ -59,8 +61,8 @@ class DuneValidator:
         return Validator
 
     def _load_meas_result_schema(self):
-        valid_isotopes = open(os.path.dirname(os.path.abspath(__file__))+'/isotopes.csv', 'r').read().strip().split(',')
-        valid_units = open(os.path.dirname(os.path.abspath(__file__))+'/units.csv', 'r').read().strip().split(',')
+        valid_isotopes = pkg_resources.read_text(dunetoolkit, 'isotopes.csv').strip().split(',')
+        valid_units = pkg_resources.read_text(dunetoolkit, 'units.csv').strip().split(',')
         measurement_result_schema = {
             "type": "object",
             "additionalProperties": False,
