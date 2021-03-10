@@ -6,7 +6,10 @@
 """
 
 import re
+import logging
 from dunetoolkit import Query, add_to_query, search, insert, update, convert_date_to_str
+
+logger = logging.getLogger('dune_ui')
 
 def _get_user(user, db_obj):
     """This function searches the "users" collection of the mongodb database for the document whose "user_mode" value is the same as the user argument provided.
