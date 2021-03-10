@@ -1,12 +1,12 @@
 FROM ubuntu:16.04
 
-# install python3.6
+# install python3.8
 RUN apt-get update && apt-get install -y \
   software-properties-common build-essential git
 
 RUN add-apt-repository ppa:deadsnakes/ppa 
 RUN apt-get update && apt-get install -y \
-  python3.6 python3.6-dev python3-pip python3.6-venv && \
+  python3.8 python3.8-dev python3-pip python3.8-venv && \
   apt-get update && \
   apt-get clean && \
   apt-get autoremove
