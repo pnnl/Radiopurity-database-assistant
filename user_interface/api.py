@@ -8,6 +8,8 @@
 import os
 import sys
 import json
+import time
+import logging
 import argparse
 import datetime
 from functools import wraps
@@ -32,6 +34,14 @@ db_obj = MongoClient(config_dict['mongodb_host'], config_dict['mongodb_port'])[c
 
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
 USER_MODES = ['DUNEwriter']
+
+logger = logging.getLogger('dune_ui')
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('dune_ui_'+str(int(time.time()))+'.log')
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s\t - %(pathname)s - %(funcName)s\t - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 
 def requires_permissions(permissions_levels):
@@ -208,8 +218,10 @@ def search_endpoint():
         num_q_lines = 0
         error_msg = ''
 
-    print('Q STR:',q_str)
-    print('APPEND MODE:',append_mode)
+    if error_msg != '':
+        logger.error(error_msg)
+
+    logger.debug('Q STR: '+str(q_str)+'   \tAPPEND MODE: '+str(append_mode))
     return render_template('search.html', existing_query=q_str, append_mode=append_mode, error_msg=error_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
 @app.route('/insert', methods=['GET','POST'])
@@ -255,6 +267,11 @@ def insert_endpoint():
             new_doc_msg = "ERROR: record not inserted because "+error_msg
     else:
         new_doc_msg = ""
+    if new_doc_msg != "":
+        if new_doc_msg.startswith('ERROR:'):
+            logger.error(new_doc_msg)
+        else:
+            logger.debug(new_doc_msg)
     return render_template('insert.html', new_doc_msg=new_doc_msg)
 
 @app.route('/update', methods=['GET','POST'])
@@ -383,6 +400,7 @@ def update_endpoint():
             message = "update success. New doc version ID: "+str(new_doc_id)
         else:
             message = 'Error: '+error_msg
+            logger.error(message)
         return render_template('update.html', doc_data=False, message=message)
     return None
 
