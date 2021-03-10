@@ -516,7 +516,7 @@ def assay_request_update_endpoint():
             * remove.measurement.institution (str): if present and not an empty string, remove the current value for the measurement.institution field
             * remove.measurement.description (str): if present and not an empty string, remove the current value for the measurement.description field
             * remove.measurement.date (str): if present and not an empty string, remove the current value for the measurement.date field
-            * remove.measurement.resultsX (str): if present and not an empty string, remove the entire measurement result at position X in the documents measurement results list where X is a postive integer
+            * remove.measurement.resultsX (str): if present and not an empty string, remove the entire measurement result at position X in the documents measurement results list where X is a positive integer
             * remove.measurement.results.isotopeX (str): if present and not an empty string, remove the current value for the measurement.results.isotopeX field
             * remove.measurement.results.typeX (str): if present and not an empty string, remove the current value for the measurement.results.typeX field
             * remove.measurement.results.unitX (str): if present and not an empty string, remove the current value for the measurement.results.unitX field
