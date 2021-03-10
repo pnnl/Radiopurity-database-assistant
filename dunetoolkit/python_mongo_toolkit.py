@@ -47,7 +47,7 @@ def _create_db_obj():
         pymongo.database.Database. A pymongo database object that, once a collection has been selected, can be used to query.
     """
     # TODO: use a config object, access it with an environment variable (just like with the UI). If scripting, create a configure() function
-    mongo_host, mongo_port, db_name = configure()
+    mongo_host, mongo_port, db_name = _configure()
 
     client = MongoClient(mongo_host, mongo_port)
     db_obj = client[db_name]
