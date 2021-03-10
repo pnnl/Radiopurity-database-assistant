@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 
 # clone git repo
 WORKDIR /home/
-RUN git clone https://github.com/pnnl/Radiopurity-database-assistant.git
+RUN git clone https://github.com/pnnl/Radiopurity-database-assistant.git && cd /home/Radiopurity-database-assistant && git checkout snolab-version
 
 # install python packages and dunetoolkit
 RUN cd /home/Radiopurity-database-assistant && python3 setup.py install
