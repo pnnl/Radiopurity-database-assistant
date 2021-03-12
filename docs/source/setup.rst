@@ -2,15 +2,52 @@
 Setup
 *****
 
+db.assays.createIndex({grouping:"text", sample.name:"text", sample.description:"text", sample.source:"text", sample.id:"text", measurement.technique:"text", measurement.description:"text", data_source.reference:"text", data_source.input.notes:"text"})
 
 General requirements
 ====================
-* MongoDB `installed and running <https://docs.mongodb.com/manual/installation/>`_ on a machine that you have access to via the values for "mongodb_host" and "mongodb_port" in your app config JSON file
-* Python >= 3.6
+* MongoDB `installed and running <https://docs.mongodb.com/manual/installation/>`_ on a machine (or in a Docker container) that you have access to via the values for "mongodb_host" and "mongodb_port" in your app config JSON file. All assay data is stored in the database specified in the config JSON file in a collection called "assays." This "assays" collection must have a `text index <https://docs.mongodb.com/manual/core/index-text/>`_ on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" in order for the code to be able to query it properly. You can create this index in the MongoDB shell by running the following commands:
+    .. code-block::
+
+        > use DATABASE_NAME
+        > db.assays.createIndex({"grouping":"text", "sample.name":"text", "sample.description":"text", "sample.source":"text", "sample.id":"text", "measurement.technique":"text", "measurement.description":"text", "data_source.reference":"text", "data_source.input.notes":"text"}, {"name":"text_index"})
+        {
+            "createdCollectionAutomatically" : false,
+            "numIndexesBefore" : 1,
+            "numIndexesAfter" : 2,
+            "ok" : 1
+        }
+
+  Or you could create the index using a python script with the pymongo package:
+
+    .. code-block::
+        :linenos:
+
+        from pymongo import MongoClient, TEXT
+        
+        # initialize database object
+        client = MongoClient("HOST_NAME", PORT_NUM)
+        collection = client.DATABASE_NAME.assays
+        
+        # create text index
+        resp = collection.create_index([("grouping",TEXT), ("sample.name",TEXT), ("sample.description",TEXT), ("sample.source",TEXT), ("sample.id",TEXT), ("measurement.technique",TEXT), ("measurement.description",TEXT), ("data_source.reference",TEXT), ("data_source.input.notes",TEXT)], default_language="english", name="text_index")
+        
+        # verify index exists
+        indices = collection.list_indexes()
+        print(indices)
+
+* Python >= 3.8
 * A conda or virtualenv environment with the contents of requirements.txt installed
-    * `virtualenv venv -p python3.6`
-    * `source venv/bin/activate`
-    * `pip install -r requirements.txt`
+    .. code-block::
+
+        $ virtualenv venv -p python3.8
+        Running virtualenv with interpreter /usr/bin/python3.8
+        Using base prefix '/usr'
+        New python executable in /home/username/venv/bin/python3.8
+        Also creating executable in /home/username/venv/bin/python
+        Installing setuptools, pip, wheel...done.
+        $ source venv/bin/activate
+        (venv) $ pip install -r requirements.txt
 
 
 Running the user interface
@@ -21,24 +58,32 @@ Requirements
     * Note: If you are running the app in a Docker container and using the MongoDB instance that is running on the host, you must use "host.docker.internal" as the value for "mongodb_host".
     * Note: If you are running the app in a Docker container, make sure the value you use for "mongodb_port" is mapped to the host when you run the container.
 * An `environment variable <https://www.schrodinger.com/kb/1842>`_ named ``DUNE_API_CONFIG_NAME`` whose value is the path to the app config json file
-* If you want to host the documentation along with the user interface, create a directory called "docs" in the user_interface/static directory. Then create a `symbolic link <https://www.freecodecamp.org/news/symlink-tutorial-in-linux-how-to-create-and-remove-a-symbolic-link/>`_ from the sphinx docs build to the newly created docs directory by running a command like this: ``ln -s dune/docs/build/html docs`` (this will keep the code in "docs" up to date with the code in "dune/docs/build/html" if it gets rebuilt). Then when you run the user interface, access the docs in your browser at: `HOSTNAME:PORT/static/docs/html/index.html`. 
+* If you want to host the documentation along with the user interface, create a directory called "docs" in the user_interface/static directory. Then create a `symbolic link <https://www.freecodecamp.org/news/symlink-tutorial-in-linux-how-to-create-and-remove-a-symbolic-link/>`_ from the sphinx docs build to the newly created docs directory by running a command like this: ``ln -s dune/docs/build/html docs`` (this will keep the code in "docs" up to date with the code in "dune/docs/build/html" if it gets rebuilt). Then when you run the user interface, access the docs in your browser at: HOSTNAME:PORT/static/docs/html/index.html. 
 
 Instructions
 ------------
-1. Clone the repository
-2. Activate the virtual environment
-3. ``cd`` into the "user_interface" directory
-4. Run ``./run.sh``
-5. Navigate the browser to `localhost:5000/` and you should see the search page
+1. Clone the repository.
+2. Activate the virtual environment.
+3. ``cd`` into the "user_interface" directory.
+4. Run ``./run.sh``.
+5. Navigate the browser to localhost:5000/ and you should see the search page.
+
+Docker instructions (this runs the UI container)
+------------------------------------------------
+1. Ensure that you have either MongoDB running on the host machine at port 27017 or a Docker container running a MongoDB instance on port 27017.
+2. Clone the repository and ``cd`` into it.
+3. Create the docker image by running the bash script ``create_image.sh`` that is included in the repository. Alternatively, run the command ``docker build --file ./Dockerfile -t dune_image .`` from the top-level directory of the cloned repository. The ``-t dune_image`` flag names the image "dune_image" for ease of use.
+4. Run the docker container by running the bash script ``run_docker.sh`` that is included in the repository. Alternatively, execute the following command: ``docker run -d --expose 27017 -p 5000:5000 -p 27017:27017 dune_image``. The ``-p`` arguments connect ports 5000 (for the user interface) and 27017 (for MongoDB) on the docker container to ports 5000 and 27017 on the host, so that the host can access the processes running on those ports via HTTP.
+5. Navigate the browser to localhost:5000/ and you should see the launch page.
+
+Docker-compose instructions (this runs the UI and a MongoDB container)
+----------------------------------------------------------------------
+1. Clone the repository and ``cd`` into it.
+2. Build the cluster by running ``docker-compose build``. This uses the ``docker-compose.yml`` file in the top level of the cloned repository.
+3. Start the cluster by running ``docker-compose up``.
+4. Navigate the browser to localhost:5000/ and you should see the launch page.
 
 For examples on using the user interface, see :ref:`user-interface-tutorial`.
-
-
-Running the API
-===============
-Not sure if this will be a thing.
-
-For examples on using the API, see :ref:`api-tutorial`.
 
 
 Using the python toolkit on the command line

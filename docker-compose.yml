@@ -1,0 +1,21 @@
+version: "2"
+services:
+  flask:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - "mongo"
+    links:
+      - mongo
+  mongo:
+    image: mongo
+    container_name: duneui_mongodb
+    restart: unless-stopped
+    environment:
+      MONGODB_DATA_DIR: /data/db
+    volumes:
+      - mongodb_data:/data/db
+volumes:
+  mongodb_data:
+    driver: local
