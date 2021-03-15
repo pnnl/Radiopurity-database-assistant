@@ -1,0 +1,5 @@
+include LICENSE
+include dunetoolkit/isotopes.csv
+include dunetoolkit/units.csv
+include dunetoolkit/synonyms.txt
+
