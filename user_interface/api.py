@@ -70,6 +70,7 @@ def reference_endpoint():
     """This is the landing page for the API if no endpoint is specified. It redirects to the search endpoint.
     """
 
+'''
 @app.route('/register', methods=['GET', 'POST'])
 @requires_permissions(['Admin'])
 def register():
@@ -97,6 +98,7 @@ def register():
 
     else:
         return render_template('register.html')
+'''
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

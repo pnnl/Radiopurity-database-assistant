@@ -2,10 +2,21 @@
 Setup
 *****
 
-db.assays.createIndex({grouping:"text", sample.name:"text", sample.description:"text", sample.source:"text", sample.id:"text", measurement.technique:"text", measurement.description:"text", data_source.reference:"text", data_source.input.notes:"text"})
-
 General requirements
 ====================
+* Python >= 3.8
+* A conda or virtualenv environment with the contents of requirements.txt installed
+    .. code-block::
+
+        $ virtualenv venv -p python3.8
+        Running virtualenv with interpreter /usr/bin/python3.8
+        Using base prefix '/usr'
+        New python executable in /home/username/venv/bin/python3.8
+        Also creating executable in /home/username/venv/bin/python
+        Installing setuptools, pip, wheel...done.
+        $ source venv/bin/activate
+        (venv) $ pip install -r requirements.txt
+
 * MongoDB `installed and running <https://docs.mongodb.com/manual/installation/>`_ on a machine (or in a Docker container) that you have access to via the values for "mongodb_host" and "mongodb_port" in your app config JSON file. All assay data is stored in the database specified in the config JSON file in a collection called "assays." This "assays" collection must have a `text index <https://docs.mongodb.com/manual/core/index-text/>`_ on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" in order for the code to be able to query it properly. You can create this index in the MongoDB shell by running the following commands:
     .. code-block::
 
@@ -36,19 +47,7 @@ General requirements
         indices = collection.list_indexes()
         print(indices)
 
-* Python >= 3.8
-* A conda or virtualenv environment with the contents of requirements.txt installed
-    .. code-block::
-
-        $ virtualenv venv -p python3.8
-        Running virtualenv with interpreter /usr/bin/python3.8
-        Using base prefix '/usr'
-        New python executable in /home/username/venv/bin/python3.8
-        Also creating executable in /home/username/venv/bin/python
-        Installing setuptools, pip, wheel...done.
-        $ source venv/bin/activate
-        (venv) $ pip install -r requirements.txt
-
+* A database administrator must create two users in the "users" collection of the database specified in the config file. One must have username "DUNEreader" and the other must have the username "DUNEwriter." The user elements in the database should have the following format: ``{"user_mode":"DUNEreader", "password_hashed":"abc123"}``. Before inserting, the password for each of the users must be hashed using the python "scrypt" package like so: ``encrypted_pw = scrypt.hash(plaintext_password, salt, N=16)`` where the salt is specified in the config file.
 
 Running the user interface
 ==========================
