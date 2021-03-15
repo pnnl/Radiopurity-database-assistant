@@ -5,12 +5,48 @@ Setup
 
 General requirements
 ====================
-* MongoDB `installed and running <https://docs.mongodb.com/manual/installation/>`_ on a machine that you have access to via the values for "mongodb_host" and "mongodb_port" in your app config JSON file
-* Python >= 3.6
+* Python >= 3.7
 * A conda or virtualenv environment with the contents of requirements.txt installed
-    * `virtualenv venv -p python3.6`
-    * `source venv/bin/activate`
-    * `pip install -r requirements.txt`
+    .. code-block::
+
+        $ virtualenv venv -p python3.8
+        Running virtualenv with interpreter /usr/bin/python3.8
+        Using base prefix '/usr'
+        New python executable in /home/username/venv/bin/python3.8
+        Also creating executable in /home/username/venv/bin/python
+        Installing setuptools, pip, wheel...done.
+        $ source venv/bin/activate
+        (venv) $ pip install -r requirements.txt
+
+* MongoDB `installed and running <https://docs.mongodb.com/manual/installation/>`_ on a machine (or in a Docker container) that you have access to via the values for "mongodb_host" and "mongodb_port" in your app config JSON file. All assay data is stored in the database specified in the config JSON file in a collection called "assays." This "assays" collection must have a `text index <https://docs.mongodb.com/manual/core/index-text/>`_ on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" in order for the code to be able to query it properly. You can create this index in the MongoDB shell by running the following commands:
+    .. code-block::
+
+        > use DATABASE_NAME
+        > db.assays.createIndex({"grouping":"text", "sample.name":"text", "sample.description":"text", "sample.source":"text", "sample.id":"text", "measurement.technique":"text", "measurement.description":"text", "data_source.reference":"text", "data_source.input.notes":"text"}, {"name":"text_index"})
+        {
+            "createdCollectionAutomatically" : false,
+            "numIndexesBefore" : 1,
+            "numIndexesAfter" : 2,
+            "ok" : 1
+        }
+
+  Or you could create the index using a python script with the pymongo package:
+
+    .. code-block::
+        :linenos:
+
+        from pymongo import MongoClient, TEXT
+        
+        # initialize database object
+        client = MongoClient("HOST_NAME", PORT_NUM)
+        collection = client.DATABASE_NAME.assays
+        
+        # create text index
+        resp = collection.create_index([("grouping",TEXT), ("sample.name",TEXT), ("sample.description",TEXT), ("sample.source",TEXT), ("sample.id",TEXT), ("measurement.technique",TEXT), ("measurement.description",TEXT), ("data_source.reference",TEXT), ("data_source.input.notes",TEXT)], default_language="english", name="text_index")
+        
+        # verify index exists
+        indices = collection.list_indexes()
+        print(indices)
 
 
 Running the user interface
@@ -19,7 +55,7 @@ Requirements
 ------------
 * A JSON file (preferrably in the "user_interface" directory) containing one JSON object with the following keys and values types: "mongodb_host" (a string with the IP or name of the machine where MongoDB is running), "mongodb_port" (an integer that corresponds to the port that MongoDB is listening on), "database" (the name of the MongoDB database to use for the back-end of the app), "secret_key" (a string that is used to initiate sessions for users; set the value to whatever you perfer), and "salt" (a string that is used with encryption to make password hashes unpredictable).
 * An `environment variable <https://www.schrodinger.com/kb/1842>`_ named ``DUNE_API_CONFIG_NAME`` whose value is the path to the app config json file
-* If you want to host the documentation along with the user interface, create a directory called "docs" in the user_interface/static directory. Then create a `symbolic link <https://www.freecodecamp.org/news/symlink-tutorial-in-linux-how-to-create-and-remove-a-symbolic-link/>`_ from the sphinx docs build to the newly created docs directory by running a command like this: ``ln -s dune/docs/build/html docs`` (this will keep the code in "docs" up to date with the code in "dune/docs/build/html" if it gets rebuilt). Then when you run the user interface, access the docs in your browser at: `HOSTNAME:PORT/static/docs/html/index.html`. 
+* If you want to host the documentation along with the user interface, create a directory called "docs" in the user_interface/static directory. Then create a `symbolic link <https://www.freecodecamp.org/news/symlink-tutorial-in-linux-how-to-create-and-remove-a-symbolic-link/>`_ from the sphinx docs build to the newly created docs directory by running a command like this: ``ln -s dune/docs/build/html docs`` (this will keep the code in "docs" up to date with the code in "dune/docs/build/html" if it gets rebuilt). Then when you run the user interface, access the docs in your browser at: HOSTNAME:PORT/static/docs/html/index.html. 
 
 Instructions
 ------------
@@ -27,16 +63,9 @@ Instructions
 2. Activate the virtual environment
 3. ``cd`` into the "user_interface" directory
 4. Run ``./run.sh``
-5. Navigate the browser to `localhost:5000/` and you should see the search page
+5. Navigate the browser to localhost:5000/ and you should see the search page
 
 For examples on using the user interface, see :ref:`user-interface-tutorial`.
-
-
-Running the API
-===============
-Not sure if this will be a thing.
-
-For examples on using the API, see :ref:`api-tutorial`.
 
 
 Using the python toolkit on the command line
