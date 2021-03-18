@@ -11,14 +11,13 @@
     * `salt` (only for the UI) a string to use for hashing passwords when users log into the user interface
 * Environment variables `DUNE_API_CONFIG_NAME` and `TOOLKIT_CONFIG_NAME` set to the absolute paths of the toolkit config file and the user interface config file, respectively
 * MongoDB installed and running on a machine (or in a Docker container) that you have access to via the values for “mongodb_host” and “mongodb_port” in the app config JSON file 
-    * Within the database (specified in the config file), two collections, "assays" and "assay_requests" must have a text index on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" so that they can be properly searched. For help creating a text index, see the [setup docs](setup.rst)
-
+    * Within the database (specified in the config file), two collections, "assays" and "assay_requests" must have a text index on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" so that they can be properly searched. For help creating a text index, see the [setup docs](docs/source/setup.rst)
 
 ### Database user interface (UI)
 #### Requirements
 In addition to the general requirements above, in order to use the user interface, two users must be created in the "users" collection of the database with the usernames "DUNEreader" and "DUNEwriter." The user elements in the database should have the following format: `{"user_mode":"DUNEreader", "password_hashed":"abc123"}`. Before inserting, the password for each of the users must be hashed using the python [scrypt package](https://pypi.org/project/scrypt/) like so: `encrypted_pw = scrypt.hash(plaintext_password, salt, N=16)` where the salt is specified in the config file.
 
-### Running the UI
+#### Running the UI
 * clone the repository
 * activate the virtual environment
 * `cd` into the repository directory
@@ -28,6 +27,7 @@ In addition to the general requirements above, in order to use the user interfac
 
 #### Available Pages
 The user interface provides an easy way to interact with the database. The user can search, insert, and update assays as well as assay requests.
+* `/login` allows a user to log in with the general read-only credentials or the general read/edit credentials.
 * `/search` allows the user to assemble queries and use them to search the database. Search results 
 are displayed at the bottom of the page, along with a count of the number of records found that 
 match the query. A small summary of each record's information is provided in the list of search 
