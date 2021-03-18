@@ -132,6 +132,7 @@ select {
 }
 .normal-button, .submit-button {
   border: none;
+  cursor: pointer;
   font-family: Arial, Helvetica, sans-serif;
   padding: 5px;
 }
