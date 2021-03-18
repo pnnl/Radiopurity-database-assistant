@@ -37,7 +37,7 @@ USER_MODES = ['DUNEreader', 'DUNEwriter']
 
 logger = logging.getLogger('dune_ui')
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('dune_ui_'+str(int(time.time()))+'.log')
+fh = logging.FileHandler('logs/dune_ui_'+str(int(time.time()))+'.log')
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s\t - %(pathname)s - %(funcName)s\t - %(message)s')
 fh.setFormatter(formatter)

@@ -615,17 +615,18 @@ def convert_str_list_to_date(str_list):
 
 
 if __name__ == '__main__':
-    valid_fields = ["grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.results.isotope", "measurement.results.type", "measurement.results.unit", "measurement.results.value", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
+    valid_fields = ["all", "grouping", "sample.name", "sample.description", "sample.source", "sample.id", "sample.owner.name", "sample.owner.contact", "measurement.results.isotope", "measurement.results.type", "measurement.results.unit", "measurement.results.value", "measurement.practitioner.name", "measurement.practitioner.contact", "measurement.technique","measurement.institution", "measurement.date", "measurement.description", "measurement.requestor.name", "measurement.requestor.contact", "data_source.reference", "data_source.input.name", "data_source.input.contact", "data_source.input.date", "data_source.input.notes"]
     valid_str_comparisons = ["contains", "notcontains", "eq"]
     valid_num_comparisons = ["eq", "lt", "lte", "gt", "gte"]
     valid_appendmodes = ["AND", "OR"]
 
 
-    parser = argparse.ArgumentParser(description='A python toolkit for interfacing with the radiopurity_example MongoDB.')
+    parser = argparse.ArgumentParser(description='A python toolkit for interfacing with the radiopurity database.')
     subparsers = parser.add_subparsers(help='options for which function to run', dest='subparser_name')
 
     search_parser = subparsers.add_parser('search', help='search for an assay in the database')
     search_parser.add_argument('--q', required=True, help='query to execute. *must be surrounded with single quotes, and use double quotes within dict*')
+    search_parser.add_argument('--assay_requests', action='store_true', required=False, help='query the assay requests database')
 
     query_append_parser = subparsers.add_parser('add_query_term', help='adds a new query term to an existing query')
     query_append_parser.add_argument('--field', type=str, required=True, choices=valid_fields, help='the field to compare the value of')
@@ -635,8 +636,10 @@ if __name__ == '__main__':
     query_append_parser.add_argument('--mode', type=str, choices=["OR", "AND"], default="", required=False, help='optional argument to define append mode. If not present, defaults to "AND"')
     query_append_parser.add_argument('--q', type=str, default='', \
         help='existing query dictionary to add a new term to. If not present, creates a new query *must be surrounded with single quotes, and use double quotes within dict*')
+    query_append_parser.add_argument('--synonyms', action='store_true', required=False, help='include synonyms in query')
 
     insert_parser = subparsers.add_parser('insert', help='inserts a new assay into the database')
+    insert_parser.add_argument('--assay_requests', action='store_true', required=False, help='insert into the assay requests database')
     insert_parser.add_argument('--sample_name', type=str, required=True, help='concise sample description')
     insert_parser.add_argument('--sample_description', type=str, required=True, help='detailed sample description')
     insert_parser.add_argument('--data_reference', type=str, required=True, help='where the data came from')
@@ -660,6 +663,8 @@ if __name__ == '__main__':
     insert_parser.add_argument('--measurement_requestor_contact', type=str, default='', help='email of who coordinated the measurement')
 
     update_parser = subparsers.add_parser('update', help='updates an existing assay in the database')
+    update_parser.add_argument('--assay_request_update', action='store_true', required=False, help='update an assay request')
+    update_parser.add_argument('--assay_request_verify', action='store_true', required=False, help='verify an assay request')
     update_parser.add_argument('--doc_id', type=str, required=True, help='the MongoDB id of the document in the database to update')
     update_parser.add_argument('--remove_doc', action='store_true', default=False, help='if present, remove the entire document from the database')
     update_parser.add_argument('--update_pairs', type=json.loads, default=[], help='series of keys to update and the new values to use')
@@ -669,16 +674,19 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     if args['subparser_name'] == 'search':
-        result = search(args['q'])
+        if args['assay_requests']:
+            collection = 'assay_requests'
+        else:
+            collection = ''
+        result = search(args['q'], coll_type=collection)
     elif args['subparser_name'] == 'add_query_term':
-        #TODO: add "include_synonyms" field
-        q_str, q_dict = add_to_query(args['field'], args['compare'], args['val'], query_string=args['q'], append_mode=args['mode'])
+        q_str, q_dict = add_to_query(args['field'], args['compare'], args['val'], query_string=args['q'], append_mode=args['mode'], include_synonyms=args['synonyms'])
         result = "QUERY STRING: "+str(q_str.replace('\n', '\\n'))+"\nQUERY DICT:   "+str(q_dict)
     elif args['subparser_name'] == 'insert':
-        '''
-        for i in range(len(args['measurement_results'])):
-            args['measurement_results'][i] = json.loads(args['measurement_results'][i])
-        '''
+        if args['assay_requests']:
+            collection = 'assay_requests'
+        else:
+            collection = ''
         result, error_msg = insert(args['sample_name'], \
             args['sample_description'], \
             args['data_reference'], \
@@ -699,25 +707,20 @@ if __name__ == '__main__':
             measurement_date=args['measurement_date'], \
             measurement_description=args['measurement_description'], \
             measurement_requestor_name=args['measurement_requestor_name'], \
-            measurement_requestor_contact=args['measurement_requestor_contact']
+            measurement_requestor_contact=args['measurement_requestor_contact'], \
+            coll_type=collection
         )
         if error_msg != '':
             print(error_msg)
         result = 'NEW DOC ID: '+str(result)
     elif args['subparser_name'] == 'update':
-        '''
-        update_keyval_pairs = {}
-        for i in range(len(args['update_pairs'])):
-            if i%2 == 0:
-                update_key = args['update_pairs'][i]
-                update_val = args['update_pairs'][i+1]
-                update_keyval_pairs[update_key] = update_val
-        '''
         result, error_msg = update(args['doc_id'], \
             remove_doc=args['remove_doc'], \
             update_pairs=args['update_pairs'], \
             new_meas_objects=args['new_meas_objects'], \
-            meas_remove_indices=[ int(i) for i in args['meas_remove_indices'] ]
+            meas_remove_indices=[ int(i) for i in args['meas_remove_indices'] ], \
+            is_assay_request_update=args['assay_request_update'], \
+            is_assay_request_verify=args['assay_request_verify']
         )
         if result is None and error_msg == '':
             result = 'REMOVED.'
