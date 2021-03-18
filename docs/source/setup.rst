@@ -57,7 +57,7 @@ Requirements
     * Note: If you are running the app in a Docker container and using the MongoDB instance that is running on the host, you must use "host.docker.internal" as the value for "mongodb_host".
     * Note: If you are running the app in a Docker container, make sure the value you use for "mongodb_port" is mapped to the host when you run the container.
 * An `environment variable <https://www.schrodinger.com/kb/1842>`_ named ``DUNE_API_CONFIG_NAME`` whose value is the path to the app config json file
-* If you want to host the documentation along with the user interface, create a directory called "docs" in the user_interface/static directory. Then create a `symbolic link <https://www.freecodecamp.org/news/symlink-tutorial-in-linux-how-to-create-and-remove-a-symbolic-link/>`_ from the sphinx docs build to the newly created docs directory by running a command like this: ``ln -s dune/docs/build/html docs`` (this will keep the code in "docs" up to date with the code in "dune/docs/build/html" if it gets rebuilt). Then when you run the user interface, access the docs in your browser at: HOSTNAME:PORT/static/docs/html/index.html. 
+* If you want the links to the documentation in the user interface to work, create a directory called "docs" in the user_interface/static directory. Then create a `symbolic link <https://www.freecodecamp.org/news/symlink-tutorial-in-linux-how-to-create-and-remove-a-symbolic-link/>`_ from the sphinx docs build to the newly created docs directory by doing ``cd user_interface/static`` and then running a command like this: ``ln -s ../../docs/build/html docs`` (this will keep the code in "docs" up to date with the code in "dune/docs/build/html" if it gets rebuilt). Then when you run the user interface, access the docs in your browser at: HOSTNAME:PORT/static/docs/html/index.html. 
 
 Instructions
 ------------
@@ -67,7 +67,7 @@ Instructions
 4. Run ``./run.sh``.
 5. Navigate the browser to localhost:5000/ and you should see the search page.
 
-Docker instructions (this runs the UI container)
+Docker instructions (UI container)
 ------------------------------------------------
 1. Ensure that you have either MongoDB running on the host machine at port 27017 or a Docker container running a MongoDB instance on port 27017.
 2. Clone the repository and ``cd`` into it.
@@ -75,7 +75,7 @@ Docker instructions (this runs the UI container)
 4. Run the docker container by running the bash script ``run_docker.sh`` that is included in the repository. Alternatively, execute the following command: ``docker run -d --expose 27017 -p 5000:5000 -p 27017:27017 dune_image``. The ``-p`` arguments connect ports 5000 (for the user interface) and 27017 (for MongoDB) on the docker container to ports 5000 and 27017 on the host, so that the host can access the processes running on those ports via HTTP.
 5. Navigate the browser to localhost:5000/ and you should see the launch page.
 
-Docker-compose instructions (this runs the UI and a MongoDB container)
+Docker-compose instructions (UI and MongoDB container)
 ----------------------------------------------------------------------
 1. Clone the repository and ``cd`` into it.
 2. Build the cluster by running ``docker-compose build``. This uses the ``docker-compose.yml`` file in the top level of the cloned repository.
