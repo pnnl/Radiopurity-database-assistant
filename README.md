@@ -11,7 +11,7 @@
     * `salt` (only for the UI) a string to use for hashing passwords when users log into the user interface
 * Environment variables `DUNE_API_CONFIG_NAME` and `TOOLKIT_CONFIG_NAME` set to the absolute paths of the toolkit config file and the user interface config file, respectively
 * MongoDB installed and running on a machine (or in a Docker container) that you have access to via the values for “mongodb_host” and “mongodb_port” in the app config JSON file 
-    * Within the database (specified in the config file), a collection named "assays" must have a text index on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" so that they can be properly searched. For help creating a text index, see the [setup docs](setup.rst)
+    * Within the database (specified in the config file), a collection named "assays" must have a text index on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" so that they can be properly searched. For help creating a text index, see the [setup docs](docs/source/setup.rst)
 
 
 ### User Interface (UI)
