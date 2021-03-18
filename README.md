@@ -11,14 +11,14 @@
     * `salt` (only for the UI) a string to use for hashing passwords when users log into the user interface
 * Environment variables `DUNE_API_CONFIG_NAME` and `TOOLKIT_CONFIG_NAME` set to the absolute paths of the toolkit config file and the user interface config file, respectively
 * MongoDB installed and running on a machine (or in a Docker container) that you have access to via the values for “mongodb_host” and “mongodb_port” in the app config JSON file 
-    * Within the database (specified in the config file), two collections, "assays" and "assay_requests" must have a text index on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" so that they can be properly searched. For help creating a text index, see the [setup docs](setup.rst)
+    * Within the database (specified in the config file), a collection named "assays" must have a text index on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" so that they can be properly searched. For help creating a text index, see the [setup docs](setup.rst)
 
 
-### Database user interface (UI)
+### User Interface (UI)
 #### Requirements
 In addition to the general requirements above, in order to use the user interface, two users must be created in the "users" collection of the database with the usernames "DUNEreader" and "DUNEwriter." The user elements in the database should have the following format: `{"user_mode":"DUNEreader", "password_hashed":"abc123"}`. Before inserting, the password for each of the users must be hashed using the python [scrypt package](https://pypi.org/project/scrypt/) like so: `encrypted_pw = scrypt.hash(plaintext_password, salt, N=16)` where the salt is specified in the config file.
 
-### Running the UI
+#### Running the UI (command line)
 * clone the repository
 * activate the virtual environment
 * `cd` into the repository directory
@@ -26,13 +26,32 @@ In addition to the general requirements above, in order to use the user interfac
 * run `python api.py`
 * access the UI in your browser using the port number listed on the console.
 
+#### Running the UI and database (docker compose)
+* Clone the repository and `cd` into it.
+* Build the cluster by running `docker-compose build`. This uses the `docker-compose.yml` file in the top level of the cloned repository.
+* Start the cluster by running `docker-compose up`.
+* Navigate the browser to localhost:5000/ and you should see the launch page.
+
+#### Running the UI (docker)
+* Clone the repository and `cd` into it.
+* Create the docker image by running the bash script `create_image.sh` that is included in the repository. Alternatively, run the command `docker build --file ./Dockerfile -t dune_image .` from the top-level directory of the cloned repository. The `-t dune_image` flag names the image "dune_image" for ease of use.
+* Run the docker container by running the bash script `run_docker.sh` that is included in the repository. Alternatively, execute the following command: `docker run -d --expose 27017 -p 5000:5000 -p 27017:27017 dune_image`. The `-p` arguments connect ports 5000 (for the user interface) and 27017 (for MongoDB) on the docker container to ports 5000 and 27017 on the host, so that the host can access the processes running on those ports via HTTP.
+* Navigate the browser to localhost:5000/ and you should see the launch page.
+
 #### Available Pages
 The user interface provides an easy way to interact with the database. The user can search, insert, and update assays as well as assay requests.
-* `/search` allows the user to assemble queries and use them to search the database. Search results 
-are displayed at the bottom of the page, along with a count of the number of records found that 
+* `/about` provides info about the Radiopurity database, data sources, and help with using the UI.
+* `/login` allows a user to log in with the general read-only credentials or the general read/edit credentials.
+* `/simple_search` is a simple search interface where the user enters a keyword (or keywords) to search for in any field of any assay in the database.
+Search results are displayed at the bottom of the page, along with a count of the number of records found that 
 match the query. A small summary of each record's information is provided in the list of search 
 results, and the user can click on an individual element in the list to reveal all of the record's 
 information.
+* `/search` allows the user to assemble more complicated queries and use them to search the database. 
+In contrast to the simple search page, which searches all fields for the keyword(s), this page allows 
+the user to define specific fields, comparisons, and values to search for. Using this page, the user 
+can also create multi-term queries, where they add as many field-comparison-value sets to the query 
+as desired.
 * `/insert` provides a form that the user can fill out in order to create a new assay record in the 
 database. This form enforces the required record schema upon the user in order to maintain data 
 quality in the database. Each field provides a 
@@ -51,10 +70,7 @@ below the measurement results section. To insert the updated document into the d
 button. If the update is successful, the resulting page displays the new updated record's database 
 ID. Otherwise, an error message is displayed describing why the record could not be updated 
 successfully.
-* `/assay_request_search` allows the user to search just the assay requests database for assay requests that are not yet finished.
-* `/assay_request` enables the user to request that an assay be made.
-* `/assay_request_update` when an update to an assay request needs to be made, the user can add all the necessary updates and press the "update" button. If the assay is finished and all necessary fields have been filled out, the user can press the "verify" button, which will cause the fully updated document to be moved from the "assay requests" collection to the "assays" collection.
- 
+
 ### Python Toolkit
 The python toolkit was created to provide ease of database use. With the help of the 
 python toolkit, a user need not know how to query a MongoDB database. 
