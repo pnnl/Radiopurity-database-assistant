@@ -33,6 +33,7 @@ RUN cd /home/Radiopurity-database-assistant/docs && make clean && make html && \
 # for running and testing the flask app
 COPY ./user_interface/app_config_docker.json /home/Radiopurity-database-assistant/user_interface/app_config.json
 COPY ./user_interface/app_config_docker_test.json /home/Radiopurity-database-assistant/user_interface/app_config_test.json
+COPY ./dunetoolkit/toolkit_config_docker_test.json /home/Radiopurity-database-assistant/dunetoolkit/toolkit_config_test.json
 
 # default command
 ENTRYPOINT ./run.sh
