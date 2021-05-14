@@ -13,7 +13,7 @@ setuptools.setup(
     python_requires='>=3.7',
     include_package_data=True,
     install_requires=[
-        'jsonschema==2.6.0',
+        'jsonschema==3.2.0',
         'pymongo',
         'importlib'
     ],
