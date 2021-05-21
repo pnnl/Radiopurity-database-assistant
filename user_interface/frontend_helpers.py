@@ -196,6 +196,7 @@ def perform_insert(form, db_obj, coll_type=''):
         data_input_name=form.get('data_source.input.name',''), \
         data_input_contact=form.get('data_source.input.contact',''), \
         data_input_date=data_input_date, \
+        db_obj=db_obj, \
         grouping=form.get('grouping',''), \
         sample_source=form.get('sample.source',''), \
         sample_id=form.get('sample.id',''), \
