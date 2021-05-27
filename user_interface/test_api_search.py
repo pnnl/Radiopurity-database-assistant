@@ -276,7 +276,7 @@ def teardown_stuff(browser):
     _teardown_db_for_test()
 
 def get_mongodb_config_info():
-    with open(os.environ.get('DUNE_API_CONFIG_NAME', 'r') as rf:
+    with open(os.environ.get('DUNE_API_CONFIG_NAME'), 'r') as rf:
         config = json.load(rf)
         return config['mongodb_host'], config['mongodb_port'], config['database']
 
