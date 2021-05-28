@@ -36,6 +36,8 @@ RUN wget https://chromedriver.storage.googleapis.com/91.0.4472.19/chromedriver_l
 # for testing the flask app
 COPY ./user_interface/app_config_docker_test.json /home/Radiopurity-database-assistant/user_interface/app_config_test.json
 COPY ./dunetoolkit/toolkit_config_docker_test.json /home/Radiopurity-database-assistant/dunetoolkit/toolkit_config_test.json
+COPY ./user_interface/DUNEreader_creds.txt /home/Radiopurity-database-assistant/dunetoolkit/DUNEreader_creds.txt
+COPY ./user_interface/DUNEwriter_creds.txt /home/Radiopurity-database-assistant/dunetoolkit/DUNEwriter_creds.txt
 
 # set test config environment variable names
 ENV DUNE_API_CONFIG_NAME=/home/Radiopurity-database-assistant/user_interface/app_config_test.json
