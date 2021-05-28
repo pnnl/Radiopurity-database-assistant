@@ -181,7 +181,7 @@ class Query():
         """
         for word_list in self.synonyms:
             for word in word_list:
-                if re.match(value, word, re.IGNORECASE):
+                if re.match(r'\b{}\b'.format(word), value, re.IGNORECASE):
                     return word_list
         return None
 

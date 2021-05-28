@@ -32,6 +32,22 @@ def test_load_from_str(base_str, correct_q_dict):
     assert q_str == base_str
     assert q_dict == correct_q_dict
 
+
+#TODO: add a test/fix functionality for isotopes (e.g. Th-382) matching synonyms
+synonym_data= [
+    ('measurement.results.isotope', 'contains', 'Th', {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^.*Thorium.*$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^.*Th.*$', re.IGNORECASE)}}}}]}),
+    ('measurement.results.isotope', 'eq', 'Th', {'$or': [{'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^Thorium$', re.IGNORECASE)}}}}, {'measurement.results': {'$elemMatch': {'isotope': {'$regex': re.compile('^Th$', re.IGNORECASE)}}}}]}),
+]
+@pytest.mark.parametrize("field,comparison,value,correct_q_dict", synonym_data)
+def test_synonyms(field, comparison, value, correct_q_dict):
+    q_obj = Query()
+    q_obj.add_query_term(field, comparison, value, include_synonyms=True)
+    q_dict = q_obj.to_query_language()
+    print('ACTUAL:',q_dict)
+    print('CORRCT:',correct_q_dict)
+    assert q_dict == correct_q_dict
+
+
 """
 def test_query_results_1():
     # set up database to be updated
