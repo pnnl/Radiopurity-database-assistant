@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 
 # install python3.8
 RUN apt-get update && apt-get install -y \
-  software-properties-common build-essential git curl
+  software-properties-common build-essential git curl vim zip wget
 
 RUN add-apt-repository ppa:deadsnakes/ppa 
 RUN apt-get update && apt-get install -y \
@@ -28,9 +28,18 @@ RUN pip install selenium beautifulsoup4 webdriver-manager
 
 WORKDIR /home/Radiopurity-database-assistant/user_interface
 
+# install google chrome binary, chromedriver (version 91)
+RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN apt install -f google-chrome-stable_current_amd64.deb
+RUN wget https://chromedriver.storage.googleapis.com/91.0.4472.19/chromedriver_linux64.zip && unzip chromedriver_linux64.zip
+
 # for testing the flask app
 COPY ./user_interface/app_config_docker_test.json /home/Radiopurity-database-assistant/user_interface/app_config_test.json
 COPY ./dunetoolkit/toolkit_config_docker_test.json /home/Radiopurity-database-assistant/dunetoolkit/toolkit_config_test.json
+
+# set test config environment variable names
+ENV DUNE_API_CONFIG_NAME=/home/Radiopurity-database-assistant/user_interface/app_config_test.json
+ENV TOOLKIT_CONFIG_NAME=/home/Radiopurity-database-assistant/dunetoolkit/toolkit_config_test.json
 
 # default command
 ENTRYPOINT ./run_test.sh

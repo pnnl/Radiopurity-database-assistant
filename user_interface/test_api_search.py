@@ -5,7 +5,6 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 import datetime
 from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 
 base_url = 'http://localhost:5000'
@@ -265,7 +264,7 @@ def _setup_browser():
     options.add_argument('--no-sandbox')
     options.add_argument('headless')
     options.add_argument('window-size=1200x600')
-    browser = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+    browser = webdriver.Chrome(executable_path="/home/Radiopurity-database-assistant/user_interface/chromedriver"), options=options)
     browser.implicitly_wait(10)
     return browser
 
