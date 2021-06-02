@@ -6,23 +6,11 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 base_url = 'http://localhost:5000'
 
-'''
-def test_api():
-    browser = setup_browser()
-
-    logout(browser)
-    assert browser.current_url == base_url + '/login'
-    
-    login("DUNEreader", browser)
-
-    browser.get(base_url+'/')
-    assert browser.current_url == base_url+'/'
-
-    teardown_browser(browser)
-'''
-
 
 endpoints = [
+    '/',
+    '/simple_search',
+    '/search',
     '/login',
     '/restricted_page',
 ]
@@ -36,9 +24,6 @@ def test_api_up(endpoint):
     assert resp.url == url
 
 restricted_endpoints = [
-    '/',
-    '/register',
-    '/search',
     '/insert',
     '/update',
 ]
@@ -51,39 +36,7 @@ def test_restricted_pages_are_restricted(endpoint):
     assert resp.url == base_url+'/login', 'Error for endpoint: '+endpoint
 
 
-read_endpoints = [
-    '/search',
-]
-@pytest.mark.parametrize('endpoint', read_endpoints)
-def test_readonly_endpoints_work_when_logged_in(endpoint):
-    browser = setup_browser()
-
-    # logout for good measure
-    logout(browser)
-    assert browser.current_url == base_url + '/login'
-
-    # login as read user
-    login("DUNEreader", browser)
-
-    # test that read user can access readuser-allowed endpoints
-    url = base_url + endpoint
-    browser.get(url)
-    assert browser.current_url == url
-
-    # logout
-    logout(browser)
-    assert browser.current_url == base_url + '/login'
-
-    # test that logged out user cannot access readuser-allowed endpoints
-    browser.get(url)
-    assert browser.current_url == base_url + '/login'
-
-    teardown_browser(browser)
-
-
-
 write_endpoints = [
-    '/search',
     '/insert',
     '/update',
 ]

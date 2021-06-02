@@ -15,11 +15,11 @@ test_data = [
     ([{'field':'all', 'comparison':'contains', 'value':'testing', 'append':''}], 'all contains testing', 7),
     ([{'field':'grouping', 'comparison':'contains', 'value':'one', 'append':'or'}, {'field':'sample.name', 'comparison':'notcontains', 'value':'two', 'append':'and'}, {'field':'sample.description', 'comparison':'eq', 'value':'three', 'append':''}], 'grouping contains one\nOR\nsample.name does not contain two\nAND\nsample.description equals three', 0),
     ([{'field':'measurement.results.value', 'comparison':'lt', 'value':'10', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gte', 'value':'5', 'append':''}], "measurement.results.value is less than 10.0\nAND\nmeasurement.results.value is greater than or equal to 5.0", 5),
-    ([{'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'eq', 'value':'37.2', 'append':'or'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'20.4', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'40.6', 'append':'and'}, {'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':''}], "measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", 0),
+    ([{'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'eq', 'value':'37.2', 'append':'or'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'20.4', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'40.6', 'append':'and'}, {'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'', "synonyms":False}], "measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", 0),
     ([{'field':'sample.description', 'comparison':'contains', 'value':'copper', 'append':''}], 'sample.description contains ["Copper", "Cu"]', 24),
-    ([{'field':'measurement.results.isotope', 'comparison':'eq', 'value':'K-40', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'0.1', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1', 'append':''}], 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1.0', 4),
+    ([{'field':'measurement.results.isotope', 'comparison':'eq', 'value':'K-40', 'append':'and', "synonyms":False}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'0.1', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1', 'append':''}], 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1.0', 4),
     ([{'field':'measurement.results.type', 'comparison':'eq', 'value':'range', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'200', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lt', 'value':'1', 'append':''}], 'measurement.results.type equals range\nAND\nmeasurement.results.value is greater than 200.0\nAND\nmeasurement.results.value is less than 1.0', 0),
-    ([{'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'and'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'U-238', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1.0', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppt', 'append':''}], "grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt", 15),
+    ([{'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'and'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'U-238', 'append':'and', "synonyms":False}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1.0', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppt', 'append':''}], "grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt", 15),
     ([{'field':'grouping', 'comparison':'contains', 'value':'testing', 'append':'or'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'actinium', 'append':''}], 'grouping contains testing\nOR\nmeasurement.results.isotope equals ["Actinium", "Ac"]', 1),
     ([{'field':'grouping', 'comparison':'contains', 'value':'testing', 'append':'or'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'actinium', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'or'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppb', 'append':''}], 'grouping contains testing\nOR\nmeasurement.results.isotope equals ["Actinium", "Ac"]\nAND\nmeasurement.results.unit equals ppm\nOR\nmeasurement.results.unit equals ppb', 14),
     #([{'field':'', 'comparison':'', 'value':'', 'append':''}], '', 0),
@@ -125,6 +125,7 @@ def do_query(browser, query_elements):
         value = query_element_parts['value']
         append_type = query_element_parts['append']
         append_button_name = 'query-'+append_type+'-button' if append_type != '' else None
+        do_synonyms = query_element_parts["synonyms"] if "synonyms" in query_element_parts else True
 
         field_select = webdriver.support.ui.Select(browser.find_element_by_id('query_field'))
         field_select.select_by_value(field)
@@ -138,13 +139,17 @@ def do_query(browser, query_elements):
         value_input = browser.find_element_by_id('query_value')
         value_input.send_keys(value)
 
+        if not do_synonyms:
+            synonym_checkbox = browser.find_element_by_name("include_synonyms")
+            synonym_checkbox.click()
+            
+
         if append_button_name is not None:
             append_button = browser.find_element_by_id(append_button_name)
             append_button.click()
 
     submit_button = browser.find_element_by_id('submit-query')
     submit_button.click()
-
     return browser
 
 def parse_html(soup_results):
@@ -239,7 +244,6 @@ def prep(username):
     
     browser = _setup_browser()
     _logout(browser)
-    _login(username, browser)
 
     return browser
 
@@ -264,7 +268,7 @@ def _setup_browser():
     options.add_argument('--no-sandbox')
     options.add_argument('headless')
     options.add_argument('window-size=1200x600')
-    browser = webdriver.Chrome(executable_path="/home/Radiopurity-database-assistant/user_interface/chromedriver"), options=options)
+    browser = webdriver.Chrome(options=options)
     browser.implicitly_wait(10)
     return browser
 
