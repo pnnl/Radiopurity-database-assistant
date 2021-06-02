@@ -1,10 +1,6 @@
 import pytest
 import requests
-import json
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-
-base_url = 'http://localhost:5000'
+from test_auxiliary import base_url, login, logout, setup_browser, teardown_browser
 
 
 endpoints = [
@@ -65,36 +61,5 @@ def test_readwrite_endpoints_work_when_logged_in(endpoint):
     assert browser.current_url == base_url + '/login'
 
     teardown_browser(browser)
-
-
-def login(username, browser):
-    login_url = base_url+'/login'
-    browser.get(login_url)
-    browser.find_element_by_id("username-text-entry").clear()
-    username_input = browser.find_element_by_id("username-text-entry")
-    username_input.send_keys(username)
-    password_input = browser.find_element_by_id("password-text-entry")
-    password_input.send_keys(open(username+'_creds.txt', 'r').read().strip())
-
-    submit_button = browser.find_element_by_id("login-submit-button")
-    submit_button.click()
-
-def logout(browser):
-    logout_url = base_url+'/logout'
-    browser.get(logout_url)
-
-
-
-def setup_browser():
-    options = webdriver.ChromeOptions()
-    options.add_argument('--no-sandbox')
-    options.add_argument('headless')
-    options.add_argument('window-size=1200x600')
-    options.add_argument('--disable-dev-shm-usage')
-    browser = webdriver.Chrome(ChromeDriverManager().install(), options=options)
-    return browser
-def teardown_browser(browser):
-    browser.quit()
-
 
 
