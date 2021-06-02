@@ -133,7 +133,6 @@ def login():
         return render_template('login.html')
 
 @app.route('/logout', methods=['GET'])
-@requires_permissions(['DUNEwriter', 'Admin'])
 def logout():
     """When the user hits this endpoint, their session is deleted, essentially logging them out.
 
