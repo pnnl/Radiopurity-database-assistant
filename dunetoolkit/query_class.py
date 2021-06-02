@@ -63,7 +63,7 @@ class Query():
         returns:
             * list of list of str. The list of the lists of synonyms for each word on record.
         """
-        synonyms_list = [ line.strip().split(',') for line in  pkg_resources.read_text(dunetoolkit, 'synonyms.txt').split('\n') ]
+        synonyms_list = [ line.strip().split(',') for line in pkg_resources.read_text(dunetoolkit, 'synonyms.txt').split('\n') if line.strip() != ""]
         return synonyms_list
 
     def _get_field_from_str(self, line):
