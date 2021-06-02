@@ -26,7 +26,7 @@ test_data = [
 ]
 @pytest.mark.parametrize('query_elements,human_query_string,num_expected_results',test_data)
 def test_search(query_elements, human_query_string, num_expected_results):
-    browser = prep('DUNEreader')
+    browser = prep()
 
     browser.get(base_url+'/search')
 
@@ -51,7 +51,7 @@ def test_search(query_elements, human_query_string, num_expected_results):
 
 
 def test_examine_results_1():
-    browser = prep('DUNEreader')
+    browser = prep()
 
     browser.get(base_url+'/search')
 
@@ -85,7 +85,7 @@ def test_examine_results_1():
 
 
 def test_examine_results_2():
-    browser = prep('DUNEreader')
+    browser = prep()
 
     browser.get(base_url+'/search')
 
@@ -238,7 +238,7 @@ def parse_html(soup_results):
 
     return all_doc_info
 
-def prep(username):
+def prep():
     _teardown_db_for_test()
     _set_up_db_for_test()
     
@@ -246,18 +246,6 @@ def prep(username):
     _logout(browser)
 
     return browser
-
-def _login(username, browser):
-    login_url = base_url+'/login'
-    browser.get(login_url)
-    browser.find_element_by_id("username-text-entry").clear()
-    username_input = browser.find_element_by_id("username-text-entry")
-    username_input.send_keys(username)
-    password_input = browser.find_element_by_id("password-text-entry")
-    password_input.send_keys(open(username+'_creds.txt', 'r').read().strip())
-
-    submit_button = browser.find_element_by_id("login-submit-button")
-    submit_button.click()
 
 def _logout(browser):
     logout_url = base_url+'/logout'
@@ -268,6 +256,7 @@ def _setup_browser():
     options.add_argument('--no-sandbox')
     options.add_argument('headless')
     options.add_argument('window-size=1200x600')
+    options.add_argument('--disable-dev-shm-usage')
     browser = webdriver.Chrome(options=options)
     browser.implicitly_wait(10)
     return browser

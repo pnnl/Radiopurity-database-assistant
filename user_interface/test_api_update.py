@@ -339,8 +339,9 @@ def find_doc_with_id(browser, doc_id):
     submit_button.click()
 
 def search_oldversions(doc_id):
-    client = MongoClient('localhost', 27017)
-    coll = client.dune_pytest_data.assays_old_versions
+    host, port, db_name = get_mongodb_config_info()
+    client = MongoClient(host, port)
+    coll = client[db_name].assays_old_versions
     resp = coll.find({'_id':ObjectId(doc_id)})
     resp = list(resp)
     if len(resp) <= 0:
@@ -350,8 +351,9 @@ def search_oldversions(doc_id):
     return doc
 
 def get_curr_version(doc_id):
-    client = MongoClient('localhost', 27017)
-    coll = client.dune_pytest_data.assays
+    host, port, db_name = get_mongodb_config_info()
+    client = MongoClient(host, port)
+    coll = client[db_name].assays
     resp = coll.find({})
     resp = list(resp)
     found_doc = None
@@ -393,6 +395,7 @@ def _setup_browser():
     options.add_argument('--no-sandbox')
     options.add_argument('headless')
     options.add_argument('window-size=1200x600')
+    options.add_argument('--disable-dev-shm-usage')
     browser = webdriver.Chrome(ChromeDriverManager().install(), options=options)
     browser.implicitly_wait(10)
     return browser
