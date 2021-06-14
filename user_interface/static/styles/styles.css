@@ -1,4 +1,5 @@
 /* dark blue:   #28487a */
+
 /* light blue:  #7aa5eb */
 /* dark gray:   #6c6d70 */
 /* light gray:  #abaeb3 */
@@ -7,6 +8,11 @@ h1 {
   text-align: center;
   font-family: Arial, Helvetica, sans-serif;
   color: #7aa5eb;
+}
+
+h2 {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #28487a;
 }
 
 h3 {
@@ -57,7 +63,7 @@ select {
 }
 
 .pages, .logout-link {
-  width: 16%;
+  width: 14%;
   background-color: #e1e3e6;
   display: inline-block;
   color: black;
@@ -128,7 +134,8 @@ select {
 }
 .submit-button {
   background-color: #7aa5eb;
-  font-size: 14pt;
+  font-size: 11pt;
+  font-family: Arial, Helvetica, sans-serif;
 }
 .normal-button, .submit-button {
   border: none;
@@ -221,4 +228,41 @@ div > img {
   max-height: 100%;
   max-width: 100%;
   transform: translate(-50%, -50%);
+}
+
+.droparea {
+	width:250px;
+	height:200px;
+	border:5px dashed black;
+	color:#ccc;
+	text-align: center;
+}
+
+.droparea--over{
+    height: 200px;
+    width: 250px;
+	border: 5px solid black;
+	background-color: gray;
+	border-radius: 10px;
+}
+
+.droparea__input{
+    height: 200px;
+    width: 250px;
+    border: 5px dashed black;
+    text-align: center;
+    font-size: 10pt;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.droparea__prompt {
+    color: #565656;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: center;
+}
+
+
+.file_msg{
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11pt;
 }

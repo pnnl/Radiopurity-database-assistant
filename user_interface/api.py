@@ -1,7 +1,6 @@
 """
 .. module:: radiopurity_api
    :synopsis: The access point for the user interface or API users to access the radiopurity functionality.
-
 .. moduleauthor:: Elise Saxon
 """
 
@@ -16,7 +15,9 @@ from functools import wraps
 import scrypt
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
-from frontend_helpers import _add_user, _get_user, do_q_append, parse_update, perform_search, perform_insert, perform_update
+from frontend_helpers import _add_user, _get_user, do_q_append, parse_update, perform_search, perform_insert, \
+    perform_update
+import TxtToJSONScript as Conversion
 from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -37,7 +38,7 @@ USER_MODES = ['DUNEwriter']
 
 logger = logging.getLogger('dune_ui')
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('logs/dune_ui_'+str(int(time.time()))+'.log')
+fh = logging.FileHandler('logs/dune_ui_' + str(int(time.time())) + '.log')
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s\t - %(pathname)s - %(funcName)s\t - %(message)s')
 fh.setFormatter(formatter)
@@ -46,10 +47,10 @@ logger.addHandler(fh)
 
 def requires_permissions(permissions_levels):
     """This defines a custom decorator for other endpoints which specifies which users can access a given endpoint. This decorator checks if the user that is currently logged in has permissions in the group of permissions_levels that are permitted to access the given endpoint. If permission is granted, the user is taken to the requested endpoint. Otherwise, they are taken to the "login" page if the user mode was None, or to the "restricted" page if their user mode does not have access.
-
     args:
         * permissions_levels (list of str): The user modes (user names) that are allowed to access this endpoint
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -61,8 +62,11 @@ def requires_permissions(permissions_levels):
                 if user_mode == permissions_level:
                     return f(*args, **kwargs)
             return redirect(url_for('restricted_page'))
+
         return decorated_function
+
     return decorator
+
 
 @app.route('/', methods=['GET', 'POST'])
 def reference_endpoint():
@@ -70,12 +74,12 @@ def reference_endpoint():
     """This is the landing page for the API if no endpoint is specified. It redirects to the search endpoint.
     """
 
+
 '''
 @app.route('/register', methods=['GET', 'POST'])
 @requires_permissions(['Admin'])
 def register():
     """This is the endpoint to add a new user to the database. Only administrators of the API can access it. At this point, it should only be used for development purposes, since the only users necessary for the API are DUNEreader, DUNEwriter, and Admin.
-
     GET request:
         Render the request page.
     POST request:
@@ -89,21 +93,18 @@ def register():
         user_obj = _get_user(user, db_obj)
         if user_obj is not None:
             return render_template('register.html', msg='Your email already exists in the database.')
-
         password = request.form.get('password')
         encrypted_pw = scrypt.hash(password, salt, N=16) #password, salt, N=(num_iterations), r=(block_size), p=(num_threads), bufflen=(num_output_bytes)
-
         insert_resp = _add_user(user, encrypted_pw, db_obj)
         return redirect(url_for('login'))
-
     else:
         return render_template('register.html')
 '''
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """This endpoint is used to initiate a session with a given set of permissions. The user provides a username and password, which are compared against entries in the database to try and find a match. If a match is found, a session is created for that user and they are redirected to the main landing endpoint, which is the search endpoint.
-
     GET request:
         Render the login page.
     POST request:
@@ -132,20 +133,21 @@ def login():
     else:
         return render_template('login.html')
 
+
 @app.route('/logout', methods=['GET'])
-@requires_permissions(['DUNEwriter', 'Admin'])
 def logout():
     """When the user hits this endpoint, their session is deleted, essentially logging them out.
-
     GET request:
         Render the login page.
     """
     session.clear()
     return redirect(url_for('login'))
 
+
 @app.route('/about', methods=['GET'])
 def about_endpoint():
     return render_template('about.html')
+
 
 @app.route('/restricted_page')
 def restricted_page():
@@ -153,7 +155,8 @@ def restricted_page():
     """
     return render_template('restricted_page.html')
 
-@app.route('/simple_search', methods=['GET','POST'])
+
+@app.route('/simple_search', methods=['GET', 'POST'])
 def simplesearch_endpoint():
     if request.method == 'POST':
         field = "all"
@@ -161,7 +164,7 @@ def simplesearch_endpoint():
         q_dict, q_str, _, error_msg = do_q_append(request.form)
 
         results, error_msg = perform_search(q_dict, db_obj)
-        results_str = [ str(r) for r in results ]
+        results_str = [str(r) for r in results]
 
     else:
         error_msg = ''
@@ -170,10 +173,10 @@ def simplesearch_endpoint():
 
     return render_template('simple_search.html', error_msg=error_msg, results_str=results_str, results_dict=results)
 
-@app.route('/search', methods=['GET','POST'])
+
+@app.route('/search', methods=['GET', 'POST'])
 def search_endpoint():
     """Intakes query term elements, assembles them into a valid query term, and appends the new query term to an existing query, if possible. If the option to perform the search is selected, this endpoint calls the back-end's search function with the newly assembled query and returns the resulting documents from the database.
-
     GET request:
         Render the search page with no results or existing query.
     POST request:
@@ -199,17 +202,17 @@ def search_endpoint():
     elif request.form.get("append_button") == "do_or":
         q_dict, q_str, num_q_lines, error_msg = do_q_append(request.form)
         append_mode = "OR"
- 
+
     elif request.method == "POST":
         final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
 
         results, error_msg = perform_search(final_q, db_obj)
-        
+
         final_q_lines_list = []
         if final_q_str != '':
             final_q_lines_list = final_q_str.split('\n')
-        
-        results_str = [ str(r) for r in results ]
+
+        results_str = [str(r) for r in results]
         q_dict = {}
         q_str = ''
         num_q_lines = 0
@@ -223,14 +226,16 @@ def search_endpoint():
     if error_msg != '':
         logger.error(error_msg)
 
-    logger.debug('Q STR: '+str(q_str)+'   \tAPPEND MODE: '+str(append_mode))
-    return render_template('search.html', existing_query=q_str, append_mode=append_mode, error_msg=error_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
+    logger.debug('Q STR: ' + str(q_str) + '   \tAPPEND MODE: ' + str(append_mode))
+    return render_template('search.html', existing_query=q_str, append_mode=append_mode, error_msg=error_msg,
+                           num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str,
+                           results_dict=results)
 
-@app.route('/insert', methods=['GET','POST'])
+
+@app.route('/insert', methods=['GET', 'POST'])
 @requires_permissions(['DUNEwriter', 'Admin'])
 def insert_endpoint():
     """Assembles all specified fields and values into a valid database object and inserts it into the database.
-
     GET request:
         Renders the blank insert page.
     POST request:
@@ -264,9 +269,9 @@ def insert_endpoint():
     """
     if request.method == "POST":
         new_doc_id, error_msg = perform_insert(request.form, db_obj)
-        new_doc_msg = 'new doc id: '+str(new_doc_id)
+        new_doc_msg = 'new doc id: ' + str(new_doc_id)
         if new_doc_id is None:
-            new_doc_msg = "ERROR: record not inserted because "+error_msg
+            new_doc_msg = "ERROR: record not inserted because " + error_msg
     else:
         new_doc_msg = ""
     if new_doc_msg != "":
@@ -276,11 +281,11 @@ def insert_endpoint():
             logger.debug(new_doc_msg)
     return render_template('insert.html', new_doc_msg=new_doc_msg)
 
-@app.route('/update', methods=['GET','POST'])
+
+@app.route('/update', methods=['GET', 'POST'])
 @requires_permissions(['DUNEwriter', 'Admin'])
 def update_endpoint():
     """Finds the document with the given ID in the database and updates its fields and values with the fields and values that the user supplies in the form data.
-
     GET request:
         Renders the page for a user to specify a document ID to search for.
     POST request:
@@ -360,8 +365,9 @@ def update_endpoint():
         doc = search_by_id(doc_id, db_obj)
 
         if doc is None:
-            return render_template('update.html', doc_data=False, message="No document was found with the ID you provided.")
-        
+            return render_template('update.html', doc_data=False,
+                                   message="No document was found with the ID you provided.")
+
         for i in range(len(doc['measurement']['results'])):
             num_vals = len(doc['measurement']['results'][i]['value'])
             if num_vals == 0:
@@ -372,39 +378,59 @@ def update_endpoint():
                 doc['measurement']['results'][i]['value'].append('')
 
         return render_template('update.html', doc_data=True, doc_id=doc['_id'], \
-                grouping=doc['grouping'], \
-                sample_name=doc['sample']['name'], \
-                sample_description=doc['sample']['description'], \
-                sample_source=doc['sample']['source'], \
-                sample_id=doc['sample']['id'], \
-                sample_owner_name=doc['sample']['owner']['name'], \
-                sample_owner_contact=doc['sample']['owner']['contact'], \
-                data_reference=doc['data_source']['reference'], \
-                data_input_name=doc['data_source']['input']['name'], \
-                data_input_contact=doc['data_source']['input']['contact'], \
-                data_input_date=' '.join([convert_date_to_str(date_ele) for date_ele in doc['data_source']['input']['date']]), \
-                data_input_notes=doc['data_source']['input']['notes'], \
-                measurement_practitioner_name=doc['measurement']['practitioner']['name'], \
-                measurement_practitioner_contact=doc['measurement']['practitioner']['contact'], \
-                measurement_technique=doc['measurement']['technique'], \
-                measurement_institution=doc['measurement']['institution'], \
-                measurement_date=' '.join([convert_date_to_str(date_ele) for date_ele in doc['measurement']['date']]), \
-                measurement_description=doc['measurement']['description'], \
-                measurement_requestor_name=doc['measurement']['requestor']['name'], \
-                measurement_requestor_contact=doc['measurement']['requestor']['contact'], \
-                measurement_results=doc['measurement']['results']
-            ) 
+                               grouping=doc['grouping'], \
+                               sample_name=doc['sample']['name'], \
+                               sample_description=doc['sample']['description'], \
+                               sample_source=doc['sample']['source'], \
+                               sample_id=doc['sample']['id'], \
+                               sample_owner_name=doc['sample']['owner']['name'], \
+                               sample_owner_contact=doc['sample']['owner']['contact'], \
+                               data_reference=doc['data_source']['reference'], \
+                               data_input_name=doc['data_source']['input']['name'], \
+                               data_input_contact=doc['data_source']['input']['contact'], \
+                               data_input_date=' '.join(
+                                   [convert_date_to_str(date_ele) for date_ele in doc['data_source']['input']['date']]), \
+                               data_input_notes=doc['data_source']['input']['notes'], \
+                               measurement_practitioner_name=doc['measurement']['practitioner']['name'], \
+                               measurement_practitioner_contact=doc['measurement']['practitioner']['contact'], \
+                               measurement_technique=doc['measurement']['technique'], \
+                               measurement_institution=doc['measurement']['institution'], \
+                               measurement_date=' '.join(
+                                   [convert_date_to_str(date_ele) for date_ele in doc['measurement']['date']]), \
+                               measurement_description=doc['measurement']['description'], \
+                               measurement_requestor_name=doc['measurement']['requestor']['name'], \
+                               measurement_requestor_contact=doc['measurement']['requestor']['contact'], \
+                               measurement_results=doc['measurement']['results']
+                               )
 
     elif request.form.get("submit_button") == "update_doc":
         doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form)
-        new_doc_id, error_msg = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles, db_obj)
+        new_doc_id, error_msg = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles,
+                                               db_obj)
         if new_doc_id != None:
-            message = "update success. New doc version ID: "+str(new_doc_id)
+            message = "update success. New doc version ID: " + str(new_doc_id)
         else:
-            message = 'Error: '+error_msg
+            message = 'Error: ' + error_msg
             logger.error(message)
         return render_template('update.html', doc_data=False, message=message)
     return None
 
-
-
+@app.route('/xia', methods=["GET", "POST"])
+def xia_endpoint():
+    tmp_directory = "/tmp"
+    if request.method == "POST":	
+        files = request.files
+        if "file" in request.files:
+            f = request.files["file"]
+            filename = f.filename
+            filepath = os.path.join(tmp_directory, filename)
+            print(filename, "submitted")
+            if len(filename) > 0:
+                f.save(filepath)
+                f_cast = open(filepath, 'r')
+                upload_msg = Conversion.conversion_main(f_cast, filepath).replace("____", filename)
+            else:
+                upload_msg = "No file selected"
+    else:
+        upload_msg = ""
+    return render_template('xia_insert.html', upload_msg=upload_msg)
