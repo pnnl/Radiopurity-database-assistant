@@ -113,7 +113,7 @@ def write_to_output_file(json_file, file_path):
 
 def insert_json_to_collection(json_file):
     # This function inserts the formatted JSON file (held as a dictionary) into the MongoDB collection given below
-    client = MongoClient("172.17.0.5", 27017)
+    client = MongoClient("", 27017)  # Connecting to the mongodb container containing the database
     db = client["xia_pytest_data"]
     coll = db.assays
     inserting = coll.insert_one(json_file)
