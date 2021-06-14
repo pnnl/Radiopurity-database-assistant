@@ -10,13 +10,13 @@
 
 <!-- Logos for PNNL, radiopurity.org, and SNOLAB -->
 <div class="logo-container">
-    <img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
+<img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
 </div>
 <div class="logo-container">
-    <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
+<img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
 </div>
 <div class="logo-container">
-    <img src="{{ url_for('static', filename='logos/snolab_logo.png') }}"/>
+<img src="{{ url_for('static', filename='logos/snolab_logo.png') }}"/>
 </div>
 
 <!-- documentation link -->
@@ -35,21 +35,21 @@
 
 <!-- Links to the other pages -->
 <div>
-    <a href=""><button class="logout-link">about</button></a>
-    <a href=""><button class="pages">search</button></a>
-    <a href=""><button class="pages">advanced search</button></a>
-    <a href=""><button class="pages">insert</button></a>
-    <a href=""><button class="pages">update</button></a>
-	<a href="{{ url_for('xia_endpoint') }}"><button class="pages">XIA</button></a>
-    <a href=""><button class="logout-link">logout</button></a>
+    <a href="{{ url_for('about_endpoint') }}"><button class="logout-link">about</button></a>
+    <a href="{{ url_for('simplesearch_endpoint') }}"><button class="pages">search</button></a>
+    <a href="{{ url_for('search_endpoint') }}"><button class="pages">advanced search</button></a>
+    <a href="{{ url_for('insert_endpoint') }}"><button class="pages">insert</button></a>
+    <a href="{{ url_for('update_endpoint') }}"><button class="pages">update</button></a>
+    <a href="{{ url_for('xia_endpoint') }}"><button class="pages">XIA</button></a>
+    <a href="{{ url_for('logout') }}"><button class="logout-link">logout</button></a>
 </div>
 <h1>XIA Data Insertion Assistant</h1>
 
-<!--
+
 <div class="logo-container right-aligned">
     <img src="{{ url_for('static', filename='logos/conversion_chart.png') }}" />
 </div>
--->
+
 
 <h2>Drop data file here</h2>
 <form name="xia_doc_form" method="POST" class="form-file" action="{{ url_for('xia_endpoint') }}" enctype="multipart/form-data">
@@ -58,7 +58,7 @@
     <input type="file" name="file" class="droparea__input" id="file_input">
     <p></p>
     <button type="submit" class="submit-button">Submit file</button>
-    <p class = "file_msg">{{ upload_msg }}</p>
+    <p class = "file_msg">{{ upload_msg }}</br>{{ _id }}</p>
 </form>
 
 <script type="text/javascript" src="./static/DropAreaScripts.js"></script>

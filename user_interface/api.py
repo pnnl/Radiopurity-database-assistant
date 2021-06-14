@@ -428,9 +428,10 @@ def xia_endpoint():
             if len(filename) > 0:
                 f.save(filepath)
                 f_cast = open(filepath, 'r')
-                upload_msg = Conversion.conversion_main(f_cast, filepath).replace("____", filename)
+                upload_msg, _id = Conversion.conversion_main(f_cast, filepath)
+                upload_msg = upload_msg.replace("____", filename)
             else:
-                upload_msg = "No file selected"
+                upload_msg, _id = "No file selected", ""
     else:
-        upload_msg = ""
-    return render_template('xia_insert.html', upload_msg=upload_msg)
+        upload_msg, _id = "", ""
+    return render_template('xia_insert.html', upload_msg=upload_msg, _id=_id)
