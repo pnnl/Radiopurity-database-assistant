@@ -123,15 +123,12 @@ def perform_search(curr_q, db_obj, coll_type=''):
         * str. An error message (empty string if no errors happened).
     """
     # query for results
-    results = search(curr_q, db_obj, coll_type)
-
-    # convert datetime objects to strings for UI display
-    for i in range(len(results)):
-        for j in range(len(results[i]['measurement']['date'])):
-                results[i]['measurement']['date'][j] = convert_date_to_str(results[i]['measurement']['date'][j])
-        for j in range(len(results[i]['data_source']['input']['date'])):
-            results[i]['data_source']['input']['date'][j] = convert_date_to_str(results[i]['data_source']['input']['date'][j])
-
+    results = db_obj.assays.find(curr_q)
+    results = list(results)
+    for i , ele in enumerate(results):
+        ele['_id'] = str(ele['_id'])
+        results[i] = ele
+    # results = search(curr_q, db_obj, coll_type)
     return results, ''
 
 

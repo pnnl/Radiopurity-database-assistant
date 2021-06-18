@@ -165,12 +165,10 @@ def simplesearch_endpoint():
 
         results, error_msg = perform_search(q_dict, db_obj)
         results_str = [str(r) for r in results]
-
     else:
         error_msg = ''
         results_str = ''
         results = []
-
     return render_template('simple_search.html', error_msg=error_msg, results_str=results_str, results_dict=results)
 
 
