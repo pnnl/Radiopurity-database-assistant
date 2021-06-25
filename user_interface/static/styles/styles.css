@@ -153,11 +153,11 @@ select {
 }
 .collapsiblebutton-name{
   display: inline-block;
-  width: 25%;
+  width: 15%;
 }
 .collapsiblebutton-vals{
   display: inline-block;
-  width: 45%;
+  width: 40%;
 }
 .collapsible-content {
   padding: 0 18px;
