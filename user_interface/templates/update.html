@@ -2,6 +2,7 @@
 <html>
 
 <head>
+    <title>XIA Update</title>
     <script type="text/javascript" src="{{ url_for('static', filename='javascript_funcs.js') }}"></script>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
 </head>
@@ -19,14 +20,26 @@
     <img src="{{ url_for('static', filename='logos/snolab_logo.png') }}"/>
 </div>
 
+<!-- documentation link -->
+<div>
+    <a class="normal-text github-link" href="{{ url_for('static', filename='docs/html/index.html') }}" target="_blank">documentation</a>
+</div>
+<div class="clear-float"></div>
+
+<!-- github link -->
+<div>
+    <a class="github-link" href="https://github.com/pnnl/Radiopurity-database-assistant" target="_blank" rel="noopener noreferrer">
+        <img class="github-logo" src="{{ url_for('static', filename='logos/github_logo.png') }}" alt="GitHub logo">
+    </a>
+</div>
+<div class="clear-float"></div>
+
 <!-- links to other pages on the site -->                                             
 <div>                                                                                 
     <a href="{{ url_for('about_endpoint') }}"><button class="logout-link">about</button></a>
     <a href="{{ url_for('simplesearch_endpoint') }}"><button class="pages">search</button></a>
-    <a href="{{ url_for('search_endpoint') }}"><button class="pages">advanced search</button></a>
-    <a href="{{ url_for('insert_endpoint') }}"><button class="pages">insert</button></a>   
+    <a href="{{ url_for('xia_insert_endpoint') }}"><button class="pages">insert</button></a>   
     <a href="{{ url_for('update_endpoint') }}"><button class="pages">update</button></a>
-    <a href="{{ url_for('xia_endpoint') }}"><button class="pages">XIA</button></a>
     <a href="{{ url_for('logout') }}"><button class="logout-link">logout</button></a> 
 </div>
 
@@ -73,51 +86,70 @@
                         <p class="info">remove entire document</p>
                     </span>
                 </div>
-                
+                {% for key in parent_doc.keys() %}
+					{% if key == "Energy Range (MeV)" %}
+                        <div class="collapsible-line">
+                            <p class="collapsible-field">Energy Range (MeV): </br></p>
+                        </div>
+                        {% for range in parent_doc[key].keys() %}
+                            <div class="collapsible-line">
+                                    <p class="collapsible-field"> {{ range }}: </p>
+									
+									{% for field in (parent_doc["Energy Range (MeV)"][range]).keys() %}
+										<div>
+											<span>
+												<p class="normal-text">{{field}}: <input type="text" name="{{name_doc[key][range][field]}}"></p>
+											</span>
+											<span>
+												<p class="info" name="{{current_name_doc[key][range][field]}}">current value: {{parent_doc[key][range][field]}}</p>									
+											</span>
+											<span>
+												<input class="remove-checkbox" type="checkbox" name="{{remove_name_doc[key][range][field]}}" value="remove">
+											</span>
+											<span>
+												<p class="info">remove</p>
+											</span>
+										</div>
+									{% endfor %}
+									
+                                </div>
+                        {% endfor %}
+                    {% elif key not in ["_id", "_version"] %}
+						<div>
+							<span>
+								<p class="normal-text">{{ key }}: <input type="text" name="{{name_doc[key]}}"><p>
+							</span>
+							<span>
+								<p class="info" name="{{current_name_doc[key]}}">current value: {{parent_doc[key]}}</p>
+							</span>
+							<span>
+								<input class="remove-checkbox" type="checkbox" name="{{remove_name_doc[key]}}" value="remove">
+							</span>
+							<span>
+								<p class="info">remove</p>
+							</span>
+						</div>
+                    {% endif %}
+                {% endfor %}
+				
+				
+                <!--
                 <div>
                     <span>
-                        <p class="normal-text">grouping: <input type="text" name="grouping"></p>
+                        <p class="normal-text">Sample material: <input type="text" name="Sample_material"></p>
                     </span>
                     <span>
-                        <p class="info">current value: {{grouping}}</p>
+                        <p class="info" name="current.Sample_material">current value: {{Sample_material}}</p>
                     </span>
                     <span>
-                        <input class="remove-checkbox" type="checkbox" name="remove.grouping" value="remove">
+                        <input class="remove-checkbox" type="checkbox" name="remove.Sample_material" value="remove">
                     </span>
                     <span>
                         <p class="info">remove</p>
                     </span>
                 </div>
-
-                <h3>sample:</h3>
-                <div>
-                    <span>
-                        <p class="normal-text">sample name: <input type="text" name="sample.name"></p>
-                    </span>
-                    <span>
-                        <p class="info">current value: {{sample_name}}</p>
-                    </span>
-                    <span>
-                        <input class="remove-checkbox" type="checkbox" name="remove.sample.name" value="remove">
-                    </span>
-                    <span>
-                        <p class="info">remove</p>
-                    </span>
-                </div>
-                <div>
-                    <span>
-                        <p class="normal-text">sample description: <input type="text" name="sample.description"></p>
-                    </span>
-                    <span>
-                        <p class="info">current value: {{sample_description}}</p>
-                    </span>
-                    <span>
-                        <input class="remove-checkbox" type="checkbox" name="remove.sample.description" value="remove">
-                    </span>
-                    <span>
-                        <p class="info">remove</p>
-                    </span>
-                </div>
+				-->
+				<!--
                 <div>
                     <span>
                         <p class="normal-text">sample source: <input type="text" name="sample.source"></p>
@@ -567,6 +599,9 @@
                     </div>
                 {% endfor %}
             </div> <!-- END OF div id "input-section"  -->
+			
+			-->
+			
             <div>
                 <span>
                     <button id="add-meas-button" class="normal-button" type="button">add new measurement result</button>

@@ -13,10 +13,11 @@ import argparse
 import datetime
 from functools import wraps
 import scrypt
+from copy import deepcopy
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
 from frontend_helpers import _add_user, _get_user, do_q_append, parse_update, perform_search, perform_insert, \
-    perform_update
+    perform_update, field_to_name, add_start_text, read_write_names_list
 import TxtToJSONScript as Conversion
 from pymongo import MongoClient
 
@@ -157,6 +158,7 @@ def restricted_page():
 
 
 @app.route('/simple_search', methods=['GET', 'POST'])
+@requires_permissions(['SilviaScorza', 'Admin', 'TestUser'])
 def simplesearch_endpoint():
     if request.method == 'POST':
         field = "all"
@@ -202,7 +204,10 @@ def search_endpoint():
         append_mode = "OR"
 
     elif request.method == "POST":
-        final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
+        with open("/home/Trace_api.txt", 'a') as trace_file:
+            final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
+            s = "final_q:" + str(final_q) + "\n"
+            trace_file.write(s)
 
         results, error_msg = perform_search(final_q, db_obj)
 
@@ -281,7 +286,7 @@ def insert_endpoint():
 
 
 @app.route('/update', methods=['GET', 'POST'])
-@requires_permissions(['DUNEwriter', 'Admin'])
+@requires_permissions(['DUNEwriter', 'SilviaScorza', 'Admin', 'TestUser'])
 def update_endpoint():
     """Finds the document with the given ID in the database and updates its fields and values with the fields and values that the user supplies in the form data.
     GET request:
@@ -355,6 +360,8 @@ def update_endpoint():
             * remove.measurement.practitioner.name (str): if present and not an empty string, remove the current value for the measurement.practitioner.name field
             * remove.measurement.practitioner.contact (str): if present and not an empty string, remove the current value for the measurement.practitioner.contact field
     """
+    outside_name_list = None
+    
     if request.method == "GET":
         return render_template('update.html', doc_data=False, message="")
 
@@ -365,44 +372,35 @@ def update_endpoint():
         if doc is None:
             return render_template('update.html', doc_data=False,
                                    message="No document was found with the ID you provided.")
-
-        for i in range(len(doc['measurement']['results'])):
-            num_vals = len(doc['measurement']['results'][i]['value'])
-            if num_vals == 0:
-                doc['measurement']['results'][i]['value'] = []
-            if num_vals < 2:
-                doc['measurement']['results'][i]['value'].append('')
-            if num_vals < 3:
-                doc['measurement']['results'][i]['value'].append('')
-
+        name_dictionary, current_name_dictionary, remove_name_dictionary, names_list = field_to_name(deepcopy(doc), deepcopy(doc), deepcopy(doc), [], [])
+        for field in ["_id", "_version"]:
+            if field in names_list:
+                names_list.remove(field)
+        with open("/home/Trace_api.txt", 'a') as trace_file:
+            s = "type:" + str(type(doc['Energy Range (MeV)']['0-1'])) + "\n"
+            trace_file.write(s)
+            s = "names_list: " + str(names_list) + "\n"
+            trace_file.write(s)
+            """
+            for key in doc['Energy Range (MeV)'].keys():
+                s = str(key) + ": " + str(doc['Energy Range (MeV)'][key]) + "\n" + str(type(doc['Energy Range (MeV)'][key])) + "\n"
+                trace_file.write(s)
+            """
+        read_write_names_list(names_list, "write")
         return render_template('update.html', doc_data=True, doc_id=doc['_id'], \
-                               grouping=doc['grouping'], \
-                               sample_name=doc['sample']['name'], \
-                               sample_description=doc['sample']['description'], \
-                               sample_source=doc['sample']['source'], \
-                               sample_id=doc['sample']['id'], \
-                               sample_owner_name=doc['sample']['owner']['name'], \
-                               sample_owner_contact=doc['sample']['owner']['contact'], \
-                               data_reference=doc['data_source']['reference'], \
-                               data_input_name=doc['data_source']['input']['name'], \
-                               data_input_contact=doc['data_source']['input']['contact'], \
-                               data_input_date=' '.join(
-                                   [convert_date_to_str(date_ele) for date_ele in doc['data_source']['input']['date']]), \
-                               data_input_notes=doc['data_source']['input']['notes'], \
-                               measurement_practitioner_name=doc['measurement']['practitioner']['name'], \
-                               measurement_practitioner_contact=doc['measurement']['practitioner']['contact'], \
-                               measurement_technique=doc['measurement']['technique'], \
-                               measurement_institution=doc['measurement']['institution'], \
-                               measurement_date=' '.join(
-                                   [convert_date_to_str(date_ele) for date_ele in doc['measurement']['date']]), \
-                               measurement_description=doc['measurement']['description'], \
-                               measurement_requestor_name=doc['measurement']['requestor']['name'], \
-                               measurement_requestor_contact=doc['measurement']['requestor']['contact'], \
-                               measurement_results=doc['measurement']['results']
+                               parent_doc=doc, \
+                               name_doc=name_dictionary, \
+                               current_name_doc = current_name_dictionary, \
+                               remove_name_doc = remove_name_dictionary, \
+                               message="Document found:"
                                )
 
     elif request.form.get("submit_button") == "update_doc":
-        doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form)
+        names_list = read_write_names_list(None, "read")
+        doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form, names_list)
+        with open("/home/Trace_api.txt", 'w') as trace_file:
+            s = "Parsed:" + str(doc_id) + ":" + str(remove_doc) + ":" + str(update_pairs) + ":" + str(meas_remove_indices) + ":" + str(meas_add_eles) + "\n"
+            trace_file.write(s)
         new_doc_id, error_msg = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles,
                                                db_obj)
         if new_doc_id != None:
@@ -410,11 +408,12 @@ def update_endpoint():
         else:
             message = 'Error: ' + error_msg
             logger.error(message)
-        return render_template('update.html', doc_data=False, message=message)
+        return render_template('update.html', doc_data=False, parent_doc={}, name_doc={}, doc_id=None, message=message)
     return None
 
-@app.route('/xia', methods=["GET", "POST"])
-def xia_endpoint():
+@app.route('/xia_insert', methods=["GET", "POST"])
+@requires_permissions(['SilviaScorza', 'Admin', 'TestUser'])
+def xia_insert_endpoint():
     tmp_directory = "/tmp"
     if request.method == "POST":	
         files = request.files
@@ -426,8 +425,11 @@ def xia_endpoint():
             if len(filename) > 0:
                 f.save(filepath)
                 f_cast = open(filepath, 'r')
-                upload_msg, _id = Conversion.conversion_main(f_cast, filepath)
-                upload_msg = upload_msg.replace("____", filename)
+                try:
+                    upload_msg, _id = Conversion.conversion_main(f_cast, filepath)
+                    upload_msg = upload_msg.replace("____", filename)
+                except:
+                    upload_msg, _id = "Error occured converting the entered file. See the about page for more details regarding the expected format.", ""
             else:
                 upload_msg, _id = "No file selected", ""
     else:

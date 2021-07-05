@@ -70,7 +70,7 @@ def header_lines_to_json(header_lines):
         print(header_line)
         dictionary.update(header_line)
     required_fields = ['Sample', 'Date', 'Vendor', 'Experiment', 'Sample material',
-                       'Readout mode', 'Purge time', 'Acquisition time']
+                       'Readout mode', 'Purge time', 'Acquisition time', 'parent_id']
     for field in required_fields:
         if field not in dictionary:
             dictionary.update({field: ""})
@@ -98,8 +98,9 @@ def values_lines_to_json(lines, fields):
 
 
 def combine_sections(headers, values):
-    headers.update(values)
-    json_file = headers
+    json_file = {'_version': 1}
+    json_file.update(headers)
+    json_file.update(values)
     return json_file
 
 
