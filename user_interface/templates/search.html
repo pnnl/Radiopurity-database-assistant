@@ -226,10 +226,12 @@
                     <p class="collapsible-field">database id:</p>
                     <p class="collapsible-value">{{ result_dict["_id"] }}</p>
                 </div>
-                <div class="collapsible-line">
-                    <p class="collapsible-field">grouping:</p>
-                    <p class="collapsible-value">{{ result_dict["grouping"] }}</p>
-                </div>
+                {% if result_dict["grouping"]|length > 0 %}
+                    <div class="collapsible-line">
+                        <p class="collapsible-field">grouping:</p>
+                        <p class="collapsible-value">{{ result_dict["grouping"] }}</p>
+                    </div>
+                {% endif %}
                 
                 <!-- SAMPLE INFO -->
                 <div>
@@ -408,10 +410,10 @@
                             <p class="collapsible-field">measurement practitioner:</p>
                             <p class="collapsible-value">{{result_dict["measurement"]["practitioner"]["name"]}} </p>
                         {% endif %}
-                        {% if result_dict["measurement"]["date"]|length == 1 %}
+                        {% if result_dict["measurement"]["date"]|length == 1 and result_dict["measurement"]["date"][0]|length > 0 %}
                             <p class="collapsible-field">measurement date:</p>
                             <p class="collapsible-value">{{ result_dict["measurement"]["date"][0] }}</p>
-                        {% elif result_dict["measurement"]["date"]|length == 2 %}
+                        {% elif result_dict["measurement"]["date"]|length == 2 and result_dict["measurement"]["date"][0]|length > 0 and result_dict["measurement"]["date"][1]|length > 0 %}
                             <p class="collapsible-field">measurement date range:</p>
                             <p class="collapsible-value">{{ result_dict["measurement"]["date"][0] }} - {{ result_dict["measurement"]["date"][1] }}</p>
                         {% endif %}
