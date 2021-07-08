@@ -195,8 +195,13 @@ def perform_insert(form, db_obj, coll_type=''):
         data_reference=form.get('data_source.reference',''), \
         data_input_name=form.get('data_source.input.name',''), \
         data_input_contact=form.get('data_source.input.contact',''), \
+<<<<<<< HEAD
         data_input_date=data_input_date,
         db_obj=db_obj,\
+=======
+        data_input_date=data_input_date, \
+        db_obj=db_obj, \
+>>>>>>> 656e43a47bbbcdc41c2dbad935193d655173649b
         grouping=form.get('grouping',''), \
         sample_source=form.get('sample.source',''), \
         sample_id=form.get('sample.id',''), \
