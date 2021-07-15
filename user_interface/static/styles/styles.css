@@ -213,7 +213,7 @@ select {
   overflow: hidden;
   margin: 0;
 }
-div > img {
+div > img, a > img {
   display: block;
   position: absolute;
   top: 50%;
