@@ -221,15 +221,15 @@
                                 <p class="collapsible-value">{{ meas["isotope"] }}</p>
                                 {% if meas["type"] == "measurement" %}
                                     {% if meas["value"]|length == 1 %}
-                                        <p class="collapsible-field">value:</p>
+                                        <p class="collapsible-field">&equals;</p>
                                         <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
                                     {% elif meas["value"]|length == 2 %}
-                                        <p class="collapsible-field">value:</p>
+                                        <p class="collapsible-field">&equals;</p>
                                         <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
                                         <p class="collapsible-field">symmetric error:</p>
                                         <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
                                     {% elif meas["value"]|length == 3 %}
-                                        <p class="collapsible-field">value:</p>
+                                        <p class="collapsible-field">&equals;</p>
                                         <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
                                         <p class="collapsible-field">symmetric error:</p>
                                         <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
@@ -239,10 +239,10 @@
 
                                 {% elif meas["type"] == "limit" %}
                                     {% if meas["value"]|length == 1 %}
-                                        <p class="collapsible-field">less than:</p>
+                                        <p class="collapsible-field">&lt;</p>
                                         <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
                                     {% elif meas["value"]|length == 2 %}
-                                        <p class="collapsible-field">less than:</p>
+                                        <p class="collapsible-field">&lt;</p>
                                         <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
                                         <p class="collapsible-field">confidence:</p>
                                         <p class="collapsible-value">{{ meas["value"][1] }}%</p>
@@ -250,17 +250,17 @@
 
                                 {% elif meas["type"] == "range" %}
                                     {% if meas["value"]|length == 1 %}
-                                        <p class="collapsible-field">greater than:</p>
+                                        <p class="collapsible-field">&gt;</p>
                                         <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
                                     {% elif meas["value"]|length == 2 %}
-                                        <p class="collapsible-field">greater than:</p>
+                                        <p class="collapsible-field">&gt;</p>
                                         <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">less than:</p>
+                                        <p class="collapsible-field">&lt;</p>
                                         <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
                                     {% elif meas["value"]|length == 3 %}
-                                        <p class="collapsible-field">greater than:</p>
+                                        <p class="collapsible-field">&gt;</p>
                                         <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">less than:</p>
+                                        <p class="collapsible-field">&lt;</p>
                                         <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
                                         <p class="collapsible-field">confidence:</p>
                                         <p class="collapsible-value">{{ meas["value"][2] }}%</p>
