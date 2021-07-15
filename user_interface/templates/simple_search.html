@@ -350,6 +350,18 @@
     {% endif %}
 </div>
 
+
+<script>
+    var query_value_textentry = document.getElementById("query_value");
+    query_value_textentry.addEventListener("keyup", function(event) {
+    // Number 13 is the "Enter" key on the keyboard
+    if (event.keyCode === 13) {
+        event.preventDefault();
+        document.getElementById("submit-query").click();
+    }
+    });
+</script>
+
 <script>
     var coll = document.getElementsByClassName("collapsible");
     var i;

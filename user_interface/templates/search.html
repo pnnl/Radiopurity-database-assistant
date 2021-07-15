@@ -531,6 +531,18 @@
     };
 </script>
 -->
+<script>
+    var query_value_textentry = document.getElementById("query_value");
+    query_value_textentry.addEventListener("keyup", function(event) {
+    // Number 13 is the "Enter" key on the keyboard
+    if (event.keyCode === 13) {
+        // Cancel the default action, if needed
+        event.preventDefault();
+        // Trigger the button element with a click
+        document.getElementById("submit-query").click();
+    }
+    });
+</script>
 
 <script>
     var coll = document.getElementsByClassName("collapsible");
