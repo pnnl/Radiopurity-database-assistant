@@ -219,7 +219,7 @@ select {
   overflow: hidden;
   margin: 0;
 }
-div > img, a > img {
+div > img, a > #pnnl-logo-link, a > #snolab-logo-link {
   display: block;
   position: absolute;
   top: 50%;
