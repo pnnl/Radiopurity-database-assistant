@@ -121,230 +121,234 @@
             </button>
             
             <div class="collapsible-content">
-                <div class="collapsible-line">
-                    <p class="collapsible-field">database id:</p>
-                    <p class="collapsible-value">{{ result_dict["_id"] }}</p>
-                </div>
-                {% if result_dict["grouping"]|length > 0 %}
-                    <div class="collapsible-line">
-                        <p class="collapsible-field">grouping:</p>
-                        <p class="collapsible-value">{{ result_dict["grouping"] }}</p>
-                    </div>
-                {% endif %}
-
-                <!-- SAMPLE INFO -->
-                <div>
-                    {% if result_dict["sample"]["name"]|length > 0 or result_dict["sample"]["description"]|length > 0 or result_dict["sample"]["source"]|length > 0 %}
-                        <div class="collapsible-line">
-                            <p class="collapsible-field">sample info:</p>
-                        </div>
-                        
-                        <div class="collapsible-subsection">                    
-                            {% if result_dict["sample"]["name"]|length > 0 %}
-                                <div class="collapsible-line">
-                                    <p class="collapsible-field">name:</p>
-                                    <p class="collapsible-value">{{ result_dict["sample"]["name"] }}</p>
-                                </div>
-                            {% endif %}
-                            
-                            {% if result_dict["sample"]["id"]|length > 0 %}
-                                <div class="collapsible-line">
-                                    <p class="collapsible-field">nid:</p>
-                                    <p class="collapsible-value">{{ result_dict["sample"]["id"] }}</p>
-                                </div>
-                            {% endif %}
-                            
-                            {% if result_dict["sample"]["description"]|length > 0 %}
-                                <div class="collapsible-line">
-                                    <p class="collapsible-field">description:</p>
-                                    <p class="collapsible-value">{{ result_dict["sample"]["description"] }}</p>
-                                </div>
-                            {% endif %}
-                            
-                            {% if result_dict["sample"]["source"]|length > 0 %}
-                                <div class="collapsible-line">
-                                    <p class="collapsible-field">source:</p>
-                                    <p class="collapsible-value">{{ result_dict["sample"]["source"] }}</p>
-                                </div>
-                            {% endif %}
-                        </div>
+                 <table>
+                    <tr>
+                        <td><p class="collapsible-field">database id:</p></td>
+                        <td><p class="collapsible-value">{{ result_dict["_id"] }}</p></td>
+                    </tr>
+                    {% if result_dict["grouping"]|length > 0 %}
+                        <tr>
+                            <td><p class="collapsible-field">grouping:</p></td>
+                            <td><p class="collapsible-value">{{ result_dict["grouping"] }}</p></td>
+                        </tr>
                     {% endif %}
-                </div>
 
-                <!-- DATA_SOURCE INFO (just reference) -->
-                <div>
+                    <!-- DATA_SOURCE INFO (just reference) -->
                     {% if result_dict["data_source"]["reference"]|length > 0 %}
-                        <div class="collapsible-line">
-                            <p class="collapsible-field">data reference (publication):</p>
-                            <p class="collapsible-value">{{ result_dict["data_source"]["reference"] }}</p>
-                        </div>
-                    {% endif %}            
-                </div>
-
-                <!-- MEASUREMENT INFO -->
-                <div>
-                    <div class="collapsible-line">
-                        <p class="collapsible-field">measurement info:</p>
-                    </div>
-                    
-                    <div class="collapsible-subsection">
-                        {% if result_dict["measurement"]["technique"]|length > 0 %}
-                            <div class="collapsible-line">
-                                <p class="collapsible-field">technique:</p>
-                                <p class="collapsible-value">{{ result_dict["measurement"]["technique"] }}</p>
-                            </div>
-                        {% endif %}
-                        
-                        {% if result_dict["measurement"]["institution"]|length > 0 %}
-                            <div class="collapsible-line">
-                                <p class="collapsible-field">institution:</p>
-                                <p class="collapsible-value">{{ result_dict["measurement"]["institution"] }}</p>
-                            </div>
-                        {% endif %}
-                        
-                        {% if result_dict["measurement"]["description"]|length > 0 %}
-                            <div class="collapsible-line">
-                                <p class="collapsible-field">description:</p>
-                                <p class="collapsible-value">{{ result_dict["measurement"]["description"] }}</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="collapsible-line">
-                        <p class="collapsible-field">measurement values:</p>
-                    </div>
-                    
-                    <div class="collapsible-subsection">
-                        <!-- measurement results -->
-                        {% for meas in meas_results %}
-                            <div class="collapsible-line">
-                                <p class="collapsible-value">{{ meas["isotope"] }}</p>
-                                {% if meas["type"] == "measurement" %}
-                                    {% if meas["value"]|length == 1 %}
-                                        <p class="collapsible-field">&equals;</p>
-                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                    {% elif meas["value"]|length == 2 %}
-                                        <p class="collapsible-field">&equals;</p>
-                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">symmetric error:</p>
-                                        <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
-                                    {% elif meas["value"]|length == 3 %}
-                                        <p class="collapsible-field">&equals;</p>
-                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">symmetric error:</p>
-                                        <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">asymmetric error:</p>
-                                        <p class="collapsible-value">{{ meas["value"][2] }} {{ meas["unit"] }}</p>
-                                    {% endif %}
-
-                                {% elif meas["type"] == "limit" %}
-                                    {% if meas["value"]|length == 1 %}
-                                        <p class="collapsible-field">&lt;</p>
-                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                    {% elif meas["value"]|length == 2 %}
-                                        <p class="collapsible-field">&lt;</p>
-                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">confidence:</p>
-                                        <p class="collapsible-value">{{ meas["value"][1] }}%</p>
-                                    {% endif %}
-
-                                {% elif meas["type"] == "range" %}
-                                    {% if meas["value"]|length == 1 %}
-                                        <p class="collapsible-field">&gt;</p>
-                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                    {% elif meas["value"]|length == 2 %}
-                                        <p class="collapsible-field">&gt;</p>
-                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">&lt;</p>
-                                        <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
-                                    {% elif meas["value"]|length == 3 %}
-                                        <p class="collapsible-field">&gt;</p>
-                                        <p class="collapsible-value">{{ meas["value"][0] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">&lt;</p>
-                                        <p class="collapsible-value">{{ meas["value"][1] }} {{ meas["unit"] }}</p>
-                                        <p class="collapsible-field">confidence:</p>
-                                        <p class="collapsible-value">{{ meas["value"][2] }}%</p>
-                                    {% endif %}
-                                    
-                                {% endif %}
-                            </div>
+                        <tr>
+                            <td><p class="collapsible-field">data reference (publication):</p></td>
+                            <td><p class="collapsible-value">{{ result_dict["data_source"]["reference"] }}</p></td>
+                        </tr>
+                    {% endif %}
+                </table>
+                <table>
+                    <!-- SAMPLE INFO -->
+                    {% if result_dict["sample"]["name"]|length > 0 or result_dict["sample"]["id"]|length > 0 or result_dict["sample"]["description"]|length > 0 or result_dict["sample"]["source"]|length > 0 %}
+                        <tr>
+                            <td><p class="collapsible-field">sample info</p></td>
+                        </tr>
+                        {% for field_name in ["name", "id", "description", "source"] %}
+                            {% if result_dict["sample"][field_name]|length > 0 %}
+                                <tr>
+                                    <td><p class="collapsible-field"></p></td>
+                                    <td><p class="collapsible-field">{{ field_name }}:</p></td>
+                                    <td><p class="collapsible-value">{{ result_dict["sample"][field_name] }}</p></td>
+                                </tr>
+                            {% endif %}
                         {% endfor %}
-                    </div>
-                </div>
+                    {% endif %}
+                    
+                    <!-- MEASUREMENT INFO -->
+                    <tr>
+                        <td><p class="collapsible-field">measurement info</p></td>
+                    </tr>
+                    {% for field_name in ["technique", "institution", "description"] %}
+                        {% if result_dict["measurement"][field_name]|length > 0 %}
+                            <tr>
+                                <td><p class="collapsible-field"></p></td>
+                                <td><p class="collapsible-field">{{ field_name }}:</p></td>
+                                <td><p class="collapsible-value">{{ result_dict["measurement"][field_name] }}</p></td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                    {% if result_dict["measurement"]["date"]|length > 0 %}
+                        <tr>
+                            <td><p class="collapsible-field"></p></td>
+                            {% if result_dict["measurement"]["date"]|length == 1 and result_dict["measurement"]["date"][0]|length > 0 %}
+                                <td><p class="collapsible-field">measurement date:</p></td>
+                                <td><p class="collapsible-value">{{ result_dict["measurement"]["date"][0] }}</p></td>
+                            {% elif result_dict["measurement"]["date"]|length == 2 and result_dict["measurement"]["date"][0]|length > 0 and result_dict["measurement"]["date"][1]|length > 0 %}
+                                <td><p class="collapsible-field">measurement date range:</p></td>
+                                <td><p class="collapsible-value">{{ result_dict["measurement"]["date"][0] }} - {{ result_dict["measurement"]["date"][1] }}</p></td>
+                            {% endif %}
+                        </tr>
+                    {% endif %}
 
-                <!-- PEOPLE INFO -->
-                <div>
-                    <!-- data input -->
-                    <div class="collapsible-line">
-                        {% if result_dict["data_source"]["input"]["name"]|length > 0 and result_dict["data_source"]["input"]["contact"]|length > 0 %}
-                            <p class="collapsible-field">data input:</p>
-                            <p class="collapsible-value">{{result_dict["data_source"]["input"]["name"]}} </p>
-                            <p class="collapsible-field">contact:</p>
-                            <p class="collapsible-value">{{result_dict["data_source"]["input"]["contact"]}} </p>
-                        {% elif result_dict["data_source"]["input"]["name"]|length > 0 %}
-                            <p class="collapsible-field">data input:</p>
-                            <p class="collapsible-value">{{result_dict["data_source"]["input"]["name"]}} </p>
-                        {% endif %}
-                        {% if result_dict["data_source"]["input"]["date"]|length == 1 %}
-                            <p class="collapsible-field">data input date:</p>
-                            <p class="collapsible-value">{{ result_dict["data_source"]["input"]["date"][0] }}</p>
-                        {% elif result_dict["data_source"]["input"]["date"]|length == 2 %}
-                            <p class="collapsible-field">data input date range:</p>
-                            <p class="collapsible-value">{{ result_dict["data_source"]["input"]["date"][0] }} - {{ result_dict["data_source"]["input"]["date"][1] }}</p>
-                        {% endif %}
-                        {% if result_dict["data_source"]["input"]["notes"]|length > 0 %}
-                            <p class="collapsible-field">notes:</p>
-                            <p class="collapsible-value">{{result_dict["data_source"]["input"]["notes"]}} </p> 
-                        {% endif %}
-                    </div>
-                    
-                    <!-- measurement practitioner -->
-                    <div class="collapsible-line">
-                        {% if result_dict["measurement"]["practitioner"]["name"]|length > 0 and result_dict["measurement"]["practitioner"]["contact"]|length > 0 %}
-                            <p class="collapsible-field">measurement practitioner:</p>
-                            <p class="collapsible-value">{{result_dict["measurement"]["practitioner"]["name"]}} </p>
-                            <p class="collapsible-field">contact:</p>
-                            <p class="collapsible-value">{{result_dict["measurement"]["practitioner"]["contact"]}} </p>
-                        {% elif result_dict["measurement"]["practitioner"]["name"]|length > 0 %}
-                            <p class="collapsible-field">measurement practitioner:</p>
-                            <p class="collapsible-value">{{result_dict["measurement"]["practitioner"]["name"]}} </p>
-                        {% endif %}
-                        {% if result_dict["measurement"]["date"]|length == 1 and result_dict["measurement"]["date"][0]|length > 0 %}
-                            <p class="collapsible-field">measurement date:</p>
-                            <p class="collapsible-value">{{ result_dict["measurement"]["date"][0] }}</p>
-                        {% elif result_dict["measurement"]["date"]|length == 2 and result_dict["measurement"]["date"][0]|length > 0 and result_dict["measurement"]["date"][1]|length > 0 %}
-                            <p class="collapsible-field">measurement date range:</p>
-                            <p class="collapsible-value">{{ result_dict["measurement"]["date"][0] }} - {{ result_dict["measurement"]["date"][1] }}</p>
-                        {% endif %}
-                    </div>
-                    
+                    <!-- measurement results -->
+                    <tr>
+                        <td><p class="collapsible-field"></p></td>
+                        <td><p class="collapsible-field">values:</p></td>
+                        <td>
+                            <table border=0>
+                                <!-- | 0      | 1 | 2       | 3 | 4      | 5     | 6                          | 7                                  | 8                | 9                    | -->
+                                <!-- | lt_val | < | isotope | < | gt_val | units | symmetric_error/confidence | symmetric_error_val/confidence_val | asymmetric_error | asymmetric_error_val | -->
+                                {% for meas in meas_results %}
+                                    <tr>
+                                        {% if meas["type"] == "measurement" %}
+                                            {% if meas["value"]|length == 1 %}
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value">{{ meas["isotope"] }}</p></td>
+                                                <td><p class="collapsible-value">&equals;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][0] }}</p><td>
+                                                <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
+                                            {% elif meas["value"]|length == 2 %}
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value">{{ meas["isotope"] }}</p></td>
+                                                <td><p class="collapsible-value">&equals;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
+                                                <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
+                                                <td><p class="collapsible-field">symmetric error:</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][1] }}</p></td>
+                                            {% elif meas["value"]|length == 3 %}
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value">{{ meas["isotope"] }}</p></td>
+                                                <td><p class="collapsible-value">&equals;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
+                                                <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
+                                                <td><p class="collapsible-field">symmetric error:</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][1] }}</p></td>
+                                                <td><p class="collapsible-field">asymmetric error:</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][2] }}</p></td>
+                                            {% endif %}
+                                        {% elif meas["type"] == "limit" %}
+                                            {% if meas["value"]|length == 1 %}
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value">{{ meas["isotope"] }}</p></td>
+                                                <td><p class="collapsible-value">&lt;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
+                                                <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
+                                            {% elif meas["value"]|length == 2 %}
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value">{{ meas["isotope"] }}</p></td>
+                                                <td><p class="collapsible-value">&lt;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
+                                                <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
+                                                <td><p class="collapsible-field">confidence:</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][1] }}%</p></td>
+                                            {% endif %}
+                                        {% elif meas["type"] == "range" %}
+                                            {% if meas["value"]|length == 1 %}
+                                                <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
+                                                <td><p class="collapsible-value">&lt;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["isotope"] }}</p></td>
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value"></p></td>
+                                                <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
+                                            {% elif meas["value"]|length == 2 %}
+                                                <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
+                                                <td><p class="collapsible-value">&lt;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["isotope"] }}</p></td>
+                                                <td><p class="collapsible-value">&lt;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][1] }}</p></td>
+                                                <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
+                                            {% elif meas["value"]|length == 3 %}
+                                                <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
+                                                <td><p class="collapsible-value">&lt;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["isotope"] }}</p></td>
+                                                <td><p class="collapsible-value">&lt;</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][1] }}</p></td>
+                                                <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
+                                                <td><p class="collapsible-field">confidence:</p></td>
+                                                <td><p class="collapsible-value">{{ meas["value"][2] }}%</p></td>
+                                            {% endif %}
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- PEOPLE INFO -->
                     <!-- measurement requestor -->
-                    <div class="collapsible-line">
-                        {% if result_dict["measurement"]["requestor"]["name"]|length > 0 and result_dict["measurement"]["requestor"]["contact"]|length > 0 %}
-                            <p class="collapsible-field">measurement requestor:</p>
-                            <p class="collapsible-value">{{result_dict["measurement"]["requestor"]["name"]}} </p>
-                            <p class="collapsible-field">contact:</p>
-                            <p class="collapsible-value">{{result_dict["measurement"]["requestor"]["contact"]}} </p>
-                        {% elif result_dict["measurement"]["requestor"]["name"]|length > 0 %}
-                            <p class="collapsible-field">measurement requestor:</p>
-                            <p class="collapsible-value">{{result_dict["measurement"]["requestor"]["name"]}} </p>
+                    {% if result_dict["measurement"]["requestor"]["name"]|length > 0 or result_dict["measurement"]["requestor"]["contact"]|length > 0 %}
+                        <tr>
+                            <td><p class="collapsible-field">measurement requestor</p></td>
+                        </tr>
+                        {% for field_name in ["name", "contact"] %}
+                            {% if result_dict["measurement"]["requestor"][field_name]|length > 0 %}
+                                <tr>
+                                    <td><p class="collapsible-field"></p></td>
+                                    <td><p class="collapsible-field">{{ field_name }}:</p></td>
+                                    <td><p class="collapsible-value">{{ result_dict["measurement"]["requestor"][field_name] }}</p></td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <!-- measurement practitioner -->
+                    {% if result_dict["measurement"]["practitioner"]["name"]|length > 0 or result_dict["measurement"]["practitioner"]["contact"]|length > 0 %}
+                        <tr>
+                            <td><p class="collapsible-field">measurement practitioner</p></td>
+                        </tr>
+                        {% for field_name in ["name", "contact"] %}
+                            {% if result_dict["measurement"]["practitioner"][field_name]|length > 0 %}
+                                <tr>
+                                    <td><p class="collapsible-field"></p></td>
+                                    <td><p class="collapsible-field">{{ field_name }}:</p></td>
+                                    <td><p class="collapsible-value">{{ result_dict["measurement"]["practitioner"][field_name] }}</p></td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <!-- data input -->
+                    {% if result_dict["data_source"]["input"]["name"]|length > 0 or result_dict["data_source"]["input"]["contact"]|length > 0 or result_dict["data_source"]["input"]["notes"]|length > 0 or result_dict["data_source"]["input"]["date"]|length > 0%}
+                        <tr>
+                            <td><p class="collapsible-field">data input</p></td>
+                        </tr>
+                        {% for field_name in ["name", "contact", "notes"] %}
+                            {% if result_dict["data_source"]["input"][field_name]|length > 0 %}
+                                 <tr>
+                                    <td><p class="collapsible-field"></p></td>
+                                    <td><p class="collapsible-field">{{ field_name }}:</p></td>
+                                    <td><p class="collapsible-value">{{ result_dict["data_source"]["input"][field_name] }}</p></td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                        {% if result_dict["data_source"]["input"]["date"]|length > 0 %}
+                            <tr>
+                                <td><p class="collapsible-field"></p></td>
+                                {% if result_dict["data_source"]["input"]["date"]|length == 1 and result_dict["data_source"]["input"]["date"][0]|length > 0 %}
+                                    <td><p class="collapsible-field">data input date:</p></td>
+                                    <td><p class="collapsible-value">{{ result_dict["data_source"]["input"]["date"][0] }}</p></td>
+                                {% elif result_dict["data_source"]["input"]["date"]|length == 2 and result_dict["data_source"]["input"]["date"][0]|length > 0 and result_dict["data_source"]["input"]["date"][1]|length > 0 %}
+                                    <td><p class="collapsible-field">data input date range:</p></td>
+                                    <td><p class="collapsible-value">{{ result_dict["data_source"]["input"]["date"][0] }} - {{ result_dict["data_source"]["input"]["date"][1] }}</p></td>
+                                {% endif %}
+                            </tr>
                         {% endif %}
-                    </div>
-                    
+                    {% endif %}
                     <!-- sample owner -->
-                    <div class="collapsible-line">
-                        {% if result_dict["sample"]["owner"]["name"]|length > 0 and result_dict["sample"]["owner"]["contact"]|length > 0 %}
-                            <p class="collapsible-field">sample owner:</p>
-                            <p class="collapsible-value">{{result_dict["sample"]["owner"]["name"]}} </p>
-                            <p class="collapsible-field">contact:</p>
-                            <p class="collapsible-value">{{result_dict["sample"]["owner"]["contact"]}} </p>
-                        {% elif result_dict["sample"]["owner"]["name"]|length > 0 %}
-                            <p class="collapsible-field">sample owner:</p>
-                            <p class="collapsible-value">{{result_dict["sample"]["owner"]["name"]}} </p>
-                        {% endif %}
-                    </div>
-                </div>
-                
+                    {% if result_dict["sample"]["owner"]["name"]|length > 0 or result_dict["sample"]["owner"]["contact"]|length > 0 %}
+                        <tr>
+                            <td><p class="collapsible-field">sample owner</p></td>
+                        </tr>
+                        {% for field_name in ["name", "contact"] %}
+                            {% if result_dict["sample"]["owner"][field_name]|length > 0 %}
+                                <tr>
+                                    <td><p class="collapsible-field"></p></td>
+                                    <td><p class="collapsible-field">{{ field_name }}:</p></td>
+                                    <td><p class="collapsible-value">{{ result_dict["sample"]["owner"][field_name] }}</p></td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    
+                </table>
+              
             </div>
         {% endfor %}
     {% endif %}
