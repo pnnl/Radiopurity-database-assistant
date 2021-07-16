@@ -314,7 +314,7 @@
                                                 <td><p class="collapsible-value">&equals;</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
                                                 <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
-                                                <td><p class="collapsible-field">symmetric error:</p></td>
+                                                <td><p class="collapsible-value">symmetric error:</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][1] }}</p></td>
                                             {% elif meas["value"]|length == 3 %}
                                                 <td><p class="collapsible-value"></p></td>
@@ -323,9 +323,9 @@
                                                 <td><p class="collapsible-value">&equals;</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
                                                 <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
-                                                <td><p class="collapsible-field">symmetric error:</p></td>
+                                                <td><p class="collapsible-value">symmetric error:</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][1] }}</p></td>
-                                                <td><p class="collapsible-field">asymmetric error:</p></td>
+                                                <td><p class="collapsible-value">asymmetric error:</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][2] }}</p></td>
                                             {% endif %}
                                         {% elif meas["type"] == "limit" %}
@@ -343,7 +343,7 @@
                                                 <td><p class="collapsible-value">&lt;</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][0] }}</p></td>
                                                 <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
-                                                <td><p class="collapsible-field">confidence:</p></td>
+                                                <td><p class="collapsible-value">confidence:</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][1] }}%</p></td>
                                             {% endif %}
                                         {% elif meas["type"] == "range" %}
@@ -368,7 +368,7 @@
                                                 <td><p class="collapsible-value">&lt;</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][1] }}</p></td>
                                                 <td><p class="collapsible-value">{{ meas["unit"] }}</p></td>
-                                                <td><p class="collapsible-field">confidence:</p></td>
+                                                <td><p class="collapsible-value">confidence:</p></td>
                                                 <td><p class="collapsible-value">{{ meas["value"][2] }}%</p></td>
                                             {% endif %}
                                         {% endif %}
