@@ -16,7 +16,7 @@ from functools import wraps
 import scrypt
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
-from frontend_helpers import _add_user, _get_user, do_q_append, parse_update, perform_search, perform_insert, perform_update
+from frontend_helpers import _add_user, _get_user, do_q_append, parse_update, perform_search, perform_insert, perform_update, remove_private_results, parse_groupings_from_q
 from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -43,6 +43,29 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s\t - %(pathname)s - %(
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
+sealed_groupings = ["SuperCDMS", "nEXO", "DarkSide"]
+sealed_groupings_lowercase = [ele.lower() for ele in sealed_groupings]
+
+
+def has_permissions():
+    """This defines a custom decorator for other endpoints which specifies which users can access a given endpoint. This decorator checks if the user that is currently logged in has permissions in the group of permissions_levels that are permitted to access the given endpoint. If permission is granted, the user is taken to the requested endpoint. Otherwise, they are taken to the "login" page if the user mode was None, or to the "restricted" page if their user mode does not have access.
+
+    args:
+        * permissions_levels (list of str): The user modes (user names) that are allowed to access this endpoint
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user_mode = os.getenv('HTTP_USER')
+            if user_mode is None:
+                return redirect(url_for('restricted_page'))
+            return f(*args, **kwargs)
+            for permissions_level in permissions_levels:
+                if user_mode == permissions_level: # This is the condition that will have to change depending on if a present HTTP_USER is enough, or if it must be part of a group stored elsewhere
+                    return f(*args, **kwargs)
+            return redirect(url_for('restricted_page'))
+        return decorated_function
+    return decorator
 
 def requires_permissions(permissions_levels):
     """This defines a custom decorator for other endpoints which specifies which users can access a given endpoint. This decorator checks if the user that is currently logged in has permissions in the group of permissions_levels that are permitted to access the given endpoint. If permission is granted, the user is taken to the requested endpoint. Otherwise, they are taken to the "login" page if the user mode was None, or to the "restricted" page if their user mode does not have access.
@@ -155,11 +178,21 @@ def restricted_page():
 @app.route('/simple_search', methods=['GET','POST'])
 def simplesearch_endpoint():
     if request.method == 'POST':
+        allowed_grouping = ""
         field = "all"
         comparison = "contains"
         q_dict, q_str, _, error_msg = do_q_append(request.form)
+        query_text = q_str.replace("all contains ", "").lower()
+        if query_text in sealed_groupings_lowercase:
+            if 'user_mode' in session:
+                if session.user_mode.lower() != query_text:
+                    return redirect(url_for('login'))
+                allowed_grouping = query_text
+            else:
+                return redirect(url_for('login'))
 
         results, error_msg = perform_search(q_dict, db_obj)
+        results = remove_private_results(results, query_text)
         results_str = [ str(r) for r in results ]
 
     else:
@@ -186,6 +219,7 @@ def search_endpoint():
             * include_synonyms (str): if "true", the query searches not only for the specified value, but also for all synonyms of the value, if the value is present in the synonyms list.
             * append_mode (str): whether to add the new query term to the existing query with an "and" or "or"  operation.
     """
+    allowed_grouping = ""
     final_q_lines_list = []
     append_mode = ''
     results = []
@@ -201,8 +235,18 @@ def search_endpoint():
  
     elif request.method == "POST":
         final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
+        groupings = parse_groupings_from_q(final_q_str)
+        if len(groupings) > 0:
+            if 'user_mode' in session:
+                if session.user_mode.lower() in groupings:
+                    allowed_grouping = session.user_mode.lower()
+                else:
+                    return redirect(url_for('login'))
+            else:
+                return redirect(url_for('login'))
 
         results, error_msg = perform_search(final_q, db_obj)
+        results = remove_private_results(results, allowed_grouping)
         
         final_q_lines_list = []
         if final_q_str != '':
@@ -225,8 +269,8 @@ def search_endpoint():
     logger.debug('Q STR: '+str(q_str)+'   \tAPPEND MODE: '+str(append_mode))
     return render_template('search.html', existing_query=q_str, append_mode=append_mode, error_msg=error_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
-@app.route('/insert', methods=['GET','POST'])
-@requires_permissions(['DUNEwriter', 'Admin'])
+@app.route('/edit/insert', methods=['GET','POST'])
+@has_permissions()
 def insert_endpoint():
     """Assembles all specified fields and values into a valid database object and inserts it into the database.
 
@@ -261,6 +305,7 @@ def insert_endpoint():
             * measurement.practitioner.name (str): who performed the measurement
             * measurement.practitioner.contact (str): email of the person who performed the measurement
     """
+    user_name = os.getenv('HTTP_USER')
     if request.method == "POST":
         new_doc_id, error_msg = perform_insert(request.form, db_obj)
         new_doc_msg = 'new doc id: '+str(new_doc_id)
@@ -273,10 +318,10 @@ def insert_endpoint():
             logger.error(new_doc_msg)
         else:
             logger.debug(new_doc_msg)
-    return render_template('insert.html', new_doc_msg=new_doc_msg)
+    return render_template('insert.html', new_doc_msg=new_doc_msg, user_name=user_name)
 
-@app.route('/update', methods=['GET','POST'])
-@requires_permissions(['DUNEwriter', 'Admin'])
+@app.route('/edit/update', methods=['GET','POST'])
+@has_permissions()
 def update_endpoint():
     """Finds the document with the given ID in the database and updates its fields and values with the fields and values that the user supplies in the form data.
 
