@@ -91,6 +91,7 @@ function unit_conversions(){
 			}
 		}
 	}
+	console.log("Completed unit conversions");
 	
 }
 
