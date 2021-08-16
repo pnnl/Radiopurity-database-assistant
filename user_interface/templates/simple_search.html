@@ -68,13 +68,8 @@
                 <textarea id="query_value" name="query_value" rows="1" style="width:100%;"></textarea>
             </div>
             <div>
-                <span class="left-aligned">
-                    <input id="submit-query" class="submit-button" type="submit" value="search">
-                </span>
                 <span class="right-aligned">
-                    <a href="{{ url_for('search_endpoint') }}">
-                        <p class="normal-text">advanced search</p>
-                    </a>
+                    <input id="submit-query" class="submit-button" type="submit" value="search">
                 </span>
             </div>
             <div class="clear-float"></div>
@@ -104,33 +99,44 @@
             </button>
             
             <div class="collapsible-content">
-                <div class="collapsible-line">
-                    <p class="collapsible-field">database id:</p>
-                    <p class="collapsible-value">{{ result_dict["_id"] }}</p>
-                </div>
-                <div class="collapsible-line">
-                    <p class="collapsible-field">Experiment:</p>
-                    <p class="collapsible-value">{{ result_dict["Experiment"] }}</p>
-                </div>
-                
-                {% for key in result_dict.keys() %}
-                    {% if key == "Energy Range (MeV)" %}
-                        <div class="collapsible-line">
-                            <p class="collapsible-field">Energy Range (MeV):</p>
-                        </div>
-                        {% for range in result_dict[key].keys() %}
-                            <div class="collapsible-line">
-                                    <p class="collapsible-field"> {{ range }}</p>
-                                    <p class="collapsible-value">{{ result_dict[key][range] }}</p>
-                                </div>
-                        {% endfor %}                       
-                    {% elif key not in ['_id', '_version', 'parent_id'] %}
-                        <div class="collapsible-line">
-                            <p class="collapsible-field">{{ key }}: </p>
-                            <p class="collapsible-value">{{ result_dict[key] }}</p>
-                        </div>
-                    {% endif %}
-                {% endfor %}
+				<table>
+					<tr>
+						<td><p class="collapsible-field">database id:</p></td>
+						<td><p class="collapsible-value">{{ result_dict["_id"] }}</p></td>
+					</tr>
+					<tr>
+						<td><p class="collapsible-field">Experiment:</p></td>
+						<td><p class="collapsible-value">{{ result_dict["Experiment"] }}</p></td>
+					</tr>
+					
+					{% for key in result_dict.keys() %}															 
+						{% if key not in ['_id', '_version', 'parent_id', 'Experiment', 'Energy Range (MeV)'] %}
+							<tr>
+								<td><p class="collapsible-field">{{ key }}: </p></td>
+								<td><p class="collapsible-value">{{ result_dict[key] }}</p></td>
+							</tr>
+						{% endif %}
+					{% endfor %}
+				</table>
+				{% if 'Energy Range (MeV)' in result_dict.keys() %}
+					<table class="results-table">
+						{% set key="Energy Range (MeV)" %}
+						<tr>
+							<td class="results-table"><p class="collapsible-field">Energy Range (MeV)</p></td>
+							{% for field in result_dict[key]['0-1'] %}
+								<td class="results-table"><p class="collapsible-field">{{field}}</p></td>
+							{% endfor %}
+						</tr>
+						{% for range in result_dict[key].keys() %}
+							<tr>
+								<td class="results-table"><p class="collapsible-value">{{range}}</p></td>
+								{% for field in result_dict[key][range] %}
+									<td class="results-table"><p class="collapsible-value">{{result_dict[key][range][field]}}</p></td>
+								{% endfor %}
+							</tr>
+						{% endfor %}
+					</table>
+				{% endif %}
                 
             </div>
         {% endfor %}
