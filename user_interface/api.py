@@ -15,8 +15,9 @@ import datetime
 from pymongo import MongoClient
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
-from frontend_helpers import do_q_append, parse_update, perform_search, perform_insert, perform_update
-from frontend_helpers import _get_httprequest_username, _get_date_now
+from frontend_helpers import do_q_append, parse_update, perform_search, perform_insert, perform_update, parse_groupings_from_q
+from frontend_helpers import add_protected_groupings_term_to_query, make_experiment_public
+from frontend_helpers import _log_in_experiment, _get_httprequest_username, _get_date_now, _convert_logged_in_users_to_unique_experiment_names
 
 app = Flask(__name__)
 
@@ -41,25 +42,146 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s\t - %(pathname)s - %(
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
-@app.route('/', methods=['GET', 'POST'])
-def reference_endpoint():
-    """This is the landing page for the API if no endpoint is specified. It redirects to the search endpoint.
+@app.route('/', methods=['GET'])
+def index_endpoint():
+    """Landing page for the site. Redirects to the simple_search endpoint
     """
-    return render_template('simple_search.html')
+    return render_template('simple_search.html', error_msg="", results_str="", results_dict={})
 
 @app.route('/about', methods=['GET'])
 def about_endpoint():
+    """Endpoint with information about how to use the site to query for results, collaborators, and previous work.
+    """
     return render_template('about.html')
+
+@app.route('/restricted_page')
+def restricted_page():
+    """This endpoint is where users are redirected to when they try to access an endpoint they do not have access to with the account they are currently logged in as.
+    """
+    return render_template('restricted_page.html')
+
+@app.route('/add_experiment_credentials', methods=['GET', 'POST'])
+def add_experiment_credentials_endpoint():
+    """Users use this page to add credentials (similar to logging in) so they can view private experiment results
+
+    GET request:
+        Render the "add credentials" page with the login fields for experiment name and password.
+    POST request:
+        Render the "add credentials" page with the login fields for experiment name and password, and a success/failure message about the credential addition.
+        form data:
+            * experiment_grouping (str): the name of the experiment (grouping) to add credentials for
+            * password (str): the plaintext password for the experiment_grouping
+    """
+    if request.method == 'POST':
+        experiment_name = request.form.get('experiment_grouping', '').strip()
+        plaintext_password = request.form.get('password', '').strip()
+
+        # try logging user in
+        if _log_in_experiment(experiment_name, plaintext_password, salt, db_obj):
+            # update or create session variable "logged_in_list" with the newly logged-in credential on the list
+            if session.get('logged_in_experiments', None) != None:
+                logged_in_list = session.get('logged_in_experiments', [])
+                logged_in_list.append(experiment_name)
+                session['logged_in_experiments'] = logged_in_list
+            else:
+                session['permanent'] = True
+                session['logged_in_experiments'] = [experiment_name]
+            login_msg="success."
+        else:
+            login_msg="Failure to login. Did you enter the right experiment name and password?"
+        return render_template('experiment_login.html', login_msg=login_msg)
+
+    else:
+        return render_template('experiment_login.html')
+
+@app.route('/remove_experiment_credentials', methods=['GET', 'POST'])
+def remove_experiment_credentials_endpoint():
+    """Users use this page to remove credentials (similar to logging out) for specific private experiments so they can no longer view results for that experiment
+
+    GET request:
+        Render the "remove credentials" page with the logged-in credentials dropdown.
+    POST request:
+        Render the "remove credentials" page with the logged-in credentials dropdown and a success/failure message about the removal.
+        form data:
+            * logged_in_experiments (str): the name of the experiment (grouping) to remove credentials for
+    """
+    if request.method == 'POST':
+        experiment_name = request.form.get('select_experiment', '').strip()
+        
+        # try logging user out
+        if session.get('logged_in_experiments', []) != []:
+            logged_in_list = session.get('logged_in_experiments', [])
+            logged_in_list.remove(experiment_name)
+            session['logged_in_experiments'] = logged_in_list
+        return render_template('experiment_logout.html', logout_msg="success.", logged_in_experiments=session.get('logged_in_experiments', []))
+
+    else:
+        return render_template('experiment_logout.html', logged_in_experiments=session.get('logged_in_experiments', []))
+
+@app.route("/make_public", methods=["GET", "POST"])
+def release_experiment_endpoint():
+    """Experiment admins can use this page to make a private experiment public. This action permanently removes all viewer and admin credentials for the experiment
+
+    GET request:
+        Renders the "make public" page with a dropdown populated with all experiment names for which the user is logged in as an admin.
+    POST request:
+        Deletes admin and viewer credentials from the database and the flask session.
+        form data:
+            * requested_experiment_name (str): the name of the experiment (grouping) to delete viewer and admin credentials for
+    """
+    logged_in_experiments = session.get('logged_in_experiments', [])
+
+    if request.method == "POST":
+        # create admin credential from experiment name
+        requested_experiment_name = request.form.get("requested_experiment_name")
+        requested_experiment_creds = "{}_ADMIN".format(requested_experiment_name)
+
+        # remove admin and viewer credentials from database and session to make experiment public
+        if requested_experiment_creds in logged_in_experiments:
+            success = make_experiment_public(requested_experiment_name, db_obj)
+            if success:
+                response_msg = "Success"
+                for credential_name in [requested_experiment_name, requested_experiment_creds]:
+                    logged_in_list = session.get('logged_in_experiments', [])
+                    if credential_name in logged_in_list:
+                        logged_in_list.remove(credential_name)
+                    session['logged_in_experiments'] = logged_in_list
+            else:
+                response_msg = "Failure: error making private experiment public."
+        else:
+            response_msg = "You must be logged in as an administrator to make this private experiment public."
+
+        # update the list of available (admin logged-in) experiments
+        logged_in_experiments = _convert_logged_in_users_to_unique_experiment_names(session.get('logged_in_experiments', []), admin_only=True)
+        return render_template("release_experiment.html", logged_in_experiments=logged_in_experiments, response_msg=response_msg)
+
+    else:
+        # get data for dropdown of available (admin logged-in) experiments
+        logged_in_experiments = _convert_logged_in_users_to_unique_experiment_names(logged_in_experiments, admin_only=True)
+        return render_template("release_experiment.html", logged_in_experiments=logged_in_experiments, response_msg="")
 
 @app.route('/simple_search', methods=['GET','POST'])
 def simplesearch_endpoint():
-    if request.method == 'POST':
-        field = "all"
-        comparison = "contains"
-        q_dict, q_str, _, error_msg = do_q_append(request.form)
+    """A simpler interface for conducting a query where the user searches for a key term in any of the text fields (similar to "all" "contains" "TERM")
 
+    GET request:
+        Render the simple search page with no results or existing query.
+    POST request:
+        Render the simple search page with specific information depending on the form elements present:
+        form data:
+            * query_field (str): the field that is being queried against. For simple search, this will always have the value "all"
+            * comparison_operator (str): the type of comparison being made in the query term. For simple search, this will always have the value "contains"
+            * query_value (str): the value to compare.
+            * include_synonyms (str): if "true", the query searches not only for the specified value, but also for all synonyms of the value, if the value is present in the synonyms list.
+    """
+    logged_in_experiments = _convert_logged_in_users_to_unique_experiment_names(session.get('logged_in_experiments', []))
+
+    if request.method == 'POST':
+        q_dict, q_str, _, error_msg = do_q_append(request.form)
+        q_dict = add_protected_groupings_term_to_query(q_dict, q_str, logged_in_experiments, db_obj)
         results, error_msg = perform_search(q_dict, db_obj)
         results_str = [ str(r) for r in results ]
+
     else:
         error_msg = ''
         results_str = ''
@@ -98,14 +220,16 @@ def search_endpoint():
         append_mode = "OR"
  
     elif request.method == "POST":
-        final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
+        logged_in_experiments = _convert_logged_in_users_to_unique_experiment_names(session.get('logged_in_experiments', []))
 
-        results, error_msg = perform_search(final_q, db_obj)
-        
+        final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
+        q_dict = add_protected_groupings_term_to_query(final_q, final_q_str, logged_in_experiments, db_obj)
+
         final_q_lines_list = []
         if final_q_str != '':
             final_q_lines_list = final_q_str.split('\n')
         
+        results, error_msg = perform_search(q_dict, db_obj)
         results_str = [ str(r) for r in results ]
         q_dict = {}
         q_str = ''
@@ -159,6 +283,7 @@ def insert_endpoint():
             * measurement.practitioner.contact (str): email of the person who performed the measurement
     """
     username = _get_httprequest_username(request.headers.get("Authorization", None))
+    data_insert_date = _get_date_now()
 
     if request.method == "POST":
         new_doc_id, error_msg = perform_insert(request.form, db_obj)
@@ -172,9 +297,6 @@ def insert_endpoint():
             logger.error(new_doc_msg)
         else:
             logger.debug(new_doc_msg)
-
-    data_insert_date = _get_date_now()
-
     return render_template('insert.html', new_doc_msg=new_doc_msg, username=username, data_insert_date=data_insert_date)
 
 @app.route('/edit/update', methods=['GET','POST'])
@@ -253,6 +375,7 @@ def update_endpoint():
             * remove.measurement.practitioner.contact (str): if present and not an empty string, remove the current value for the measurement.practitioner.contact field
     """
     username = _get_httprequest_username(request.headers.get("Authorization", None))
+    data_insert_date = _get_date_now()
 
     if request.method == "GET":
         return render_template('update.html', doc_data=False, message="")
@@ -272,8 +395,6 @@ def update_endpoint():
                 doc['measurement']['results'][i]['value'].append('')
             if num_vals < 3:
                 doc['measurement']['results'][i]['value'].append('')
-
-        data_insert_date = _get_date_now()
 
         return render_template('update.html', username=username, data_insert_date=data_insert_date, doc_data=True, doc_id=doc['_id'], \
                 grouping=doc['grouping'], \

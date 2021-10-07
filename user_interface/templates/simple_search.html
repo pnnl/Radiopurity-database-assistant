@@ -58,6 +58,20 @@
     <div class="clear-float">
 </div>
 
+<!-- experiment login -->
+<div>
+    <a class="normal-text github-link" href="{{ url_for('add_experiment_credentials_endpoint') }}">add credentials to view experiment data</a>
+</div>
+<div class="clear-float"></div> 
+<div>
+    <a class="normal-text github-link" href="{{ url_for('remove_experiment_credentials_endpoint') }}">remove credentials for experiment data</a>
+</div>
+<div class="clear-float"></div> 
+<div>
+    <a class="normal-text github-link" href="{{ url_for('release_experiment_endpoint') }}">make experiment data public</a>
+</div>
+<div class="clear-float"></div>
+
 <div class="section-container">
     <form action="{{ url_for('simplesearch_endpoint') }}" method="POST">
 
@@ -97,32 +111,6 @@
 <div id="query-results-container" class="section-container">
     {% if results_str|length %}
         <h3>RESULTS</h3>
-		<span class="right-aligned">
-          <h3>Units: </h3>
-          <select id="units_list" name="units_field">
-            <option value="">Units</option>
-            <option value="ppm">ppm</option>
-            <option value="ppb">ppb</option>
-            <option value="ppt">ppt</option>
-            <option value="ppq">ppq</option>
-            <option value="Bq_kg">Bq/kg</option>
-            <option value="mBq_kg">mBq/kg</option>
-            <option value="uBq_kg">uBq/kg</option>
-            <option value="nBq_kg">nBq/kg</option>
-            <option value="pBq_kg">pBq/kg</option>
-			<option value="g_g">g/g</option>
-            <option value="g_kg">g/kg</option>
-            <option value="mg_kg">mg/kg</option>
-            <option value="ug_kg">ug/kg</option>
-            <option value="ng_kg">ng/kg</option>
-            <option value="pg_kg">pg/kg</option>
-            <option value="pct">pct</option>
-          </select>
-          <button type="button" id="units_convert_button" class="right-aligned">Convert</button>
-        </span>
-		<span class="right-aligned">
-			<img id="loading_icon" width="50"></img>
-		</span>
         <p class="info">num records: {{results_str|length}}</p>
         {% for result in results_str %}
             <!--<button type="button" class="collapsible">{{result|truncate(100, True)}}</button> -->
@@ -140,7 +128,7 @@
                 </span>
                 <span class="collapsiblebutton-vals">
                     {% for meas_ele in meas_results %}
-                        <span><b>{{meas_ele["isotope"]}}</b>:</span><span> {{meas_ele["value"][0]}} {{meas_ele["unit"]}} </span>
+                        <b>{{meas_ele["isotope"]}}</b>: {{meas_ele["value"][0]}}{{meas_ele["unit"]}}
                     {% endfor %}
                 </span>
             </button>
@@ -409,8 +397,6 @@
         });
     }
 </script>
-
-<script type="text/javascript" src="./static/unit_conversion_js.js"></script>
 
 </body>
 </html>

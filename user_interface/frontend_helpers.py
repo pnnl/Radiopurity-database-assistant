@@ -6,6 +6,7 @@
 """
 
 import re
+import scrypt
 import base64
 import logging
 import binascii
@@ -18,7 +19,7 @@ def _get_httprequest_username(http_auth):
     """Parses the http_authentication portion of an HTTP request's header to extract the logged in user's username. The username should be within the string, encoded as base64.
 
     args:
-        * http_auth (str): the http_authorization part of an HTTP request's header
+        * http_auth (str): the http_authorization part of an HTTP request's header.
 
     returns:
         * str. The username of the logged in user making the request. None if no user is logged in or if error.
@@ -38,7 +39,40 @@ def _get_httprequest_username(http_auth):
     return user
 
 def _get_date_now():
+    """Gets the current date.
+
+    returns:
+        * str. Date in "YYYY-mm-dd" format.
+    """
     return datetime.datetime.now().strftime("%Y-%m-%d")
+
+def _log_in_experiment(experiment_name, plaintext_password, salt, db_obj):
+    """Searches for credentials in the database matching the user-entered experiment_name and, if an entry with the same name is found, compares the user-entered password with the encrypted one in the database.
+
+    args:
+        * experiment_name (str): user-entered credential name. 
+        * plaintext_password (str): user-entered password to accompany experiment_name.
+        * salt (int): necessary for safe encryption.
+        * db_obj (pymongo.database.Database): a pymongo database object that can be used to query for users.
+
+    returns:
+        * bool. True if a proper match for the user-entered credentials was found in the database.
+    """
+    coll = db_obj.users
+    find_experiment_q = {'experiment_name':{'$eq':experiment_name}}
+    find_experiment_resp = coll.find(find_experiment_q)
+    find_experiment_resp = list(find_experiment_resp)
+    if len(find_experiment_resp) <= 0:
+        return False
+    else:
+        experiment_creds_obj = find_experiment_resp[0]
+
+    db_pw_hash = experiment_creds_obj['password_hashed']
+    is_correct_pw = (scrypt.hash(plaintext_password, salt, N=16) == db_pw_hash)
+    if is_correct_pw:
+        return True
+    else:
+        return False
 
 def do_q_append(form):
     """Parses out the form input to get the new query term field, comparison, and value, then adds the new query term to whatever query already exists, if there is one. 
@@ -62,6 +96,87 @@ def do_q_append(form):
     error_msg = ''
 
     return q_dict, q_str, num_q_lines, error_msg
+
+def add_protected_groupings_term_to_query(q_dict, q_str, logged_in_experiments, db_obj):
+    """Adds an invisible term to the query that ensures the query will exclude all datapoints whre the "grouping" value is not in the list of private experiments that the user is not logged-in to.
+
+    args:
+        * q_dict (dict): the final user-specified query.
+        * q_str (str): the human-readable version of the final user-specified query, used to create a Query object so we can add a query term.
+        * logged_in_experiments (list of str): the names of all experiments that the user is currently logged-in to.
+        * db_obj (pymongo.database.Database): a pymongo database object that can be used to query for the private experiment names that the user is not logged-in to.
+
+    returns:
+        * dict. The new query in MongoDB query language with a term to exclude records that the user is not logged-in to.
+    """
+    # get all valid experiments from user db
+    protected_experiments = []
+    resp = db_obj.users.find({})
+    for r in resp:
+        protected_experiments.append(r["experiment_name"])
+
+    # subtract logged_in_experiments from all_experiments
+    excluded_experiments = [ exp for exp in protected_experiments if exp not in logged_in_experiments ]
+
+    # can't add to a query that searches for all docs
+    if q_dict == {}:
+        q_str = ""
+
+    # add "AND grouping not in [that list]"
+    q_obj = Query(q_str)
+    for excluded_experiment in excluded_experiments:
+        q_obj.add_query_term("grouping", "notcontains", excluded_experiment, append_type="AND", include_synonyms=False)
+
+    # get query dict
+    q_dict = q_obj.to_query_language()
+    return q_dict
+
+def make_experiment_public(experiment_name, db_obj):
+    """Removes the normal and admin user records from the database, thus removing the privacy constraints on the corresponding experiment.
+
+    args: 
+        * experiment_name (str): the name of the experiment to remove all privacy restrictions for.
+        * db_obj (pymongo.database.Database): a pymongo database object that can be used to remove records from the users collection.
+
+    returns:
+        * bool. True if the removal of both the normal and admin credentials was successful.
+    """
+    for name in [experiment_name, "{}_ADMIN".format(experiment_name)]:
+        resp = db_obj.users.delete_one({'experiment_name':{'$eq':name}})
+        if resp.deleted_count == 1:
+            success = True
+        else:
+            logger.warn("When removing experiment {} from the protected experiments database collection, expected to get response of 1 deleted; got {} deleted, instead".format(name, resp.deleted_count))
+            success = False
+        if not success:
+            break
+    return success
+
+def _convert_logged_in_users_to_unique_experiment_names(credentials, admin_only=False):
+    """Deduplicates the list of logged-in credentials for a user from all credentials to just experiment names. This list requires deduplication because, for each private experiment, there are two "user" credentials: the normal reader and the admin. For querying we need this list to only contain valid values for the data record "grouping" field, so admin credentials must be thought of the same way as normal users.
+
+    args:
+        * credentials (list of str): The names of all the credentials that the user is currently logged in with.
+        * admin_only (bool) (optional): True if we only want the list of experiment names the user is currently logged in with admin credentials for.
+
+    returns:
+        * list of str. The list of experiment names that the user is currently logged in to. If admin_only, then this is the list of only experiments for which the user is currently logged in as an admin.
+    """
+    admin_experiments = []
+    experiments = []
+    for credential_name in credentials:
+        if credential_name.endswith("_ADMIN"):
+            experiment_name = credential_name.strip("_ADMIN")
+            if experiment_name not in admin_experiments:
+                admin_experiments.append(experiment_name)
+        else:
+            experiment_name = credential_name
+        if experiment_name not in experiments:
+            experiments.append(experiment_name)
+    if admin_only:
+        return admin_experiments
+    else:
+        return experiments
 
 def convert_str_to_float(value):
     """Converts the given value to a float type object, if possible. If the object cannot be converted into a float, nothing happens.

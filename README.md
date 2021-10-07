@@ -1,5 +1,5 @@
 # radiopurity.org
-This is the code for radiopurity.org 2.0, which is hosted at SNOLAB.
+This is the code for the SNOLAB Radiopurity instance, which is hosted at SNOLAB. It has both "public" (available to anyone with a SNOLAB account) and "private" (requires experiment-specific login to view) SNOLAB experiment data.
 
 ### General Requirements
 * Python >= 3.7

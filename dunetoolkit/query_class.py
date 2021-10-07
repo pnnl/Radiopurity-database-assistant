@@ -333,7 +333,7 @@ class Query():
         def _create_equals_regex(token):
             return re.compile('^'+token+'$', re.IGNORECASE)
         def _create_regex(token, comparison):
-            re.sub(r"([^\\])([\(\)])", r"\g<1>\\\g<2>", token)
+            token = re.sub(r"([^\\])([\(\)])", r"\g<1>\\\g<2>", token) # escape parentheses so they get treated as normal text
             if comparison == 'contains':
                 #search_val  = _create_contains_regex(token)
                 search_val = {"$regex":_create_contains_regex(token)}
