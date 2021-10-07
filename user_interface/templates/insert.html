@@ -30,7 +30,6 @@
     <a href="{{ url_for('search_endpoint') }}"><button class="pages">advanced search</button></a>
     <a href="{{ url_for('insert_endpoint') }}"><button class="pages">insert</button></a>   
     <a href="{{ url_for('update_endpoint') }}"><button class="pages">update</button></a>
-    <a href="{{ url_for('logout') }}"><button class="logout-link">logout</button></a> 
 </div>
 
 <h1>Insertion Assistant</h1>
@@ -98,7 +97,10 @@
             </div>
             <div>
                 <span>
-                    <p class="normal-text">name of the person/people who performed data input (required): <input type="text" required name="data_source.input.name"></p>
+                    <p class="normal-text">name of the person/people who performed data input: <input type="text" readonly value="{{username}}" name="data_source.input.name"></p>
+                </span>
+                <span>
+                    <p class="info">non-modifiable</p>
                 </span>
             </div>
             <div>
@@ -108,15 +110,18 @@
             </div>
             <div>
                 <span>
-                    <p class="normal-text">data input date(s): <input type="text" name="data_source.input.date"></p>
+                    <p class="normal-text">data input date: <input type="text" readonly value="{{data_insert_date}}" name="data_source.input.date"></p>
                 </span>
                 <span>
-                    <p class="info">help: strings for dates of input (can be a range or a single date). NOTE: if entering a date range, separate date strings with a space.</p>
+                    <p class="info">non-modifiable</p>
                 </span>
             </div>
             <div>
                 <span>
-                    <p class="normal-text">data input notes (simplifications, assumptions): <input type="text" name="data_source.input.notes"></p>
+                    <p class="normal-text">data input notes: <input type="text" name="data_source.input.notes"></p>
+                </span>
+                <span>
+                    <p class="info">help: simplifications or assumptions</p>
                 </span>
             </div>
 

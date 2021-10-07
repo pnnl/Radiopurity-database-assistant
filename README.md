@@ -1,4 +1,5 @@
-# DUNE database assistant
+# radiopurity.org
+This is the code for radiopurity.org 2.0, which is hosted at SNOLAB.
 
 ### General Requirements
 * Python >= 3.7

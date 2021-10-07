@@ -12,12 +12,11 @@ import time
 import logging
 import argparse
 import datetime
-from functools import wraps
-import scrypt
+from pymongo import MongoClient
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
-from frontend_helpers import _add_user, _get_user, do_q_append, parse_update, perform_search, perform_insert, perform_update
-from pymongo import MongoClient
+from frontend_helpers import do_q_append, parse_update, perform_search, perform_insert, perform_update
+from frontend_helpers import _get_httprequest_username, _get_date_now
 
 app = Flask(__name__)
 
@@ -33,7 +32,6 @@ salt = config_dict['salt']
 db_obj = MongoClient(config_dict['mongodb_host'], config_dict['mongodb_port'])[config_dict['database']]
 
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
-USER_MODES = ['DUNEwriter']
 
 logger = logging.getLogger('dune_ui')
 logger.setLevel(logging.DEBUG)
@@ -43,114 +41,15 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s\t - %(pathname)s - %(
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
-
-def requires_permissions(permissions_levels):
-    """This defines a custom decorator for other endpoints which specifies which users can access a given endpoint. This decorator checks if the user that is currently logged in has permissions in the group of permissions_levels that are permitted to access the given endpoint. If permission is granted, the user is taken to the requested endpoint. Otherwise, they are taken to the "login" page if the user mode was None, or to the "restricted" page if their user mode does not have access.
-
-    args:
-        * permissions_levels (list of str): The user modes (user names) that are allowed to access this endpoint
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            user_mode = session.get('user_mode')
-            if user_mode is None:
-                return redirect(url_for('login'))
-
-            for permissions_level in permissions_levels:
-                if user_mode == permissions_level:
-                    return f(*args, **kwargs)
-            return redirect(url_for('restricted_page'))
-        return decorated_function
-    return decorator
-
 @app.route('/', methods=['GET', 'POST'])
 def reference_endpoint():
-    return render_template('simple_search.html')
     """This is the landing page for the API if no endpoint is specified. It redirects to the search endpoint.
     """
-
-'''
-@app.route('/register', methods=['GET', 'POST'])
-@requires_permissions(['Admin'])
-def register():
-    """This is the endpoint to add a new user to the database. Only administrators of the API can access it. At this point, it should only be used for development purposes, since the only users necessary for the API are DUNEreader, DUNEwriter, and Admin.
-
-    GET request:
-        Render the request page.
-    POST request:
-        Perform user creation by adding the new username and password to the database.
-        form data:
-            * user (str): username to insert into the database
-            * password (str): plaintext password to encrypt and insert into the database
-    """
-    if request.method == 'POST':
-        user = request.form.get('user')
-        user_obj = _get_user(user, db_obj)
-        if user_obj is not None:
-            return render_template('register.html', msg='Your email already exists in the database.')
-
-        password = request.form.get('password')
-        encrypted_pw = scrypt.hash(password, salt, N=16) #password, salt, N=(num_iterations), r=(block_size), p=(num_threads), bufflen=(num_output_bytes)
-
-        insert_resp = _add_user(user, encrypted_pw, db_obj)
-        return redirect(url_for('login'))
-
-    else:
-        return render_template('register.html')
-'''
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """This endpoint is used to initiate a session with a given set of permissions. The user provides a username and password, which are compared against entries in the database to try and find a match. If a match is found, a session is created for that user and they are redirected to the main landing endpoint, which is the search endpoint.
-
-    GET request:
-        Render the login page.
-    POST request:
-        Attempt to initiate a session for the user by checking that their username and password correspond to a user in the database.
-        form data:
-            * user (str): username to check against the database.
-            * password (str): corresponding plaintext password to encrypt and check.
-    """
-    if request.method == 'POST':
-        user = request.form.get('user')
-        plaintext_password = request.form.get('password')
-
-        user_obj = _get_user(user, db_obj)
-        if user_obj is None:
-            return render_template('login.html', msg='User was not found in the database')
-        else:
-            user_db_pw_hash = user_obj['password_hashed']
-            is_correct_pw = (scrypt.hash(plaintext_password, salt, N=16) == user_db_pw_hash)
-
-            if is_correct_pw:
-                session['permanent'] = True
-                session['user_mode'] = user_obj['user_mode']
-                return redirect(url_for('reference_endpoint'))
-            else:
-                return render_template('login.html', msg="incorrect password")
-    else:
-        return render_template('login.html')
-
-@app.route('/logout', methods=['GET'])
-def logout():
-    """When the user hits this endpoint, their session is deleted, essentially logging them out.
-
-    GET request:
-        Render the login page.
-    """
-    session.clear()
-    return redirect(url_for('login'))
+    return render_template('simple_search.html')
 
 @app.route('/about', methods=['GET'])
 def about_endpoint():
     return render_template('about.html')
-
-@app.route('/restricted_page')
-def restricted_page():
-    """This endpoint is where users are redirected to when they try to access an endpoint they do not have access to with the account they are currently logged in as.
-    """
-    return render_template('restricted_page.html')
 
 @app.route('/simple_search', methods=['GET','POST'])
 def simplesearch_endpoint():
@@ -161,7 +60,6 @@ def simplesearch_endpoint():
 
         results, error_msg = perform_search(q_dict, db_obj)
         results_str = [ str(r) for r in results ]
-
     else:
         error_msg = ''
         results_str = ''
@@ -225,8 +123,7 @@ def search_endpoint():
     logger.debug('Q STR: '+str(q_str)+'   \tAPPEND MODE: '+str(append_mode))
     return render_template('search.html', existing_query=q_str, append_mode=append_mode, error_msg=error_msg, num_q_lines=num_q_lines, final_q=final_q_lines_list, results_str=results_str, results_dict=results)
 
-@app.route('/insert', methods=['GET','POST'])
-@requires_permissions(['DUNEwriter', 'Admin'])
+@app.route('/edit/insert', methods=['GET','POST'])
 def insert_endpoint():
     """Assembles all specified fields and values into a valid database object and inserts it into the database.
 
@@ -261,6 +158,8 @@ def insert_endpoint():
             * measurement.practitioner.name (str): who performed the measurement
             * measurement.practitioner.contact (str): email of the person who performed the measurement
     """
+    username = _get_httprequest_username(request.headers.get("Authorization", None))
+
     if request.method == "POST":
         new_doc_id, error_msg = perform_insert(request.form, db_obj)
         new_doc_msg = 'new doc id: '+str(new_doc_id)
@@ -273,10 +172,12 @@ def insert_endpoint():
             logger.error(new_doc_msg)
         else:
             logger.debug(new_doc_msg)
-    return render_template('insert.html', new_doc_msg=new_doc_msg)
 
-@app.route('/update', methods=['GET','POST'])
-@requires_permissions(['DUNEwriter', 'Admin'])
+    data_insert_date = _get_date_now()
+
+    return render_template('insert.html', new_doc_msg=new_doc_msg, username=username, data_insert_date=data_insert_date)
+
+@app.route('/edit/update', methods=['GET','POST'])
 def update_endpoint():
     """Finds the document with the given ID in the database and updates its fields and values with the fields and values that the user supplies in the form data.
 
@@ -351,6 +252,8 @@ def update_endpoint():
             * remove.measurement.practitioner.name (str): if present and not an empty string, remove the current value for the measurement.practitioner.name field
             * remove.measurement.practitioner.contact (str): if present and not an empty string, remove the current value for the measurement.practitioner.contact field
     """
+    username = _get_httprequest_username(request.headers.get("Authorization", None))
+
     if request.method == "GET":
         return render_template('update.html', doc_data=False, message="")
 
@@ -370,7 +273,9 @@ def update_endpoint():
             if num_vals < 3:
                 doc['measurement']['results'][i]['value'].append('')
 
-        return render_template('update.html', doc_data=True, doc_id=doc['_id'], \
+        data_insert_date = _get_date_now()
+
+        return render_template('update.html', username=username, data_insert_date=data_insert_date, doc_data=True, doc_id=doc['_id'], \
                 grouping=doc['grouping'], \
                 sample_name=doc['sample']['name'], \
                 sample_description=doc['sample']['description'], \
@@ -404,6 +309,5 @@ def update_endpoint():
             logger.error(message)
         return render_template('update.html', doc_data=False, message=message)
     return None
-
 
 

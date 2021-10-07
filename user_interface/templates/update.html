@@ -30,7 +30,6 @@
     <a href="{{ url_for('search_endpoint') }}"><button class="pages">advanced search</button></a>
     <a href="{{ url_for('insert_endpoint') }}"><button class="pages">insert</button></a>   
     <a href="{{ url_for('update_endpoint') }}"><button class="pages">update</button></a>
-    <a href="{{ url_for('logout') }}"><button class="logout-link">logout</button></a> 
 </div>
 
 <h1>Document Update Assistant</h1>
@@ -195,16 +194,10 @@
                 </div>
                 <div>
                     <span>
-                        <p class="normal-text">data input name (required): <input type="text" name="data_source.input.name"></p>
+                        <p class="normal-text">data input name (non-modifiable): <input type="text" readonly value="{{username}}" name="data_source.input.name"></p>
                     </span>
                     <span>
                         <p class="info">current value: {{data_input_name}}</p>
-                    </span>
-                    <span>
-                        <input class="remove-checkbox" type="checkbox" name="remove.data_source.input.name" value="remove">
-                    </span>
-                    <span>
-                        <p class="info">remove</p>
                     </span>
                 </div>
                 <div>
@@ -223,16 +216,10 @@
                 </div>
                 <div>
                     <span>
-                        <p class="normal-text">data input date: <input type="text" name="data_source.input.date"></p>
+                        <p class="normal-text">data input date (non-modifiable): <input type="text" readonly value="{{data_insert_date}}" name="data_source.input.date"></p>
                     </span>
                     <span>
-                        <p class="info">NOTE: if entering a date range, separate date strings with a space. current value: {{data_input_date}}</p>
-                    </span>
-                    <span>
-                        <input class="remove-checkbox" type="checkbox" name="remove.data_source.input.date" value="remove">
-                    </span>
-                    <span>
-                        <p class="info">remove all dates</p>
+                        <p class="info">current value: {{data_input_date}}</p>
                     </span>
                 </div>
                 <div>
@@ -501,8 +488,6 @@
                                     <option value="pBq/m2" {% if measurement_results[i]["unit"] == "pBq/m2" %} selected="selected"{% endif %}>pBq/m2</option>
                                     <option value="pBq/cm3" {% if measurement_results[i]["unit"] == "pBq/cm3" %} selected="selected"{% endif %}>pBq/cm3 (cubed)</option>
                                     <option value="pBq/m3" {% if measurement_results[i]["unit"] == "pBq/m3" %} selected="selected"{% endif %}>pBq/m3</option>
-                                    
-                                    <option value="kru" {% if measurement_results[i]["unit"] == "kru" %} selected="selected"{% endif %}>kru</option>
                                 </select>
                             </p>
                         </span>

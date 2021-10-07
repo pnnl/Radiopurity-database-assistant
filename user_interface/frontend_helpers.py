@@ -6,48 +6,39 @@
 """
 
 import re
+import base64
 import logging
+import binascii
+import datetime
 from dunetoolkit import Query, add_to_query, search, insert, update, convert_date_to_str
 
 logger = logging.getLogger('dune_ui')
 
-def _get_user(user, db_obj):
-    """This function searches the "users" collection of the mongodb database for the document whose "user_mode" value is the same as the user argument provided.
+def _get_httprequest_username(http_auth):
+    """Parses the http_authentication portion of an HTTP request's header to extract the logged in user's username. The username should be within the string, encoded as base64.
 
     args:
-        * user (str): the user_name to search for in the database.
-        * db_obj (pymongo.database.Database): a pymongo database object that, once a collection has been selected, can be used to query.
+        * http_auth (str): the http_authorization part of an HTTP request's header
 
     returns:
-        * dict. A JSON object representing the entire user document from the database.
+        * str. The username of the logged in user making the request. None if no user is logged in or if error.
     """
-    coll = db_obj.users
+    user = None
+    if http_auth and http_auth.lower().startswith('basic'):
+        auth = http_auth.split(" ", 1)
+        if len(auth) == 2:
+            try:
+                auth = base64.b64decode(auth[1].strip().encode('utf-8'))
+                auth = auth.decode('utf-8')
+                auth = auth.split(":", 1)
+            except (TypeError, binascii.Error, UnicodeDecodeError) as exc:
+                logger.warn("Couldn't get username: {}\n".format(exc))
+            if len(auth) == 2:
+                user = auth[0]
+    return user
 
-    find_user_q = {'user_mode':{'$eq':user}}
-    find_user_resp = coll.find(find_user_q)
-    find_user_resp = list(find_user_resp)
-    if len(find_user_resp) <= 0:
-        user_obj = None
-    else:
-        user_obj = find_user_resp[0]
-    return user_obj
-
-def _add_user(user, encrypted_pw, db_obj):
-    """Creates a dict out of the provided username and password and adds it as a user document in the "users" collection of the mongodb.
-
-    args:
-        * user (str): the plaintext username to add.
-        * encrypted_pw (bytes): the encrypted byte encoding of the password to add.
-
-    returns:
-        * pymongo.results.InsertOneResult. The pymongo response object from the insertion (the inserted_id attribute of this object can be used to evaluate success).
-    """
-    coll = db_obj.users
-
-    db_new_user = {'user_mode':user, 'password_hashed':encrypted_pw}
-    insert_resp = coll.insert_one(db_new_user)
-    return insert_resp
-
+def _get_date_now():
+    return datetime.datetime.now().strftime("%Y-%m-%d")
 
 def do_q_append(form):
     """Parses out the form input to get the new query term field, comparison, and value, then adds the new query term to whatever query already exists, if there is one. 

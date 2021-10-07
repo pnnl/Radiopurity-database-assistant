@@ -271,7 +271,11 @@ def _update_nonmeas_fields(new_doc, update_pairs_copy):
                 update_key_2 = update_keys[2]
 
             if len(update_keys) == 3:
-                new_doc[update_keys[0]][update_keys[1]][update_key_2] = update_val
+                if update_key == "data_source.input.name":
+                    new_doc[update_keys[0]][update_keys[1]][update_key_2] = new_doc[update_keys[0]][update_keys[1]][update_key_2] + ", " + update_val
+                    # This is to keep track of everyone who has edited an entry
+                else:
+                    new_doc[update_keys[0]][update_keys[1]][update_key_2] = update_val
             elif len(update_keys) == 4:
                 new_doc[update_keys[0]][update_keys[1]][update_key_2][update_keys[3]] = update_val
 
