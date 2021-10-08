@@ -9,17 +9,13 @@
 
 <!-- display logos for snolab, pnnl, and radiopurity -->
 <div class="logo-container">
-    <a href="https://www.pnnl.gov/" target="_blank">
-        <img id="pnnl-logo-link" src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
-    </a>
+    <img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
 </div>
 <div class="logo-container">
     <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
 </div>
 <div class="logo-container">
-    <a href="https://www.snolab.ca/" target="_blank">
-        <img id="snolab-logo-link" src="{{ url_for('static', filename='logos/snolab_logo.png') }}"/>
-    </a>
+    <img src="{{ url_for('static', filename='logos/snolab_logo.png') }}"/>
 </div>
 
 <!-- documentation link -->
@@ -40,8 +36,7 @@
 <div>                                                                                 
     <a href="{{ url_for('about_endpoint') }}"><button class="logout-link">about</button></a>
     <a href="{{ url_for('simplesearch_endpoint') }}"><button class="pages">search</button></a>
-    <a href="{{ url_for('search_endpoint') }}"><button class="pages">advanced search</button></a>
-    <a href="{{ url_for('insert_endpoint') }}"><button class="pages">insert</button></a>   
+    <a href="{{ url_for('xia_insert_endpoint') }}"><button class="pages">insert</button></a>   
     <a href="{{ url_for('update_endpoint') }}"><button class="pages">update</button></a>
     <a href="{{ url_for('logout') }}"><button class="logout-link">logout</button></a> 
 </div>
@@ -51,68 +46,28 @@
 <p class="normal-text">View the <a href="https://github.com/pnnl/Radiopurity-database-assistant" target="_blank" rel="noopener noreferrer">open source code</a> for this project.</p>
 
 <h3>Instructions</h3>
-<p class="normal-text">To use the simple search page, simply enter a value that you would like to search for. This search will return all documents from the database where any of the fields contain the search value.</p>
+<p class="normal-text"><b>Search</b> - To use the search page, simply enter a value that you would like to search for. This search will return all documents from the database that contain the search value.</p>
+<p class="normal-text">The fields within a document that can be searched for are Sample, Sample material, and Experiment. Multiple entries can be searched for by comma-separating the entries. </p>
+<p class="normal-text">Alternatively, all documents in the database can be viewed by entering an empty search.</p>
 <br>
-<p class="normal-text">The advanced search page allows for assembly multi-term queries where each term describes a condition for a specific field.</p>
-<ul class="normal-text">
-    <li>Use the <b>field</b> dropdown to select the document field to search on.</li>
-    <li>
-        The options in the <b>comparison</b> dropdown change depending on what field is currently selected, in order to only display valid comparison types for that field.
-        For example, the "grouping" field cannot be compared against a value using the "greater than" comparison because the value should be a word, not a number.
-    </li>
-    <li>Enter any text or numbers into the <b>value</b> field as the value to compare the specified field against using the specified comparison operator.</li>
-    <li>
-        The <b>include synonyms</b> checkbox forces the query to not only search for the exact value in the "value" field, but also for all synonyms of that value that are on record.
-        For example, if "copper" is entered into the "value" textbox and the "include synonyms" box is checked, the query will search for documents containing "copper" or "Cu."
-        This option is checked by default.
-        Deselect this box in order to only search for the exact value in the "value" field.
-    </li>
-    <li>
-        Click on the <b>AND</b> button to add another term to the query using the "and" conjunction. 
-        This causes the query to search for documents where the current term (that was just added) is fulfilled AND the next term (that is about to be added) is also fulfilled.
-    </li>
-    <li>
-        Click on the <b>OR</b> button to add another term to the query using the "or" conjunction. 
-        This causes the query to search for documents where either the next term OR the current term is fulfilled.
-    </li>
-</ul>
-<p class="normal-text">Example: search for documents where the sample description contains the word "copper" or "Cu" and the grouping is "ILIAS UKDM" by: </p>
+
+<p class="normal-text"><b>Insert</b> - To use the insert page, simply drag and drop a data file onto the drop area, or click on the drop area to browse your files.</p>
+<p class="normal-text">Expected format of data files:</br>The data files will be automatically converted to JSON files that can be inserted into the database if the following requirements are met:</p>
 <ol class="normal-text">
-    <li>selecting "sample.description" from the "field" dropdown,</li>
-    <li>selecting "contains" from the "comparison" dropdown,</li>
-    <li>entering the word "copper" into the "value" textbox (do not deselect the "include synonyms" box),</li>
-    <li>pressing the "AND" button,</li>
-    <li>selecting "grouping" from the "field" dropdown,</li>
-    <li>selecting "equals" from the "comparison" dropdown,</li>
-    <li>entering the phrase "ILIAS UKDM" into the "value" field, and</li>
-    <li>pressing the "search" button.</li>
+	<li>The header information begins the line after the line containing "CONFLUENCE"</li>
+	<li>In the table containing the measurement data, the fields are separated by '^'</li>
+	<li>The measurement values begin the line immediately after the line with the fields (e.g. "Alpha Counts", "Energy Range (MeV)", etc.)</li>
+	<li>The measurement values within table rows are separated by '|'</li>
+	<li>The corrected data comes after, but not necessarily immediately after, the line containing "Corrected"</li>
 </ol>
-<p class="normal-text">
-    As terms are added to the query, the previously added terms are displayed above the query creation boxes in the "current query" section.
-    Once the <b>search</b> is pressed, the final query is displayed below the creation boxes in the "final query" section and the results are displayed at the bottom of the page as a list of summaries.
-    To view more details on an individual document in the results list, click on its summary.
-    Click on the summary again to hide the full document.
-</p>
+
+<p class="normal-text"></br><b>Update</b> - To use the update page, first find the id of the document to be updated. This should be displayed along with the other contents of the document when found in <b>search</b>.</p>
+<p class="normal-text">Once this document has been found, you will be able to edit or remove each individual field in header information and measurement values. Once the desired changes have been made, click the </b>update doc</b> button at the bottom of the page. There is also a button to remove the entire document if one wants to remove the entire measurement or replace it with a later updated insert. </p>
+
+<p class="normal-text"></br><b>Login/logout</b> - Login credentials are required to use any of the search, insert, or update features.</br></p>
 
 <h3>Data</h3>
-    <ul>
-        <li><p class="normal-text">Majorana (2016) from <a target="_blank" href="https://arxiv.org/abs/1601.03779">N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016)</a>.</p></li>
-        <li><p class="normal-text">LUX from <a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S0927650514001054?via%3Dihub">D.S. Akerib et al., Astropart. Phys. 62 (2014) 33-44</a>.</p></li>
-        <li><p class="normal-text">SuperCDMS from The SuperCDMS Collaboration (personal communication, 2014).</p></li>
-        <li><p class="normal-text">BetaCage from <a target="_blank" href="https://iopscience.iop.org/article/10.1088/1748-0221/9/01/P01009">Z. Ahmed et al., JINST 9 (2014)</a>.</p></li>
-        <li><p class="normal-text">EDELWEISS (2011) from <a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S0927650513000790?via%3Dihub">E. Armengaud et al., Astropart. Phys. 47 (2013)</a>.</p></li>
-        <li><p class="normal-text">XENON100 (2011) from <a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S0927650511000971?via%3Dihub">E. Aprile et al., Astropart. Phys., 35 (2011)</a>.</p></li>
-        <li><p class="normal-text">EXO (2008) from <a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S016890020800346X?via%3Dihub">D.S.Leonard et al., Nucl. Instr. and Meth. A 591 (2008)</a>.</p></li>
-        <li><p class="normal-text">BOREXINO (2002) from <a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S0927650501001797?via%3Dihub">C. Apresella et al., Astropart. Phys., 18 (2002)</a>.</p></li>
-        <li><p class="normal-text">Rau (2000) from <a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S096980430000155X?via%3Dihub">W. Rau & G. Heusser, Applied Radiation and Isotopes, 53 (2000)</a>.</p></li>
-        <li><p class="normal-text">ILIAS ANAIS from <a target="_blank" href="http://radiopurity.in2p3.fr/index-ILIAS.html">the ILIAS database</a>.</p></li>
-        <li><p class="normal-text">ILIAS CAST from <a target="_blank" href="http://radiopurity.in2p3.fr/index-ILIAS.html">the ILIAS database</a>.</p></li>
-        <li><p class="normal-text">ILIAS CRESST from <a target="_blank" href="http://radiopurity.in2p3.fr/index-ILIAS.html">the ILIAS database</a>.</p></li>
-        <li><p class="normal-text">ILIAS Edelweiss from <a target="_blank" href="http://radiopurity.in2p3.fr/index-ILIAS.html">the ILIAS database</a>.</p></li>
-        <li><p class="normal-text">ILIAS UKDM from <a target="_blank" href="http://radiopurity.in2p3.fr/index-ILIAS.html">the ILIAS database</a>.</p></li>
-        <li><p class="normal-text">ILIAS ROSEBUD from <a target="_blank" href="http://radiopurity.in2p3.fr/index-ILIAS.html">the ILIAS database</a>.</p></li>
-        <li><p class="normal-text">Xenon1T from <a target="_blank" href="https://link.springer.com/article/10.1140/epjc/s10052-017-5329-0">Eur. Phys. J. C (2017) 77:890</a>.</p></li>
-    </ul>
+<p class="normal-text"></p>
 
 <h3>Collaboration</h3>
 <p class="normal-text"></p>
@@ -122,16 +77,6 @@
 <p class="info">J.C. Loach et al., A Database for Storing the Results of Material Radiopurity Measurements, Nucl. Instr. Meth. A 839 (2016).</p>
 
 <h3>Acknowledgements</h3>
-<!-- this work statement -->
-<p class="normal-text">Pacific Northwest National Laboratory (PNNL) is operated by Battelle for the United States Department of Energy (DOE) under Contract no. DE-AC05-76RL01830. This study was supported by the DOE, USA Office of High Energy Physics Advanced Technology R&amp;D subprogram. The authors would like to thank SNOLAB and its staff for support through underground space, logistical and technical services. SNOLAB operations are supported by the Canada Foundation for Innovation and the Province of Ontario Ministry of Research and Innovation, with underground access provided by Vale at the Creighton mine site.</p>
-<p class="normal-text"></p>
-
-<!-- original support statement -->
-<p class="normal-text">The original work was supported by: the U.S. Department of Energy, Office of Science, Office of Nuclear Physics, under Contract No. DE-AC02-05CH11231; by the Shanghai Key Lab for Particle Physics and Cosmology (SKLPPC), Grant No. 11DZ2260700; by the Helmholtz Alliance for Astroparticle Physics (HAP) funded by the Initiative and Networking Fund of the Helmholtz Association; and by the National Science Foundation under Grant No. PHY 124260 awarded to the AARM (Assay and Acquisition of Radiopure Materials) collaboration.</p>
-<p class="normal-text"></p>
-
-<!-- collaborator statement -->
-<p class="normal-text">We acknowledge support and guidance from colleagues in the underground science community, including from the AARM, ILIAS, EXO, XENON100, SuperCDMS and Majorana collaborations.</p>
 <p class="normal-text"></p>
 
 </body>

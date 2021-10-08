@@ -4,7 +4,7 @@ from bson.objectid import ObjectId
 from selenium import webdriver
 from pymongo import MongoClient
 
-base_url = "http://localhost:5000"
+base_url = "http://localhost:1234"
 
 def login(username, browser):
     login_url = base_url+'/login'
@@ -35,7 +35,7 @@ def teardown_browser(browser):
     browser.quit()
 
 def get_mongodb_config_info():
-    with open(os.environ.get('DUNE_API_CONFIG_NAME'), 'r') as rf:
+    with open("./app_config_test.json", 'r') as rf:  # or os.environ.get('DUNE_API_CONFIG_NAME')
         config = json.load(rf)
         return config['mongodb_host'], config['mongodb_port'], config['database']
 
