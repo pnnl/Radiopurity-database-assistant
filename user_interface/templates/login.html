@@ -8,13 +8,17 @@
 
 <!-- display logos for snolab, pnnl, and radiopurity -->
 <div class="logo-container">
-    <img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
+    <a href="https://www.pnnl.gov/" target="_blank">
+        <img id="pnnl-logo-link" src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
+    </a>
 </div>
 <div class="logo-container">
     <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
 </div>
 <div class="logo-container">
-    <img src="{{ url_for('static', filename='logos/snolab_logo.png') }}"/>
+    <a href="https://www.snolab.ca/" target="_blank">
+        <img id="snolab-logo-link" src="{{ url_for('static', filename='logos/snolab_logo.png') }}"/>
+    </a>
 </div>
 
 <div>

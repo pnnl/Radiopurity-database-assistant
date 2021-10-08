@@ -1,4 +1,4 @@
-PMT,photomultiplier tube, photo multiplier tube
+PMT,photomultiplier tube,photo multiplier tube
 Actinium,Ac
 Aluminum,Al
 Americium,Am

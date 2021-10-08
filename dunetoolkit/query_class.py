@@ -63,7 +63,7 @@ class Query():
         returns:
             * list of list of str. The list of the lists of synonyms for each word on record.
         """
-        synonyms_list = [ line.strip().split(',') for line in  pkg_resources.read_text(dunetoolkit, 'synonyms.txt').split('\n') ]
+        synonyms_list = [ line.strip().split(',') for line in pkg_resources.read_text(dunetoolkit, 'synonyms.txt').split('\n') if line.strip() != ""]
         return synonyms_list
 
     def _get_field_from_str(self, line):
@@ -181,7 +181,7 @@ class Query():
         """
         for word_list in self.synonyms:
             for word in word_list:
-                if re.match(value, word, re.IGNORECASE):
+                if re.match(r'\b{}\b'.format(word), value, re.IGNORECASE):
                     return word_list
         return None
 
@@ -333,6 +333,7 @@ class Query():
         def _create_equals_regex(token):
             return re.compile('^'+token+'$', re.IGNORECASE)
         def _create_regex(token, comparison):
+            re.sub(r"([^\\])([\(\)])", r"\g<1>\\\g<2>", token)
             if comparison == 'contains':
                 #search_val  = _create_contains_regex(token)
                 search_val = {"$regex":_create_contains_regex(token)}

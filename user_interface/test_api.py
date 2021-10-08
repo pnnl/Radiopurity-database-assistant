@@ -1,28 +1,13 @@
 import pytest
 import requests
-import json
 from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-
-base_url = 'http://localhost:5000'
-
-'''
-def test_api():
-    browser = setup_browser()
-
-    logout(browser)
-    assert browser.current_url == base_url + '/login'
-    
-    login("DUNEreader", browser)
-
-    browser.get(base_url+'/')
-    assert browser.current_url == base_url+'/'
-
-    teardown_browser(browser)
-'''
-
+from test_auxiliary import base_url, login, logout, setup_browser, teardown_browser
+from test_auxiliary import setup_browser, teardown_browser
 
 endpoints = [
+    '/',
+    '/simple_search',
+    '/search',
     '/login',
     '/restricted_page',
 ]
@@ -36,9 +21,6 @@ def test_api_up(endpoint):
     assert resp.url == url
 
 restricted_endpoints = [
-    '/',
-    '/register',
-    '/search',
     '/insert',
     '/update',
 ]
@@ -51,39 +33,7 @@ def test_restricted_pages_are_restricted(endpoint):
     assert resp.url == base_url+'/login', 'Error for endpoint: '+endpoint
 
 
-read_endpoints = [
-    '/search',
-]
-@pytest.mark.parametrize('endpoint', read_endpoints)
-def test_readonly_endpoints_work_when_logged_in(endpoint):
-    browser = setup_browser()
-
-    # logout for good measure
-    logout(browser)
-    assert browser.current_url == base_url + '/login'
-
-    # login as read user
-    login("DUNEreader", browser)
-
-    # test that read user can access readuser-allowed endpoints
-    url = base_url + endpoint
-    browser.get(url)
-    assert browser.current_url == url
-
-    # logout
-    logout(browser)
-    assert browser.current_url == base_url + '/login'
-
-    # test that logged out user cannot access readuser-allowed endpoints
-    browser.get(url)
-    assert browser.current_url == base_url + '/login'
-
-    teardown_browser(browser)
-
-
-
 write_endpoints = [
-    '/search',
     '/insert',
     '/update',
 ]
@@ -114,33 +64,49 @@ def test_readwrite_endpoints_work_when_logged_in(endpoint):
     teardown_browser(browser)
 
 
-def login(username, browser):
-    login_url = base_url+'/login'
-    browser.get(login_url)
-    browser.find_element_by_id("username-text-entry").clear()
-    username_input = browser.find_element_by_id("username-text-entry")
-    username_input.send_keys(username)
-    password_input = browser.find_element_by_id("password-text-entry")
-    password_input.send_keys(open(username+'_creds.txt', 'r').read().strip())
+#'''
+endpoints = [
+    '/',
+    '/simple_search',
+    '/search',
+    '/insert',
+    '/update',
+    '/login',
+    '/restricted_page',
+]
+#'''
+#endpoints = ['/about']
+@pytest.mark.parametrize('endpoint', endpoints)
+def test_logo_links(endpoint):
+    r = requests.get(base_url + '/logout') #logout for good measure
 
-    submit_button = browser.find_element_by_id("login-submit-button")
-    submit_button.click()
+    browser = setup_browser()
 
-def logout(browser):
-    logout_url = base_url+'/logout'
-    browser.get(logout_url)
+    # test PNNL logo
+    url = base_url + endpoint
+    browser.get(url)
+    
+    pnnl_logo_img = browser.find_element_by_id('pnnl-logo-link')
+    pnnl_logo_img.click()
 
+    tab_urls = []
+    for handle in browser.window_handles:
+        browser.switch_to.window(handle)
+        tab_urls.append(browser.current_url)
+    assert "https://www.pnnl.gov/" in tab_urls
 
+    # test SNOLAB logo
+    browser.get(url)
+    
+    snolab_logo_img = browser.find_element_by_id('snolab-logo-link')
+    snolab_logo_img.click()
+    
+    tab_urls = []
+    for handle in browser.window_handles:
+        browser.switch_to.window(handle)
+        tab_urls.append(browser.current_url)
 
-def setup_browser():
-    options = webdriver.ChromeOptions()
-    options.add_argument('--no-sandbox')
-    options.add_argument('headless')
-    options.add_argument('window-size=1200x600')
-    browser = webdriver.Chrome(ChromeDriverManager().install(), options=options)
-    return browser
-def teardown_browser(browser):
-    browser.quit()
+    assert "https://www.snolab.ca/" in tab_urls
 
-
+    teardown_browser(browser)
 

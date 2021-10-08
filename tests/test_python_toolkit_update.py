@@ -1,10 +1,9 @@
 import os
 import json
 import pytest
-from pymongo import MongoClient
 from bson.objectid import ObjectId
 import datetime
-
+from test_auxiliary import set_up_db_for_test, teardown_db_for_test, query_for_all_docs
 from dunetoolkit import search_by_id, update, convert_str_to_date
 
 
@@ -20,7 +19,7 @@ def test_update_remove_doc():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     # perform update
     doc_id = '000000000000000000000002'
@@ -36,7 +35,7 @@ def test_update_nochange():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     # perform update
     doc_id = '000000000000000000000002'
@@ -80,7 +79,7 @@ def test_update_bad_field():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     # perform update
     doc_id = '000000000000000000000002'
@@ -107,7 +106,7 @@ def test_update_update_pairs_all():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     # perform update
     doc_id = '000000000000000000000002'
@@ -202,7 +201,7 @@ def test_update_update_pairs_update_twice():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     # PERFORM AND TEST FIRST UPDATE
     u1_doc_id = '000000000000000000000002'
@@ -279,7 +278,7 @@ def test_update_new_meas_objects_bad_object():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     new_meas_objects = [
         {'bad_field':1}
@@ -303,7 +302,7 @@ def test_update_new_meas_objects():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     new_meas_objects = [
         {'isotope':'K-40', 'type':'measurement', 'unit':'g/cm', 'value':[0.2]},
@@ -350,7 +349,7 @@ def test_update_new_meas_objects_str_for_val_a():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     new_meas_objects = [
         {'isotope':'U-235', 'type':'range', 'unit':'g', 'value':[0.3, 2.1]}
@@ -395,7 +394,7 @@ def test_update_new_meas_objects_str_for_val_b():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     new_meas_objects = [
         {'isotope':'U-235', 'type':'range', 'unit':'g', 'value':['a', 'b']}
@@ -419,7 +418,7 @@ def test_update_meas_remove_indices_bad_idx():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     remove_indices = [4] # list len is 3
     doc_id = '000000000000000000000002'
@@ -441,7 +440,7 @@ def test_update_meas_remove_indices():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     remove_indices = [0, 2] # list len is 3
     doc_id = '000000000000000000000002'
@@ -484,7 +483,7 @@ def test_update_all():
 
     # set up database to be updated
     teardown_db_for_test()
-    db_obj = set_up_db_for_test()
+    db_obj = set_up_db_for_test(_get_docs())
 
     update_pairs={'grouping':'new test value', 'data_source.input.contact':'testing@test.org', 'measurement.results.0.unit':'g', 'measurement.date':['2020-10-21']}
     new_meas_objects = [
@@ -557,36 +556,14 @@ def test_update_all():
 
     assert orig_doc == new_doc
 
-def get_mongodb_config_info():
-    with open(os.environ.get('TOOLKIT_CONFIG_NAME'), 'r') as rf:
-        config = json.load(rf)
-        return config['mongodb_host'], config['mongodb_port'], config['database']
-
-def set_up_db_for_test():
-    db_host, db_port, db_name = get_mongodb_config_info()
-    client = MongoClient(db_host, db_port)
-    db_obj = client[db_name]
-    coll = db_obj.assays
-    coll.insert_one({ "_id" : ObjectId("000000000000000000000001"), "type" : "testing_doc" })
-    coll.insert_one({ "_id" : ObjectId("000000000000000000000002"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA", "results" : [ { "unit" : "ppb", "value" : [ 18, 2 ], "isotope" : "U-238", "type" : "measurement" }, { "unit" : "ppb", "value" : [ 59, 2 ], "isotope" : "Th-232", "type" : "measurement" }, { "unit" : "ppm", "value" : [ 0.78, 0.02 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Resin, Magnex, 2:1 Thiokol 308, RAL", "id" : "ILIAS UKDM #249", "owner" : { "name" : "", "contact" : "" }, "name" : "Resin, Magnex, 2:1 Thiokol 308", "source" : "" }, "type" : "measurement", "_version" : 1 })
-    coll.insert_one({ "_id" : ObjectId("000000000000000000000003"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA", "results" : [ { "unit" : "ppb", "value" : [ 3 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 8.9, 0.2 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Rexalite, copper removed", "id" : "ILIAS UKDM #266", "owner" : { "name" : "", "contact" : "" }, "name" : "Rexalite, copper removed", "source" : "" }, "type" : "measurement", "_version" : 1 })
-    coll.insert_one({ "_id" : ObjectId("000000000000000000000004"), "measurement" : { "description" : "", "practitioner" : { "name" : "RAL", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "AA", "results" : [ { "unit" : "ppm", "value" : [ 15 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Salt, ICI, pure dried vacuum", "id" : "ILIAS UKDM #273", "owner" : { "name" : "", "contact" : "" }, "name" : "Salt, ICI, pure dried vacuum", "source" : "" }, "type" : "measurement", "_version" : 1 })
-    coll.insert_one({ "_id" : ObjectId("000000000000000000000005"), "measurement" : { "description" : "Lu < 1ppb, Rb < 10ppb", "practitioner" : { "name" : "Charles Evans/Cascade Scientific", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "GD-MS", "results" : [ { "unit" : "ppb", "value" : [ 1 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.22 ], "isotope" : "K-40", "type" : "limit" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Si", "id" : "ILIAS UKDM #279", "owner" : { "name" : "", "contact" : "" }, "name" : "Si", "source" : "" }, "type" : "measurement", "_version" : 1 })
-    coll.insert_one({ "_id" : ObjectId("000000000000000000000006"), "measurement" : { "description" : "", "practitioner" : { "name" : "Supplier's data", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "?", "results" : [ { "unit" : "ppm", "value" : [ 0.03 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 1, 30, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Silica fibre, TSL, 'Spectrosil'", "id" : "ILIAS UKDM #289", "owner" : { "name" : "", "contact" : "" }, "name" : "Silica fibre, TSL, 'Spectrosil'", "source" : "" }, "type" : "measurement", "_version" : 1 })
-    return db_obj
-
-def teardown_db_for_test():
-    db_host, db_port, db_name = get_mongodb_config_info()
-    client = MongoClient(db_host, db_port)
-    coll = client[db_name].assays
-    old_versions_coll = client[db_name].assays_old_versions
-    remove_resp = coll.delete_many({})
-    resmove_oldversions_resp = old_versions_coll.delete_many({})
-
-def query_for_all_docs():
-    db_host, db_port, db_name = get_mongodb_config_info()
-    client = MongoClient(db_host, db_port)
-    coll = client[db_name].assays
-    all_docs = list(coll.find({}))
-    return all_docs
+def _get_docs():
+    docs = [
+        { "_id" : ObjectId("000000000000000000000001"), "type" : "testing_doc" },
+        { "_id" : ObjectId("000000000000000000000002"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA", "results" : [ { "unit" : "ppb", "value" : [ 18, 2 ], "isotope" : "U-238", "type" : "measurement" }, { "unit" : "ppb", "value" : [ 59, 2 ], "isotope" : "Th-232", "type" : "measurement" }, { "unit" : "ppm", "value" : [ 0.78, 0.02 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Resin, Magnex, 2:1 Thiokol 308, RAL", "id" : "ILIAS UKDM #249", "owner" : { "name" : "", "contact" : "" }, "name" : "Resin, Magnex, 2:1 Thiokol 308", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000003"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA", "results" : [ { "unit" : "ppb", "value" : [ 3 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 8.9, 0.2 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Rexalite, copper removed", "id" : "ILIAS UKDM #266", "owner" : { "name" : "", "contact" : "" }, "name" : "Rexalite, copper removed", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000004"), "measurement" : { "description" : "", "practitioner" : { "name" : "RAL", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "AA", "results" : [ { "unit" : "ppm", "value" : [ 15 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Salt, ICI, pure dried vacuum", "id" : "ILIAS UKDM #273", "owner" : { "name" : "", "contact" : "" }, "name" : "Salt, ICI, pure dried vacuum", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000005"), "measurement" : { "description" : "Lu < 1ppb, Rb < 10ppb", "practitioner" : { "name" : "Charles Evans/Cascade Scientific", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "GD-MS", "results" : [ { "unit" : "ppb", "value" : [ 1 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.22 ], "isotope" : "K-40", "type" : "limit" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Si", "id" : "ILIAS UKDM #279", "owner" : { "name" : "", "contact" : "" }, "name" : "Si", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000006"), "measurement" : { "description" : "", "practitioner" : { "name" : "Supplier's data", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "?", "results" : [ { "unit" : "ppm", "value" : [ 0.03 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 1, 30, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Silica fibre, TSL, 'Spectrosil'", "id" : "ILIAS UKDM #289", "owner" : { "name" : "", "contact" : "" }, "name" : "Silica fibre, TSL, 'Spectrosil'", "source" : "" }, "type" : "measurement", "_version" : 1 }
+    ]
+    return docs
 
