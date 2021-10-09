@@ -1,4 +1,5 @@
-# DUNE database assistant
+# Radiopurity implementation specific to XIA data.
+XIA edits made by Vicente Garrido (Intern from May-Aug, 2021)
 
 ### General Requirements
 * Python >= 3.7
