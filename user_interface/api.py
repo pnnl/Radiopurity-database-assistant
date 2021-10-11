@@ -17,15 +17,15 @@ from copy import deepcopy
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
 from frontend_helpers import _add_user, _get_user, do_q_append, parse_update, perform_search, perform_insert, \
-    perform_update, field_to_name, add_start_text, read_write_names_list
+    perform_update, field_to_name, add_start_text, read_write_names_list, remove_document
 import TxtToJSONScript as Conversion
 from pymongo import MongoClient
 
 app = Flask(__name__)
 
-config_name = os.getenv('DUNE_API_CONFIG_NAME')
+config_name = None # os.getenv('DUNE_API_CONFIG_NAME')
 if config_name is None:
-    config_name = 'app_config.txt'
+    config_name = 'app_config.json'
 config_dict = None
 
 with open(config_name, 'r') as config:
@@ -74,34 +74,6 @@ def reference_endpoint():
     return render_template('simple_search.html')
     """This is the landing page for the API if no endpoint is specified. It redirects to the search endpoint.
     """
-
-
-'''
-@app.route('/register', methods=['GET', 'POST'])
-@requires_permissions(['Admin'])
-def register():
-    """This is the endpoint to add a new user to the database. Only administrators of the API can access it. At this point, it should only be used for development purposes, since the only users necessary for the API are DUNEreader, DUNEwriter, and Admin.
-    GET request:
-        Render the request page.
-    POST request:
-        Perform user creation by adding the new username and password to the database.
-        form data:
-            * user (str): username to insert into the database
-            * password (str): plaintext password to encrypt and insert into the database
-    """
-    if request.method == 'POST':
-        user = request.form.get('user')
-        user_obj = _get_user(user, db_obj)
-        if user_obj is not None:
-            return render_template('register.html', msg='Your email already exists in the database.')
-        password = request.form.get('password')
-        encrypted_pw = scrypt.hash(password, salt, N=16) #password, salt, N=(num_iterations), r=(block_size), p=(num_threads), bufflen=(num_output_bytes)
-        insert_resp = _add_user(user, encrypted_pw, db_obj)
-        return redirect(url_for('login'))
-    else:
-        return render_template('register.html')
-'''
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -158,7 +130,7 @@ def restricted_page():
 
 
 @app.route('/simple_search', methods=['GET', 'POST'])
-@requires_permissions(['SilviaScorza', 'Admin', 'TestUser'])
+@requires_permissions(['XIAwriter', 'Admin', 'TestUser'])
 def simplesearch_endpoint():
     if request.method == 'POST':
         field = "all"
@@ -204,10 +176,7 @@ def search_endpoint():
         append_mode = "OR"
 
     elif request.method == "POST":
-        with open("/home/Trace_api.txt", 'a') as trace_file:
-            final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
-            s = "final_q:" + str(final_q) + "\n"
-            trace_file.write(s)
+        final_q, final_q_str, num_q_lines, error_msg = do_q_append(request.form)
 
         results, error_msg = perform_search(final_q, db_obj)
 
@@ -286,7 +255,7 @@ def insert_endpoint():
 
 
 @app.route('/update', methods=['GET', 'POST'])
-@requires_permissions(['DUNEwriter', 'SilviaScorza', 'Admin', 'TestUser'])
+@requires_permissions(['XIAwriter', 'Admin', 'TestUser'])
 def update_endpoint():
     """Finds the document with the given ID in the database and updates its fields and values with the fields and values that the user supplies in the form data.
     GET request:
@@ -376,16 +345,6 @@ def update_endpoint():
         for field in ["_id", "_version"]:
             if field in names_list:
                 names_list.remove(field)
-        with open("/home/Trace_api.txt", 'a') as trace_file:
-            s = "type:" + str(type(doc['Energy Range (MeV)']['0-1'])) + "\n"
-            trace_file.write(s)
-            s = "names_list: " + str(names_list) + "\n"
-            trace_file.write(s)
-            """
-            for key in doc['Energy Range (MeV)'].keys():
-                s = str(key) + ": " + str(doc['Energy Range (MeV)'][key]) + "\n" + str(type(doc['Energy Range (MeV)'][key])) + "\n"
-                trace_file.write(s)
-            """
         read_write_names_list(names_list, "write")
         return render_template('update.html', doc_data=True, doc_id=doc['_id'], \
                                parent_doc=doc, \
@@ -398,21 +357,22 @@ def update_endpoint():
     elif request.form.get("submit_button") == "update_doc":
         names_list = read_write_names_list(None, "read")
         doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles = parse_update(request.form, names_list)
-        with open("/home/Trace_api.txt", 'w') as trace_file:
-            s = "Parsed:" + str(doc_id) + ":" + str(remove_doc) + ":" + str(update_pairs) + ":" + str(meas_remove_indices) + ":" + str(meas_add_eles) + "\n"
-            trace_file.write(s)
-        new_doc_id, error_msg = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles,
+        if not remove_doc:
+            new_doc_id, error_msg = perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_add_eles,
                                                db_obj)
-        if new_doc_id != None:
-            message = "update success. New doc version ID: " + str(new_doc_id)
-        else:
-            message = 'Error: ' + error_msg
+            if new_doc_id != None:
+                message = "update success. New doc version ID: " + str(new_doc_id)
+            else:
+                message = 'Error: ' + error_msg
             logger.error(message)
+        else:
+            remove_document(doc_id)
+            message = "Document was removed"
         return render_template('update.html', doc_data=False, parent_doc={}, name_doc={}, doc_id=None, message=message)
     return None
 
 @app.route('/xia_insert', methods=["GET", "POST"])
-@requires_permissions(['SilviaScorza', 'Admin', 'TestUser'])
+@requires_permissions(['XIAwriter', 'Admin', 'TestUser'])
 def xia_insert_endpoint():
     tmp_directory = "/tmp"
     if request.method == "POST":	

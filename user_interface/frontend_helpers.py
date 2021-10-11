@@ -6,6 +6,7 @@
 """
 
 import re
+import json
 import logging
 from dunetoolkit import Query, add_to_query, search, insert, update, convert_date_to_str, search_by_id
 from copy import deepcopy
@@ -63,11 +64,8 @@ def do_q_append(form):
         * int. The number of lines in the human-readable query (for UI purposes).
         * str. An error message (empty string if no errors happened).
     """
-    with open("/home/Trace_frontend_helpers.txt", 'a') as trace_file:
-        existing_q_text, field, comparison, value, append_mode, include_synonyms = parse_existing_q(form)
-        s = "existing_q_text:" + existing_q_text + ", field:" + field + ", comparison:" + comparison + ", value:" + value + "\n"
-        trace_file.write(s)
-        q_str, q_dict = add_to_query(field, comparison, value, append_mode=append_mode, include_synonyms=include_synonyms, query_string=existing_q_text)
+    existing_q_text, field, comparison, value, append_mode, include_synonyms = parse_existing_q(form)
+    q_str, q_dict = add_to_query(field, comparison, value, append_mode=append_mode, include_synonyms=include_synonyms, query_string=existing_q_text)
     q_obj = Query(q_str)
     q_dict = q_obj.to_query_language()
     q_str = q_obj.to_string()
@@ -262,10 +260,6 @@ def parse_update(form, names_list):
         current_names_list = add_start_text(deepcopy(names_list), "current.")
         remove_names_list = add_start_text(deepcopy(names_list), "remove.")
         
-        field_to_name = {"Sample":"Sample", "Experiment":"Experiment", "Sample material":"Sample_material"}
-        with open("/home/Trace_frontend_helpers.txt", 'a') as trace_file:
-            s = "names_list:\n" + str(names_list) + "\n"
-            trace_file.write(s)
         for index, field in enumerate(names_list):
             # get form values
             curr_val = form.get(current_names_list[index], '')
@@ -273,9 +267,9 @@ def parse_update(form, names_list):
             do_remove = form.get(remove_names_list[index], '') != ''
 
             # remove field's value by updating it with an empty string value. Use mongodb list indices, not html element numbers
-            if do_remove and 2<1:
+            if do_remove:
                 # add field to the "update values" list with an empty field (we don't want to completely delete the field)
-                update_pairs['measurement.results.'+str(num_measurement_results-1)+'.'+field] = ''
+                update_pairs[field] = ''
 
             # val not empty means perform some update
             elif val != '':
@@ -410,11 +404,7 @@ def perform_update(doc_id, remove_doc, update_pairs, meas_remove_indices, meas_a
     error_msg = ""
     collection = db_obj.assays
     old_versions_collection = db_obj.assays_old_versions
-    with open("/home/Trace_frontend_helpers.txt", 'a') as trace_file:
-        s = "new_doc:\n" + str(new_doc) + "\n"
-        trace_file.write(s)
-    with open("/home/Trace_frontend_helpers.txt", 'a') as trace_file:
-        trace_file.write("Past the new_doc updates and finding collections")
+
     try:
         new_doc_id = collection.insert_one(new_doc).inserted_id
         collection.delete_one(old_doc)
@@ -485,11 +475,10 @@ def insert_nested_field(result, path_list, start_text, names_list):
     return result, names_list
     
 def add_start_text(_list, text):
-    for ele in _list:
-        s = ele
-        _list.remove(ele)
-        s = s + text
-        _list.append(s)
+    for i in range(len(_list)):
+        s = _list[i]
+        s = text + s
+        _list[i] = s
     return _list
     
 def add_update_pairs(doc, pairs):
@@ -508,7 +497,7 @@ def add_update_pairs(doc, pairs):
     return doc
     
 def read_write_names_list(name_list, message):
-    client = MongoClient("hostname", 27017)
+    client = MongoClient("172.17.0.5", 27017)
     db = client['xia_pytest_data']
     coll = db.field_names
     if message == "write":
@@ -519,5 +508,15 @@ def read_write_names_list(name_list, message):
         names_list = obj['names_list']
         # coll.delete_one(obj)
         return names_list
-            
-    
+
+def remove_document(doc_id):
+    with open("app_config.json", 'r') as config_file:
+        config_dict = json.load(config_file)
+        client = MongoClient(config_dict['mongodb_host'], config_dict['mongodb_port'])
+        db_obj = client[config_dict['database']]
+        coll = db_obj.assays
+    doc = search_by_id(doc_id, db_obj)
+    doc_list = list(coll.find(doc))
+    removing = coll.delete_one(doc_list[0])
+
+
