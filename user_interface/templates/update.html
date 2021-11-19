@@ -296,10 +296,13 @@
                 </div>
                 <div>
                     <span>
-                        <p class="normal-text">measurement date: <input type="text" name="measurement.date"></p>
-                    </span>
-                    <span>
-                        <p class="info">NOTE: if entering a date range, separate date strings with a space. current value: {{measurement_date}}</p>
+                        <p class="normal-text">measurement date: 
+                            <span class="invalid-field-tooltip" id="invalid-meas-date-tooltip">
+                                <input type="text" name="measurement.date" onKeyup="tryEnableSubmit()">
+                                <span class="invalid-field-tooltip-text info" id="invalid-meas-date-tooltip-text">invalid date format</span>
+                            </span>
+                        </p>
+
                     </span>
                     <span>
                         <input class="remove-checkbox" type="checkbox" name="remove.measurement.date" value="remove">
@@ -356,7 +359,13 @@
                     <h5>result</h5>
                     <div>
                         <span>
-                            <p class="normal-text">isotope: <input type="text" name="measurement.results.isotope{{i+1}}" onKeyup="validateForm()"></p>
+                            <!--<p class="normal-text">isotope: <input type="text" name="measurement.results.isotope{{i+1}}" onKeyup="tryEnableSubmit()"></p>-->
+                            <p class="normal-text">isotope: 
+                                <span class="invalid-field-tooltip" id="invalid-isotope{{i+1}}-tooltip">
+                                    <input type="text" name="measurement.results.isotope{{i+1}}" onKeyup="tryEnableSubmit()">
+                                    <span class="invalid-field-tooltip-text info" id="invalid-isotope{{i+1}}-tooltip-text">invalid isotope</span>
+                                </span>
+                            </p>
                         </span>
                         <span>
                             <p class="info">current value: <textarea class="false-textarea" name="current.measurement.results.isotope{{i+1}}" rows="1" cols="50" readonly>{{measurement_results[i]["isotope"]}}</textarea></p>
@@ -581,7 +590,8 @@
     var button = document.getElementById("add-meas-button");
     button.addEventListener('click', function () {
         var measStr = '<h5>additional result</h5>'
-        measStr += '<div><span><p class="normal-text">isotope: <input type="text" name="measurement.results.isotope' + counter + '" onKeyup="validateForm()"></p></span></div>'
+        measStr += '<p class="normal-text">isotope: <span class="invalid-field-tooltip" id="invalid-isotope' + (counter+1) + '-tooltip"><input type="text" name="measurement.results.isotope' + (counter+1) + '" onKeyup="tryEnableSubmit()"><span class="invalid-field-tooltip-text info" id="invalid-isotope' + (counter+1) + '-tooltip-text">invalid isotope</span></span></p>'
+        //measStr += '<div><span><p class="normal-text">isotope: <input type="text" name="measurement.results.isotope' + counter + '" onKeyup="tryEnableSubmit()"></p></span></div>'
         measStr += '<div><span><p class="normal-text">measurement type: <select name="measurement.results.type' + counter + '"><option value="measurement">measurement</option>'
         measStr += '<option value="limit">limit</option><option value="range">range</option></select></p></span></div>'
         measStr += '<div><span><p class="normal-text">units: <select name="measurement.results.unit' + counter + '">'
