@@ -4,7 +4,7 @@ var curr_values = {};
 
 document.getElementById("units_convert_button").onclick= function(){
 	loading_icon = document.getElementById("loading_icon");
-	loading_icon.setAttribute("src", "./static/loading_gif.jpg");
+	loading_icon.setAttribute("src", "./static/logos/loading_gif.jpg");
 	console.log("Added the loading icon");
 }
 
@@ -98,7 +98,7 @@ function unit_conversions(){
 
 function add_loading_icon(){
 	loading_icon = document.getElementById("loading_icon");
-	loading_icon.setAttribute("src", "./static/loading_gif.jpg");
+	loading_icon.setAttribute("src", "./static/logos/loading_gif.jpg");
 	console.log("Added the loading icon");
 }
 
