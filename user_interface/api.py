@@ -60,6 +60,11 @@ def restricted_page():
     """
     return render_template('restricted_page.html')
 
+@app.route('/edit/logout', methods=['GET','POST'])
+def logout_endpoint():
+    #return Response("You are logging out...", 401, {'WWW-Authenticate':'Basic realm="Login Required"'})
+    return render_template("logout.html")
+
 @app.route('/add_experiment_credentials', methods=['GET', 'POST'])
 def add_experiment_credentials_endpoint():
     """Users use this page to add credentials (similar to logging in) so they can view private experiment results

@@ -79,3 +79,15 @@ function showHelp() {
         help_div.style.display = "none";
     }
 }
+
+function performLogout() {
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", "/edit/logout", true);
+    xmlhttp.withCredentials = true;
+    xmlhttp.setRequestHeader("Authorization", 'Basic ' + btoa('baduser:badpassword'));
+    xmlhttp.onload = function () {
+        console.log(xmlhttp.responseText);
+    };
+    xmlhttp.send();
+}
+
