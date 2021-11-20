@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/styles.css') }}">
+</head>
+<body>
+
+<!-- display logos for dune, pnnl, and radiopurity -->
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/dune_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/pnnl_logo.png') }}"/>
+</div>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='logos/radiopurity_logo.png') }}"/>
+</div>
+
+<!-- links to other pages on the site -->
+<div>
+    <a href="{{ url_for('about_endpoint') }}"><button class="logout-link">about</button></a>
+    <a href="{{ url_for('simplesearch_endpoint') }}"><button class="pages">search</button></a>
+    <a href="{{ url_for('search_endpoint') }}"><button class="pages">advanced search</button></a>
+    <a href="{{ url_for('insert_endpoint') }}"><button class="pages">insert</button></a>
+    <a href="{{ url_for('update_endpoint') }}"><button class="pages">update</button></a>
+</div>
+
+<h1>Assay MongoDB Assistant</h1>
+
+<h3>Add experiment credentials</h3>
+
+<div>
+    <p class="info">{{login_msg}}</p>
+</div>
+
+<form action="{{ url_for('add_experiment_credentials_endpoint') }}" method="POST">
+    <div>
+        <span>
+            <p class="normal-text">experiment credentials name: </p>
+        </span>
+        <span>
+            <input id="username-text-entry" type="text" name="experiment_grouping" required>
+        </span>
+    </div>
+    <div>
+        <span>
+            <p class="normal-text">password: </p>
+        </span>
+        <span>
+            <input id="password-text-entry" type="password" name="password" required>
+        </span>
+    </div>
+    <div>
+        <input id="login-submit-button" class="submit-button" type="submit" value="add credentials">
+    </div>
+</form>
+
+</body>
+</html>
+
+
