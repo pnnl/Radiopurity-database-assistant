@@ -15,7 +15,8 @@ This is the code for the SNOLAB Radiopurity instance, which is hosted at SNOLAB.
     * Within the database (specified in the config file), a collection named "assays" must have a text index on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" so that they can be properly searched. For help creating a text index, see the [setup docs](docs/source/setup.rst)
 
 ### Tests
-There are a set of pytests for the dunetoolkit package (in "tests") and a set for the user interface (in "user_interface/local_tests"). The user interface tests can only be run in a local environment, as the basic authentication is only set up in the SNOLAB environment (that is why they are called "local_tests"). In order to run the user interface tests, ensure that a test app config is created in the "local_tests" directory and that the DUNE_API_CONFIG_NAME environment variable is set. Then run the pytests from the user_interface directory (`pytest local_tests`). To run the dunetoolkit tests, simply run `pytest` from within the "tests" directory.
+There are a set of pytests for the dunetoolkit package (in "tests") and a set for the user interface (in "user_interface/local_tests"). The user interface tests can only be run in a local environment, as the basic authentication is only set up in the SNOLAB environment (that is why they are called "local_tests"). In order to run the user interface tests, ensure that a test app config is created in the "local_tests" directory and that the DUNE_API_CONFIG_NAME environment variable is set. Then run the pytests from the user_interface/local_tests directory. 
+To run the dunetoolkit tests, simply run `pytest` from within the "tests" directory.
 
 ### User Interface (UI)
 #### Running the UI (command line)
