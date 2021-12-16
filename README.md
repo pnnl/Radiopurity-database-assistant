@@ -14,26 +14,25 @@ This is the code for radiopurity.org 2.0, which is hosted at SNOLAB.
 * MongoDB installed and running on a machine (or in a Docker container) that you have access to via the values for “mongodb_host” and “mongodb_port” in the app config JSON file 
     * Within the database (specified in the config file), a collection named "assays" must have a text index on the fields "grouping," "sample.name," "sample.description," "sample.source," "sample.id," "measurement.technique," "measurement.description," "data_source.reference," and "data_source.input.notes" so that they can be properly searched. For help creating a text index, see the [setup docs](docs/source/setup.rst)
 
+### Tests
+There are a set of pytests for the dunetoolkit package (in "tests") and a set for the user interface (in "user_interface/local_tests"). The user interface tests can only be run in a local environment, as the basic authentication is only set up in the SNOLAB environment (that is why they are called "local_tests"). In order to run the user interface tests, ensure that a test app config is created in the "local_tests" directory and that the DUNE_API_CONFIG_NAME environment variable is set. Then run the pytests from the user_interface directory (`pytest local_tests`). To run the dunetoolkit tests, simply run `pytest` from within the "tests" directory.
 
 ### User Interface (UI)
-#### Requirements
-In addition to the general requirements above, in order to use the user interface, two users must be created in the "users" collection of the database with the usernames "DUNEreader" and "DUNEwriter." The user elements in the database should have the following format: `{"user_mode":"DUNEreader", "password_hashed":"abc123"}`. Before inserting, the password for each of the users must be hashed using the python [scrypt package](https://pypi.org/project/scrypt/) like so: `encrypted_pw = scrypt.hash(plaintext_password, salt, N=16)` where the salt is specified in the config file.
-
 #### Running the UI (command line)
 * clone the repository
 * activate the virtual environment
 * `cd` into the repository directory
 * make sure the `DUNE_APII_CONFiG_NAME` environment variable is set
-* run `python api.py`
+* execute the run script `./run.sh`
 * access the UI in your browser using the port number listed on the console.
 
-#### Running the UI and database (docker compose)
+#### Running the UI and database with Docker compose
 * Clone the repository and `cd` into it.
 * Build the cluster by running `docker-compose build`. This uses the `docker-compose.yml` file in the top level of the cloned repository.
 * Start the cluster by running `docker-compose up`.
 * Navigate the browser to localhost:5000/ and you should see the launch page.
 
-#### Running the UI (docker)
+#### Running the UI with Docker
 * Clone the repository and `cd` into it.
 * Create the docker image by running the bash script `create_image.sh` that is included in the repository. Alternatively, run the command `docker build --file ./Dockerfile -t dune_image .` from the top-level directory of the cloned repository. The `-t dune_image` flag names the image "dune_image" for ease of use.
 * Run the docker container by running the bash script `run_docker.sh` that is included in the repository. Alternatively, execute the following command: `docker run -d --expose 27017 -p 5000:5000 -p 27017:27017 dune_image`. The `-p` arguments connect ports 5000 (for the user interface) and 27017 (for MongoDB) on the docker container to ports 5000 and 27017 on the host, so that the host can access the processes running on those ports via HTTP.
@@ -42,7 +41,6 @@ In addition to the general requirements above, in order to use the user interfac
 #### Available Pages
 The user interface provides an easy way to interact with the database. The user can search, insert, and update assays as well as assay requests.
 * `/about` provides info about the Radiopurity database, data sources, and help with using the UI.
-* `/login` allows a user to log in with the general read-only credentials or the general read/edit credentials.
 * `/simple_search` is a simple search interface where the user enters a keyword (or keywords) to search for in any field of any assay in the database.
 Search results are displayed at the bottom of the page, along with a count of the number of records found that 
 match the query. A small summary of each record's information is provided in the list of search 
@@ -53,24 +51,22 @@ In contrast to the simple search page, which searches all fields for the keyword
 the user to define specific fields, comparisons, and values to search for. Using this page, the user 
 can also create multi-term queries, where they add as many field-comparison-value sets to the query 
 as desired.
-* `/insert` provides a form that the user can fill out in order to create a new assay record in the 
+* `/edit/insert` provides a form that the user can fill out in order to create a new assay record in the 
 database. This form enforces the required record schema upon the user in order to maintain data 
 quality in the database. Each field provides a 
 description for what type of value the user should enter. To insert a document once all desired 
 fields are filled, the user can press the "insert" button. The database ID of the newly-inserted 
 record is displayed on the resulting page if the insert was successful; otherwise, an error 
 message is displayed describing why the record could not be inserted successfully.
-* `/update` to update a record, the user must provide the record's database ID, which can be found 
+* `/edit/update` to update a record, the user must provide the record's database ID, which can be found 
 by using the search page. After entering a valid ID, the user is presented with a page similar to 
 the insert page, displaying all the possible fields along with the record's current values for 
-each field. The 
-user can remove a value altogether by checking 
-the "remove" box. Measurement result objects can be removed entirely by clicking the "remove" 
-button below a result object. New measurement result objects can be added by clicking the "add" button 
-below the measurement results section. To insert the updated document into the database, the user can click the "update" 
-button. If the update is successful, the resulting page displays the new updated record's database 
-ID. Otherwise, an error message is displayed describing why the record could not be updated 
-successfully.
+each field. The user can remove a value altogether by checking the "remove" box. Measurement result 
+objects can be removed entirely by clicking the "remove" button below a result object. New measurement 
+result objects can be added by clicking the "add" button below the measurement results section. To insert 
+the updated document into the database, the user can click the "update" button. If the update is 
+successful, the resulting page displays the new updated record's database ID. Otherwise, an error message 
+is displayed describing why the record could not be updated successfully.
 
 ### Python Toolkit
 The python toolkit was created to provide ease of database use. With the help of the 
