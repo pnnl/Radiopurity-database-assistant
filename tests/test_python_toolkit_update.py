@@ -183,7 +183,12 @@ def test_update_update_pairs_all():
             doc[key_parts[0]].pop(key_parts[1])
             assert currversion_doc[key_parts[0]].pop(key_parts[1]) == new_val
         elif len(key_parts) == 3:
-            doc[key_parts[0]][key_parts[1]].pop(key_parts[2])
+            if update_key == "data_source.input.name":
+                # data input gets appended to, not fully replaced
+                new_val = "{}, {}".format(oldversion_doc[key_parts[0]][key_parts[1]][key_parts[2]], new_val)
+            else:
+                doc[key_parts[0]][key_parts[1]].pop(key_parts[2])
+
             assert currversion_doc[key_parts[0]][key_parts[1]].pop(key_parts[2]) == new_val
         elif len(key_parts) == 4:
             try:

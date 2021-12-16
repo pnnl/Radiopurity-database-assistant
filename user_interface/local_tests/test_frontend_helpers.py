@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../')
 import json
 import pytest
 from frontend_helpers import do_q_append, parse_existing_q, perform_search, perform_insert, parse_update, perform_update

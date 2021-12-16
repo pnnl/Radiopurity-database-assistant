@@ -6,13 +6,13 @@ from pymongo import MongoClient
 import datetime
 from selenium import webdriver
 from bs4 import BeautifulSoup
-from test_auxiliary import base_url, login, logout, setup_browser, teardown_browser, set_up_db_for_test, teardown_db_for_test
+from test_auxiliary import base_url, setup_browser, teardown_browser, set_up_db_for_test, teardown_db_for_test
 from test_auxiliary import verify_original_doc_in_oldversions, find_doc_with_id, search_oldversions, get_curr_version
 
 
 def test_update_remove_doc():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     find_doc_with_id(browser, doc_id)
@@ -62,7 +62,7 @@ def test_update_remove_doc():
 
 def test_update_nochange():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # get original doc for future comparison
@@ -85,7 +85,7 @@ def test_update_nochange():
 
 def test_update_update_all():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # get original doc for future comparison
@@ -111,9 +111,7 @@ def test_update_update_all():
         'measurement.requestor.name':'test requestor',
         'measurement.requestor.contact':'requestor@test.gov',
         'data_source.reference':'testing',
-        'data_source.input.name':'testing',
         'data_source.input.contact':'testing@test.org', 
-        'data_source.input.date':'2010/18/02 2020-10-21',
         'data_source.input.notes':'test test test',
     }
     for key in update_pairs.keys():
@@ -127,7 +125,7 @@ def test_update_update_all():
     meas_type_select.select_by_value('range')
 
     meas_unit_select = webdriver.support.ui.Select(browser.find_element_by_name('measurement.results.unit1'))
-    meas_unit_select.select_by_value('g')
+    meas_unit_select.select_by_value('Bq/kg')
 
     browser.find_element_by_name('measurement.results.valueA1').send_keys('10.3')
     browser.find_element_by_name('measurement.results.valueB1').send_keys('12.9')
@@ -146,8 +144,14 @@ def test_update_update_all():
         if key == 'measurement.date':
             assert new_doc['measurement']['date'][0] == datetime.datetime(2020,10,21,0,0,0)
         elif key == 'data_source.input.date':
-            assert new_doc['data_source']['input']['date'][0] == datetime.datetime(2010,2,18,0,0,0)
-            assert new_doc['data_source']['input']['date'][1] == datetime.datetime(2020,10,21,0,0,0)
+            # this field auto-populates and is non-modifiable
+            assert new_doc['data_source']['input']['date'][0] == datetime.datetime.now()
+        elif key == "data_source.input.name":
+            # data input gets appended to, not fully replaced. 
+            # This field auto-populates with logged-in username and is non-modifiable.
+            # If you're not logged in (you can't be in these local tests), your username is None
+            expected_val = "{}, {}".format(orig_doc['data_source']['input']['name'], "None")
+            assert new_doc['data_source']['input']['name'] == expected_val
         else:
             expected_val = update_pairs[key]
             key_parts = key.split('.')
@@ -159,7 +163,7 @@ def test_update_update_all():
                 assert new_doc[key_parts[0]][key_parts[1]][key_parts[2]] == expected_val
     assert new_doc['measurement']['results'][0]['isotope'] == 'K-40'
     assert new_doc['measurement']['results'][0]['type'] == 'range'
-    assert new_doc['measurement']['results'][0]['unit'] == 'g'
+    assert new_doc['measurement']['results'][0]['unit'] == 'Bq/kg'
     assert new_doc['measurement']['results'][0]['value'][0] == 10.3
     assert new_doc['measurement']['results'][0]['value'][1] == 12.9
 
@@ -167,7 +171,7 @@ def test_update_update_all():
 
 def test_update_update_twice():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # PERFORM FIRST UPDATE AND TEST
@@ -186,7 +190,7 @@ def test_update_update_twice():
         input_obj.send_keys(update_pairs[key])
 
     meas_unit_select = webdriver.support.ui.Select(browser.find_element_by_name('measurement.results.unit1'))
-    meas_unit_select.select_by_value('g')
+    meas_unit_select.select_by_value('Bq/kg')
 
     # update doc
     update_button = browser.find_element_by_id('update-doc-button')
@@ -202,7 +206,7 @@ def test_update_update_twice():
     assert new_doc_v1['grouping'] == 'new test value'
     assert new_doc_v1['data_source']['input']['contact'] == 'testing@test.org'
     assert new_doc_v1['measurement']['date'][0] == datetime.datetime(2020,10,21,0,0,0)
-    assert new_doc_v1['measurement']['results'][0]['unit'] == 'g'
+    assert new_doc_v1['measurement']['results'][0]['unit'] == 'Bq/kg'
 
     # PERFORM SECOND UPDATE AND TEST
     orig_doc = new_doc_v1
@@ -234,7 +238,7 @@ def test_update_update_twice():
 
 def test_update_new_meas_obj():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # PERFORM FIRST UPDATE AND TEST
@@ -253,7 +257,7 @@ def test_update_new_meas_obj():
     meas_type_select.select_by_value('range')
 
     meas_type_select = webdriver.support.ui.Select(browser.find_element_by_name('measurement.results.unit2'))
-    meas_type_select.select_by_value('g')
+    meas_type_select.select_by_value('Bq/kg')
 
     browser.find_element_by_name('measurement.results.valueA2').send_keys('0.3')
     browser.find_element_by_name('measurement.results.valueB2').send_keys('2.1')
@@ -270,7 +274,7 @@ def test_update_new_meas_obj():
 
     # ensure updated values are updated
     assert new_doc['measurement']['results'][1]['isotope'] == 'U-235'
-    assert new_doc['measurement']['results'][1]['unit'] == 'g'
+    assert new_doc['measurement']['results'][1]['unit'] == 'Bq/kg'
     assert new_doc['measurement']['results'][1]['type'] == 'range'
     assert new_doc['measurement']['results'][1]['value'] == [0.3, 2.1]
 
@@ -278,7 +282,7 @@ def test_update_new_meas_obj():
 
 def test_update_remove_fields():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # PERFORM FIRST UPDATE AND TEST
@@ -324,8 +328,6 @@ def prep(username):
     set_up_db_for_test(docs)
     
     browser = setup_browser()
-    logout(browser)
-    login(username, browser)
 
     return browser
 

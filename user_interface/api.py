@@ -15,7 +15,7 @@ import datetime
 from pymongo import MongoClient
 from flask import Flask, request, session, url_for, redirect, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
-from frontend_helpers import do_q_append, parse_update, perform_search, perform_insert, perform_update, parse_groupings_from_q
+from frontend_helpers import do_q_append, parse_update, perform_search, perform_insert, perform_update
 from frontend_helpers import add_protected_groupings_term_to_query, make_experiment_public
 from frontend_helpers import _log_in_experiment, _get_httprequest_username, _get_date_now, _convert_logged_in_users_to_unique_experiment_names
 

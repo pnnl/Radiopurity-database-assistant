@@ -5,31 +5,18 @@ from bson.objectid import ObjectId
 import datetime
 from selenium import webdriver
 from bs4 import BeautifulSoup
-from test_auxiliary import base_url, set_up_db_for_test, teardown_db_for_test, teardown_browser, setup_browser, logout
+from test_auxiliary import base_url, set_up_db_for_test, teardown_db_for_test, teardown_browser, setup_browser
+from test_auxiliary import experiment_login, experiment_logout, release_experiment
 
+def test_getall():
+    query_elements = [{'field':'all', 'comparison':'contains', 'value':'', 'append':''}]
+    human_query_string = 'all contains '
+    num_expected_results = 40
 
-test_data = [
-    ([{'field':'all', 'comparison':'contains', 'value':'', 'append':''}], 'all contains ', 45),
-    ([{'field':'all', 'comparison':'contains', 'value':'testing', 'append':''}], 'all contains testing', 7),
-    ([{'field':'grouping', 'comparison':'contains', 'value':'one', 'append':'or'}, {'field':'sample.name', 'comparison':'notcontains', 'value':'two', 'append':'and'}, {'field':'sample.description', 'comparison':'eq', 'value':'three', 'append':''}], 'grouping contains one\nOR\nsample.name does not contain two\nAND\nsample.description equals three', 0),
-    ([{'field':'measurement.results.value', 'comparison':'lt', 'value':'10', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gte', 'value':'5', 'append':''}], "measurement.results.value is less than 10.0\nAND\nmeasurement.results.value is greater than or equal to 5.0", 5),
-    ([{'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'eq', 'value':'37.2', 'append':'or'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'20.4', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'40.6', 'append':'and'}, {'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'', "synonyms":False}], "measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", 0),
-    ([{'field':'sample.description', 'comparison':'contains', 'value':'copper', 'append':''}], 'sample.description contains ["Copper", "Cu"]', 24),
-    ([{'field':'measurement.results.isotope', 'comparison':'eq', 'value':'K-40', 'append':'and', "synonyms":False}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'0.1', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1', 'append':''}], 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1.0', 4),
-    ([{'field':'measurement.results.type', 'comparison':'eq', 'value':'range', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'200', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lt', 'value':'1', 'append':''}], 'measurement.results.type equals range\nAND\nmeasurement.results.value is greater than 200.0\nAND\nmeasurement.results.value is less than 1.0', 0),
-    ([{'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'and'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'U-238', 'append':'and', "synonyms":False}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1.0', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppt', 'append':''}], "grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt", 15),
-    ([{'field':'grouping', 'comparison':'contains', 'value':'testing', 'append':'or'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'actinium', 'append':''}], 'grouping contains testing\nOR\nmeasurement.results.isotope equals ["Actinium", "Ac"]', 1),
-    ([{'field':'grouping', 'comparison':'contains', 'value':'testing', 'append':'or'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'actinium', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'or'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppb', 'append':''}], 'grouping contains testing\nOR\nmeasurement.results.isotope equals ["Actinium", "Ac"]\nAND\nmeasurement.results.unit equals ppm\nOR\nmeasurement.results.unit equals ppb', 14),
-    #([{'field':'', 'comparison':'', 'value':'', 'append':''}], '', 0),
-]
-@pytest.mark.parametrize('query_elements,human_query_string,num_expected_results',test_data)
-def test_search(query_elements, human_query_string, num_expected_results):
     browser = prep()
-
     browser.get(base_url+'/search')
 
     browser = do_query(browser, query_elements)
-
     assert browser.current_url == base_url+'/search'
 
     results = browser.page_source
@@ -38,84 +25,229 @@ def test_search(query_elements, human_query_string, num_expected_results):
     result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
     num_docs = len(result_docs)
     query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
     assert query_text == human_query_string
+    assert num_docs==num_expected_results
 
-    #parse_html(result_docs)
+    docs = parse_html(result_docs)
+    for doc in docs:
+        assert doc["grouping"] not in ["TEST_EXPERIMENT_1", "TEST_EXPERIMENT_2"]
 
+    teardown_stuff(browser)
+
+def test_login_one():
+    browser = prep()
+    experiment_login("TEST_EXPERIMENT_1", "password1", browser)
+
+    query_elements = [{'field':'all', 'comparison':'contains', 'value':'', 'append':''}]
+    human_query_string = 'all contains '
+    num_expected_results = 42
+
+    browser.get(base_url+'/search')
+
+    browser = do_query(browser, query_elements)
+    assert browser.current_url == base_url+'/search'
+
+    results = browser.page_source
+
+    soup = BeautifulSoup(results, features="html.parser")
+    result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
+    num_docs = len(result_docs)
+    query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
+    assert query_text == human_query_string
+    assert num_docs==num_expected_results
+
+    docs = parse_html(result_docs)
+    for doc in docs:
+        assert doc["grouping"] != "TEST_EXPERIMENT_2"
+
+    teardown_stuff(browser)
+
+def test_bad_login():
+    browser = prep()
+    experiment_login("TEST_EXPERIMENT_1", "badpassword", browser)
+
+    query_elements = [{'field':'all', 'comparison':'contains', 'value':'', 'append':''}]
+    human_query_string = 'all contains '
+    num_expected_results = 40
+
+    browser.get(base_url+'/search')
+
+    browser = do_query(browser, query_elements)
+    assert browser.current_url == base_url+'/search'
+
+    results = browser.page_source
+
+    soup = BeautifulSoup(results, features="html.parser")
+    result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
+    num_docs = len(result_docs)
+    query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
+    assert query_text == human_query_string
+    assert num_docs==num_expected_results
+
+    docs = parse_html(result_docs)
+    for doc in docs:
+        assert doc["grouping"] not in ["TEST_EXPERIMENT_1", "TEST_EXPERIMENT_2"]
+
+    teardown_stuff(browser)
+
+def test_login_two():
+    browser = prep()
+    experiment_login("TEST_EXPERIMENT_1", "password1", browser)
+    experiment_login("TEST_EXPERIMENT_2", "password2", browser)
+
+    query_elements = [{'field':'all', 'comparison':'contains', 'value':'', 'append':''}]
+    human_query_string = 'all contains '
+    num_expected_results = 45
+
+    browser.get(base_url+'/search')
+
+    browser = do_query(browser, query_elements)
+    assert browser.current_url == base_url+'/search'
+
+    results = browser.page_source
+
+    soup = BeautifulSoup(results, features="html.parser")
+    result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
+    num_docs = len(result_docs)
+    query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
+    assert query_text == human_query_string
     assert num_docs==num_expected_results
 
     teardown_stuff(browser)
 
-
-
-def test_examine_results_1():
+def test_login_logout():
     browser = prep()
+
+    # test login and search
+    experiment_login("TEST_EXPERIMENT_1", "password1", browser)
+
+    query_elements = [{'field':'all', 'comparison':'contains', 'value':'', 'append':''}]
+    human_query_string = 'all contains '
+    num_expected_results = 42
 
     browser.get(base_url+'/search')
 
-    # "measurement.results.value is less than 10.0\nAND\nmeasurement.results.value is greater than or equal to 5.0"
-    q_elements = [{'field':'measurement.results.value', 'comparison':'lt', 'value':'10', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gte', 'value':'5', 'append':''}] 
-
-    browser = do_query(browser, q_elements)
+    browser = do_query(browser, query_elements)
+    assert browser.current_url == base_url+'/search'
 
     results = browser.page_source
+
     soup = BeautifulSoup(results, features="html.parser")
     result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
-    parsed_results = parse_html(result_docs)
-
-    for doc in parsed_results:
-        assert 'measurement' in list(doc.keys())
-        assert 'results' in list(doc['measurement'].keys())
-        found = False
-        for meas_ele in doc['measurement']['results']:
-            if meas_ele['type'] == 'measurement':
-                val = meas_ele['value'][0]
-                if val < 10.0 and val >= 5.0:
-                    found = True
-            elif meas_ele['type'] == 'range':
-                lower_limit = meas_ele['value'][0]
-                upper_limit = meas_ele['value'][1]
-                if lower_limit >= 5.0 and upper_limit < 10.0:
-                    found = True
-        assert found == True
-
-    teardown_stuff(browser)
-
-
-def test_examine_results_2():
-    browser = prep()
-
-    browser.get(base_url+'/search')
-
-    # 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1.0'
-    q_elements = [{'field':'measurement.results.isotope', 'comparison':'eq', 'value':'K-40', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'0.1', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1', 'append':''}]
-    browser = do_query(browser, q_elements)
-
-    results = browser.page_source
-    soup = BeautifulSoup(results, features="html.parser")
-    result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
-    parsed_results = parse_html(result_docs)
-
-    for doc in parsed_results:
-        assert 'measurement' in list(doc.keys())
-        assert 'results' in list(doc['measurement'].keys())
-        found = False
-        for meas_ele in doc['measurement']['results']:
-            if meas_ele['isotope'] == 'K-40' and meas_ele['unit'] == 'ppm':
-                if meas_ele['type'] == 'measurement':
-                    val = meas_ele['value'][0]
-                    if val > 0.1 and val <= 1.0:
-                        found = True
-                elif meas_ele['type'] == 'range':
-                    lower_limit = meas_ele['value'][0]
-                    upper_limit = meas_ele['value'][1]
-                    if lower_limit <= 1.0 and upper_limit > 0.1:
-                        found = True
-        assert found == True
-
-    teardown_stuff(browser)
-
+    num_docs = len(result_docs)
+    query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
     
+    assert query_text == human_query_string
+    assert num_docs==num_expected_results
+
+    docs = parse_html(result_docs)
+    for doc in docs:
+        assert doc["grouping"] != "TEST_EXPERIMENT_2"
+
+    # test logout and search
+    num_expected_results = 40
+    experiment_logout("TEST_EXPERIMENT_1", browser)
+
+    browser.get(base_url+'/search')
+
+    browser = do_query(browser, query_elements)
+    assert browser.current_url == base_url+'/search'
+
+    results = browser.page_source
+
+    soup = BeautifulSoup(results, features="html.parser")
+    result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
+    num_docs = len(result_docs)
+    query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
+    assert query_text == human_query_string
+    assert num_docs == num_expected_results
+
+    docs = parse_html(result_docs)
+    for doc in docs:
+        assert doc["grouping"] not in ["TEST_EXPERIMENT_1" "TEST_EXPERIMENT_2"]
+
+    teardown_stuff(browser)
+
+def test_login_two_logout():
+    browser = prep()
+
+    # test login and search
+    experiment_login("TEST_EXPERIMENT_1", "password1", browser)
+    experiment_login("TEST_EXPERIMENT_2", "password2", browser)
+
+    query_elements = [{'field':'all', 'comparison':'contains', 'value':'', 'append':''}]
+    human_query_string = 'all contains '
+    num_expected_results = 45
+
+    browser.get(base_url+'/search')
+
+    browser = do_query(browser, query_elements)
+    assert browser.current_url == base_url+'/search'
+
+    results = browser.page_source
+
+    soup = BeautifulSoup(results, features="html.parser")
+    result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
+    num_docs = len(result_docs)
+    query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
+    assert query_text == human_query_string
+    assert num_docs==num_expected_results
+
+    # test logout of one and search
+    num_expected_results = 43
+    experiment_logout("TEST_EXPERIMENT_1", browser)
+
+    browser.get(base_url+'/search')
+
+    browser = do_query(browser, query_elements)
+    assert browser.current_url == base_url+'/search'
+
+    results = browser.page_source
+
+    soup = BeautifulSoup(results, features="html.parser")
+    result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
+    num_docs = len(result_docs)
+    query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
+    assert query_text == human_query_string
+    assert num_docs == num_expected_results
+
+    docs = parse_html(result_docs)
+    for doc in docs:
+        assert doc["grouping"] != "TEST_EXPERIMENT_1"
+
+    # test logout of one and search
+    num_expected_results = 40
+    experiment_logout("TEST_EXPERIMENT_2", browser)
+
+    browser.get(base_url+'/search')
+
+    browser = do_query(browser, query_elements)
+    assert browser.current_url == base_url+'/search'
+
+    results = browser.page_source
+
+    soup = BeautifulSoup(results, features="html.parser")
+    result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
+    num_docs = len(result_docs)
+    query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
+    assert query_text == human_query_string
+    assert num_docs == num_expected_results
+
+    docs = parse_html(result_docs)
+    for doc in docs:
+        assert doc["grouping"] not in ["TEST_EXPERIMENT_1", "TEST_EXPERIMENT_2"]
+
+    teardown_stuff(browser)
+
+
 def do_query(browser, query_elements):
     for query_element_parts in query_elements:
         field = query_element_parts['field']
@@ -130,7 +262,6 @@ def do_query(browser, query_elements):
 
         comparison_select = webdriver.support.ui.Select(browser.find_element_by_id('comparison_operator'))
         comparison_options = comparison_select.options
-        #assert [ comparison_options[i].text for i in range(len(comparison_options)) ] == ['contains']
         comparison_select.select_by_value(comp)
 
         browser.find_element_by_id('query_value').clear()
@@ -155,85 +286,92 @@ def parse_html(soup_results):
     for doc in soup_results:
         doc_info = {}
         section_name = ''
-        for line_ele in doc.find_all('div', {'class':'collapsible-line'}):
-            keys = [ ele.get_text().replace(':', '').replace(' info', '') for ele in line_ele.find_all('p', {'class':'collapsible-field'}) ]
-            values = [ ele.get_text() for ele in line_ele.find_all('p', {'class':'collapsible-value'}) ]
-            #print(keys)
-            #print(values)
-            if (len(keys) > 0 and keys[0] == 'data input') or (len(values) == 0 and len(keys) == 1 and keys[0] in ['grouping', 'sample', 'measurement', 'measurement values']):
+        for line_ele in doc.find_all('tr'):
+            keys = [ ele.get_text().replace(':', '').replace(' info', '') for ele in line_ele.find_all('p', {'class':'collapsible-field'}) if ele.get_text().replace(':', '').replace(' info', '') != '']
+            values = [ ele.get_text() for ele in line_ele.find_all('p', {'class':'collapsible-value'}) if ele.get_text() != '']
+
+            if (len(values) == 0 and len(keys) == 1 and keys[0] in ["sample", "measurement", "measurement practitioner", "measurement requestor", "data input"]) or (len(keys) == 1 and keys[0] == "values"):
                 section_name = keys[0]
-            
+                continue
+            if len(values) > 0 and len(keys) == 1 and keys[0] in ["grouping", "data reference (publication)"]:
+                section_name = keys[0]
+
             if 'grouping' in keys:
-                #print('found grouping', keys)
                 doc_info['grouping'] = values[keys.index('grouping')]
-            elif 'sample' in keys:
-                #print('found sample',keys)
-                doc_info['sample'] = {}
-            elif section_name == 'sample' and 'sample' in list(doc_info.keys()):
-                #print('found sample subsec',keys)
+            elif "data reference (publication)" in keys:
+                if 'data_source' not in list(doc_info.keys()):
+                    doc_info['data_source'] = {}
+                doc_info["data_source"]["reference"] = values[keys.index('data reference (publication)')]
+            elif section_name == 'sample':
+                if "sample" not in list(doc_info.keys()):
+                    doc_info['sample'] = {}
                 if 'name' in keys:
                     doc_info['sample']['name'] = values[keys.index('name')]
-                elif 'description' in keys:
+                if 'description' in keys:
                     doc_info['sample']['description'] = values[keys.index('description')]
-                elif 'source' in keys:
+                if 'id' in keys:
+                    doc_info['sample']['id'] = values[keys.index('id')]
+                if 'source' in keys:
                     doc_info['sample']['source'] = values[keys.index('source')]
-            elif 'measurement' in keys:
-                #print('found meas',keys)
-                doc_info['measurement'] = {}
-            elif section_name == 'measurement' and 'measurement' in list(doc_info.keys()):
-                #print('found meas subsec',keys)
+            elif 'measurement' in section_name:
+                if 'measurement' not in list(doc_info.keys()):
+                    doc_info['measurement'] = {}
                 if 'technique' in keys:
                     doc_info['measurement']['technique'] = values[keys.index('technique')]
-                elif 'institution' in keys:
+                if 'institution' in keys:
                     doc_info['measurement']['institution'] = values[keys.index('institution')]
-                elif 'description' in keys:
+                if 'description' in keys:
                     doc_info['measurement']['description'] = values[keys.index('description')]
-            elif 'measurement values' in keys:
-                #print('found meas values',keys)
-                doc_info['measurement']['results'] = []
-            elif section_name == 'measurement values' and 'measurement' in list(doc_info.keys()) and 'results' in list(doc_info['measurement'].keys()) and ('value' in keys or 'less than' in keys or 
-'greater than' in keys):
-                #print('found meas values subsec',keys)
-                meas_results_ele = {'isotope':values[0]}
-                if keys[0] == 'value':
-                    meas_results_ele['type'] = 'measurement'
-                    val_eles = values[keys.index('value')+1].split()
-                    meas_results_ele['value'] = [float(val_eles[0])]
-                    meas_results_ele['unit'] = val_eles[-1]
-                elif keys[0] == 'less than':
-                    meas_results_ele['type'] = 'limit'
-                    val_eles = values[keys.index('less than')+1].split()
-                    meas_results_ele['value'] = [float(val_eles[0])]
-                    meas_results_ele['unit'] = val_eles[-1]
-                elif keys[0] == 'greater than':
-                    meas_results_ele['type'] = 'range'
-                    gt_eles = values[keys.index('greater than')+1].split()
-                    lt_eles = values[keys.index('less than')+1].split()
-                    meas_results_ele['value'] = [float(gt_eles[0]), int(lt_eles[0])]
-                    meas_results_ele['unit'] = gt_eles[-1]
-
+                if section_name == "measurement requestor":
+                    if "requestor" not in list(doc_info["measurement"].keys()):
+                        doc_info["measurement"]["requestor"] = {}
+                    doc_info["measurement"]["requestor"][keys[0]] = values[0]
+                if section_name == "measurement practitioner":
+                    if "practitioner" not in list(doc_info["measurement"].keys()):
+                        doc_info["measurement"]["practitioner"] = {}
+                    doc_info["measurement"]["practitioner"][keys[0]] = values[0]
+            elif section_name == 'values':
+                if 'measurement' not in list(doc_info.keys()):
+                    doc_info['measurement'] = {}
+                if "results" not in list(doc_info["measurement"].keys()):
+                    doc_info['measurement']['results'] = []
+                meas_results_ele = {}
+                if values[1] == '=':
+                    meas_results_ele["type"] = "measurement"
+                    meas_results_ele['isotope'] = values[0]
+                    meas_results_ele["value"] = [float(values[2])]
+                    meas_results_ele["unit"] = values[3]
+                    if len(values) > 4:
+                        meas_results_ele["value"].append(float(values[5])) # asymmetric error
+                    if len(values) > 7:
+                        meas_results_ele["value"].append(float(values[8])) # symmetric error
+                elif values[1] == "<":
+                    meas_results_ele["type"] = "limit"
+                    meas_results_ele['isotope'] = values[0]
+                    meas_results_ele["value"] = [float(values[2])]
+                    meas_results_ele["unit"] = values[3]
+                    if len(values) > 4:
+                        meas_results_ele["value"].append(float(values[5].replace("%",""))) # confidence level
+                elif values[0].replace(".","").replace(",","").isnumeric():
+                    meas_results_ele["type"] = "range"
+                    meas_results_ele["isotope"] = values[2]
+                    meas_results_ele["value"] = [float(values[0])]
+                    if len(values) == 4:
+                        meas_results_ele["unit"] = values[3]
+                    if len(values) > 3: 
+                        meas_results_ele["unit"] = values[5]
+                        meas_results_ele["value"].append(float(values[4]))
+                    if len(values) > 6:
+                        meas_results_ele["value"].append(float(values[7]))
                 doc_info['measurement']['results'].append(meas_results_ele)
-            #elif 'data input' in keys:
-            #    doc_info['data_input'] = {'name':values[keys.index('data input')]}
-            #elif 'data_input' in list(doc_info).keys()):
+            elif 'data input' in keys:
+                if 'data_source' not in list(doc_info.keys()):
+                    doc_info['data_source'] = {}
+                doc_info["data_source"][keys[0]] = values[0]
             else:
                 #print('OTHER',keys)
                 pass
-            #print(doc_info)
-            #print()
-        #print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-
-        '''
-        print(doc_info)
-        print(query_elements)
-
-        for query_element in query_elements:
-            field = query_element['field']
-            comparison = query_element['comparison']
-            value = 
-        '''
         all_doc_info.append(doc_info)
-
     return all_doc_info
 
 
@@ -248,17 +386,17 @@ def prep():
     set_up_db_for_test(docs)
     
     browser = setup_browser()
-    logout(browser)
+    #logout(browser)
     
     return browser
  
 def _get_docs():
     docs = [
-        { "_id" : ObjectId("000000000000000000000002"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA", "results" : [ { "unit" : "ppb", "value" : [ 0.18, 2 ], "isotope" : "U-238", "type" : "measurement" }, { "unit" : "ppb", "value" : [ 59, 2 ], "isotope" : "Th-232", "type" : "measurement" }, { "unit" : "ppm", "value" : [ 0.78, 0.02 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "Majorana (2016)", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "we are performing a test right now" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Resin, Magnex, 2:1 Thiokol 308, RAL", "id" : "ILIAS UKDM #249", "owner" : { "name" : "", "contact" : "" }, "name" : "Resin, Magnex, 2:1 Thiokol 308", "source" : "" }, "type" : "measurement", "_version" : 1 },
-        { "_id" : ObjectId("000000000000000000000003"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA testing", "results" : [ { "unit" : "ppb", "value" : [ 3 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.89, 0.2 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Rexalite, copper removed", "id" : "ILIAS UKDM #266", "owner" : { "name" : "", "contact" : "" }, "name" : "Rexalite, copper removed", "source" : "" }, "type" : "measurement", "_version" : 1 },
-        { "_id" : ObjectId("000000000000000000000004"), "measurement" : { "description" : "", "practitioner" : { "name" : "RAL", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "AA", "results" : [ { "unit" : "ppb", "value" : [ 150 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Salt, ICI, pure dried vacuum TESTING", "id" : "ILIAS UKDM #273", "owner" : { "name" : "", "contact" : "" }, "name" : "Salt, ICI, pure dried vacuum", "source" : "" }, "type" : "measurement", "_version" : 1 },
-        { "_id" : ObjectId("000000000000000000000005"), "measurement" : { "description" : "Lu < 1ppb, Rb < 10ppb", "practitioner" : { "name" : "Charles Evans/Cascade Scientific", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "GD-MS", "results" : [ { "unit" : "ppb", "value" : [ 1 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.22 ], "isotope" : "K-40", "type" : "limit" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "copper COPPER" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Si", "id" : "ILIAS UKDM #279", "owner" : { "name" : "", "contact" : "" }, "name" : "Si", "source" : "" }, "type" : "measurement", "_version" : 1 },
-        { "_id" : ObjectId("000000000000000000000006"), "measurement" : { "description" : "", "practitioner" : { "name" : "Supplier's data", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "?", "results" : [ { "unit" : "ppm", "value" : [ 0.03 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "ILIAS UKDM", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 1, 30, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "this has a COPPER test phrase" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Silica fibre, TSL, 'Spectrosil'", "id" : "ILIAS UKDM #289", "owner" : { "name" : "", "contact" : "" }, "name" : "Silica fibre, TSL, 'Spectrosil'", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000002"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA", "results" : [ { "unit" : "ppb", "value" : [ 0.18, 2 ], "isotope" : "U-238", "type" : "measurement" }, { "unit" : "ppb", "value" : [ 59, 2 ], "isotope" : "Th-232", "type" : "measurement" }, { "unit" : "ppm", "value" : [ 0.78, 0.02 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "TEST_EXPERIMENT_1", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "we are performing a test right now" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Resin, Magnex, 2:1 Thiokol 308, RAL", "id" : "ILIAS UKDM #249", "owner" : { "name" : "", "contact" : "" }, "name" : "Resin, Magnex, 2:1 Thiokol 308", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000003"), "measurement" : { "description" : "", "practitioner" : { "name" : "ICI Tracerco", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "NAA testing", "results" : [ { "unit" : "ppb", "value" : [ 3 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.89, 0.2 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "TEST_EXPERIMENT_1", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Rexalite, copper removed", "id" : "ILIAS UKDM #266", "owner" : { "name" : "", "contact" : "" }, "name" : "Rexalite, copper removed", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000004"), "measurement" : { "description" : "", "practitioner" : { "name" : "RAL", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "AA", "results" : [ { "unit" : "ppb", "value" : [ 150 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "TEST_EXPERIMENT_2", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2016, 7, 14, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Salt, ICI, pure dried vacuum TESTING", "id" : "ILIAS UKDM #273", "owner" : { "name" : "", "contact" : "" }, "name" : "Salt, ICI, pure dried vacuum", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000005"), "measurement" : { "description" : "Lu < 1ppb, Rb < 10ppb", "practitioner" : { "name" : "Charles Evans/Cascade Scientific", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "GD-MS", "results" : [ { "unit" : "ppb", "value" : [ 1 ], "isotope" : "U-238", "type" : "limit" }, { "unit" : "ppb", "value" : [ 1 ], "isotope" : "Th-232", "type" : "limit" }, { "unit" : "ppm", "value" : [ 0.22 ], "isotope" : "K-40", "type" : "limit" } ] }, "grouping" : "TEST_EXPERIMENT_2", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 7, 22, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "copper COPPER" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Si", "id" : "ILIAS UKDM #279", "owner" : { "name" : "", "contact" : "" }, "name" : "Si", "source" : "" }, "type" : "measurement", "_version" : 1 },
+        { "_id" : ObjectId("000000000000000000000006"), "measurement" : { "description" : "", "practitioner" : { "name" : "Supplier's data", "contact" : "" }, "requestor" : { "name" : "", "contact" : "" }, "date" : [ ], "institution" : "", "technique" : "?", "results" : [ { "unit" : "ppm", "value" : [ 0.03 ], "isotope" : "K-40", "type" : "measurement" } ] }, "grouping" : "TEST_EXPERIMENT_2", "specification" : "3.00", "data_source" : { "input" : { "date" : [ datetime.datetime(2013, 1, 30, 0, 0) ], "name" : "Ben Wise / James Loach", "contact" : "bwise@smu.edu / james.loach@gmail.com", "notes" : "this has a COPPER test phrase" }, "reference" : "ILIAS Database http://radiopurity.in2p3.fr/" }, "sample" : { "description" : "Silica fibre, TSL, 'Spectrosil'", "id" : "ILIAS UKDM #289", "owner" : { "name" : "", "contact" : "" }, "name" : "Silica fibre, TSL, 'Spectrosil'", "source" : "" }, "type" : "measurement", "_version" : 1 },
         {'_id': ObjectId('5f18a7020a51fbd22bb85ee8'), 'measurement': {'description': '', 'practitioner': {'name': 'ICI Tracerco', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'NAA', 'results': [{'unit': 'ppb', 'value': [18, 2], 'isotope': 'U-238', 'type': 'measurement'}, {'unit': 'ppb', 'value': [59, 2], 'isotope': 'Th-232', 'type': 'measurement'}, {'unit': 'ppm', 'value': [0.78, 0.02], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'ILIAS UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Resin, Magnex, 2:1 Thiokol 308, RAL', 'id': 'ILIAS UKDM #249', 'owner': {'name': '', 'contact': ''}, 'name': 'Resin, Magnex, 2:1 Thiokol 308', 'source': ''}, 'type': 'measurement', '_version': 1},
         {'_id': ObjectId('5f18a7020a51fbd22bb85ee9'), 'measurement': {'description': '', 'practitioner': {'name': 'ICI Tracerco', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'NAA', 'results': [{'unit': 'ppb', 'value': [3], 'isotope': 'U-238', 'type': 'limit'}, {'unit': 'ppb', 'value': [1], 'isotope': 'Th-232', 'type': 'limit'}, {'unit': 'ppb', 'value': [890, 0.2], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'ILIAS UKDM', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Rexalite, copper removed', 'id': 'ILIAS UKDM #266', 'owner': {'name': '', 'contact': ''}, 'name': 'Rexalite, copper removed', 'source': ''}, 'type': 'measurement', '_version': 1},
         {'_id': ObjectId('5f18a7020a51fbd22bb85eea'), 'measurement': {'description': '', 'practitioner': {'name': 'RAL', 'contact': ''}, 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'technique': 'AA', 'results': [{'unit': 'ppm', 'value': [0.15], 'isotope': 'K-40', 'type': 'measurement'}]}, 'grouping': 'Majorana(2016)', 'specification': '3.00', 'data_source': {'input': {'date': [datetime.datetime(2013, 7, 22, 0, 0)], 'name': 'Ben Wise / James Loach', 'contact': 'bwise@smu.edu / james.loach@gmail.com', 'notes': ''}, 'reference': 'ILIAS Database http://radiopurity.in2p3.fr/'}, 'sample': {'description': 'Salt, ICI, pure dried vacuum', 'id': 'ILIAS UKDM #273', 'owner': {'name': '', 'contact': ''}, 'name': 'Salt, ICI, pure dried vacuum', 'source': ''}, 'type': 'measurement', '_version': 1},
