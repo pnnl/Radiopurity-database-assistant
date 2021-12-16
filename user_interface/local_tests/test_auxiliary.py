@@ -6,6 +6,7 @@ from pymongo import MongoClient
 
 base_url = "http://localhost:5000"
 
+'''
 def login(username, browser):
     login_url = base_url+'/login'
     browser.get(login_url)
@@ -21,8 +22,19 @@ def login(username, browser):
 def logout(browser):
     logout_url = base_url+'/logout'
     browser.get(logout_url)
+'''
 
+from webdriver_manager.chrome import ChromeDriverManager
 def setup_browser():
+    options = webdriver.ChromeOptions()
+    options.add_argument('--no-sandbox')
+    options.add_argument('headless')
+    options.add_argument('window-size=1200x600')
+    options.add_argument('--disable-dev-shm-usage')
+    browser = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+    return browser
+
+def setup_browser_old():
     options = webdriver.ChromeOptions()
     options.add_argument('--no-sandbox')
     options.add_argument('headless')

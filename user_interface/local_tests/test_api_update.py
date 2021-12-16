@@ -6,13 +6,12 @@ from pymongo import MongoClient
 import datetime
 from selenium import webdriver
 from bs4 import BeautifulSoup
-from test_auxiliary import base_url, login, logout, setup_browser, teardown_browser, set_up_db_for_test, teardown_db_for_test
+from test_auxiliary import base_url, setup_browser, teardown_browser, set_up_db_for_test, teardown_db_for_test
 from test_auxiliary import verify_original_doc_in_oldversions, find_doc_with_id, search_oldversions, get_curr_version
-
 
 def test_update_remove_doc():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     find_doc_with_id(browser, doc_id)
@@ -59,10 +58,9 @@ def test_update_remove_doc():
 
     teardown_stuff(browser)
 
-
 def test_update_nochange():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # get original doc for future comparison
@@ -82,10 +80,9 @@ def test_update_nochange():
 
     teardown_stuff(browser)
 
-
 def test_update_update_all():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # get original doc for future comparison
@@ -111,9 +108,7 @@ def test_update_update_all():
         'measurement.requestor.name':'test requestor',
         'measurement.requestor.contact':'requestor@test.gov',
         'data_source.reference':'testing',
-        'data_source.input.name':'testing',
         'data_source.input.contact':'testing@test.org', 
-        'data_source.input.date':'2010/18/02 2020-10-21',
         'data_source.input.notes':'test test test',
     }
     for key in update_pairs.keys():
@@ -146,8 +141,14 @@ def test_update_update_all():
         if key == 'measurement.date':
             assert new_doc['measurement']['date'][0] == datetime.datetime(2020,10,21,0,0,0)
         elif key == 'data_source.input.date':
-            assert new_doc['data_source']['input']['date'][0] == datetime.datetime(2010,2,18,0,0,0)
-            assert new_doc['data_source']['input']['date'][1] == datetime.datetime(2020,10,21,0,0,0)
+            # this field auto-populates and is non-modifiable
+            assert new_doc['data_source']['input']['date'][0] == datetime.datetime.now()
+        elif key == "data_source.input.name":
+            # data input gets appended to, not fully replaced. 
+            # This field auto-populates with logged-in username and is non-modifiable.
+            # If you're not logged in (you can't be in these local tests), your username is None
+            expected_val = "{}, {}".format(orig_doc['data_source']['input']['name'], "None")
+            assert new_doc['data_source']['input']['name'] == expected_val
         else:
             expected_val = update_pairs[key]
             key_parts = key.split('.')
@@ -167,7 +168,7 @@ def test_update_update_all():
 
 def test_update_update_twice():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # PERFORM FIRST UPDATE AND TEST
@@ -234,7 +235,7 @@ def test_update_update_twice():
 
 def test_update_new_meas_obj():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # PERFORM FIRST UPDATE AND TEST
@@ -278,7 +279,7 @@ def test_update_new_meas_obj():
 
 def test_update_remove_fields():
     browser = prep('DUNEwriter')
-    browser.get(base_url+'/update')
+    browser.get(base_url+'/edit/update')
     doc_id = '000000000000000000000002'
 
     # PERFORM FIRST UPDATE AND TEST
@@ -324,8 +325,8 @@ def prep(username):
     set_up_db_for_test(docs)
     
     browser = setup_browser()
-    logout(browser)
-    login(username, browser)
+    #logout(browser)
+    #login(username, browser)
 
     return browser
 

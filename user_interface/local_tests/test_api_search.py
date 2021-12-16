@@ -5,21 +5,19 @@ from bson.objectid import ObjectId
 import datetime
 from selenium import webdriver
 from bs4 import BeautifulSoup
-from test_auxiliary import base_url, set_up_db_for_test, teardown_db_for_test, teardown_browser, setup_browser, logout
-
+from test_auxiliary import base_url, set_up_db_for_test, teardown_db_for_test, teardown_browser, setup_browser
 
 test_data = [
     ([{'field':'all', 'comparison':'contains', 'value':'', 'append':''}], 'all contains ', 45),
     ([{'field':'all', 'comparison':'contains', 'value':'testing', 'append':''}], 'all contains testing', 7),
     ([{'field':'grouping', 'comparison':'contains', 'value':'one', 'append':'or'}, {'field':'sample.name', 'comparison':'notcontains', 'value':'two', 'append':'and'}, {'field':'sample.description', 'comparison':'eq', 'value':'three', 'append':''}], 'grouping contains one\nOR\nsample.name does not contain two\nAND\nsample.description equals three', 0),
     ([{'field':'measurement.results.value', 'comparison':'lt', 'value':'10', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gte', 'value':'5', 'append':''}], "measurement.results.value is less than 10.0\nAND\nmeasurement.results.value is greater than or equal to 5.0", 5),
-    ([{'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'eq', 'value':'37.2', 'append':'or'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'20.4', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'40.6', 'append':'and'}, {'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'', "synonyms":False}], "measurement.results.unit equals ppm\nAND\nmeasurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", 0),
+    ([{'field':'measurement.results.value', 'comparison':'eq', 'value':'37.2', 'append':'or'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'20.4', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'40.6', 'append':'and'}, {'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'', "synonyms":False}], "measurement.results.value equals 37.2\nOR\nmeasurement.results.value is greater than 20.4\nAND\nmeasurement.results.value is less than or equal to 40.6\nAND\ngrouping contains majorana", 0),
     ([{'field':'sample.description', 'comparison':'contains', 'value':'copper', 'append':''}], 'sample.description contains ["Copper", "Cu"]', 24),
-    ([{'field':'measurement.results.isotope', 'comparison':'eq', 'value':'K-40', 'append':'and', "synonyms":False}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'0.1', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1', 'append':''}], 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1.0', 4),
+    ([{'field':'measurement.results.isotope', 'comparison':'eq', 'value':'K-40', 'append':'and', "synonyms":False}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'0.1', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1', 'append':''}], 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1.0', 4),
     ([{'field':'measurement.results.type', 'comparison':'eq', 'value':'range', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'200', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lt', 'value':'1', 'append':''}], 'measurement.results.type equals range\nAND\nmeasurement.results.value is greater than 200.0\nAND\nmeasurement.results.value is less than 1.0', 0),
-    ([{'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'and'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'U-238', 'append':'and', "synonyms":False}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1.0', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppt', 'append':''}], "grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0\nAND\nmeasurement.results.unit equals ppt", 15),
+    ([{'field':'grouping', 'comparison':'contains', 'value':'majorana', 'append':'and'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'U-238', 'append':'and', "synonyms":False}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1.0', 'append':''}], "grouping contains majorana\nAND\nmeasurement.results.isotope equals U-238\nAND\nmeasurement.results.value is less than or equal to 1.0", 18),
     ([{'field':'grouping', 'comparison':'contains', 'value':'testing', 'append':'or'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'actinium', 'append':''}], 'grouping contains testing\nOR\nmeasurement.results.isotope equals ["Actinium", "Ac"]', 1),
-    ([{'field':'grouping', 'comparison':'contains', 'value':'testing', 'append':'or'}, {'field':'measurement.results.isotope', 'comparison':'eq', 'value':'actinium', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'or'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppb', 'append':''}], 'grouping contains testing\nOR\nmeasurement.results.isotope equals ["Actinium", "Ac"]\nAND\nmeasurement.results.unit equals ppm\nOR\nmeasurement.results.unit equals ppb', 14),
     #([{'field':'', 'comparison':'', 'value':'', 'append':''}], '', 0),
 ]
 @pytest.mark.parametrize('query_elements,human_query_string,num_expected_results',test_data)
@@ -38,15 +36,11 @@ def test_search(query_elements, human_query_string, num_expected_results):
     result_docs = soup.find('div', {'id':'query-results-container'}).find_all('div', {'class':'collapsible-content'})
     num_docs = len(result_docs)
     query_text = '\n'.join([ p_ele.get_text() for p_ele in soup.find('div', {'id':'final-query-text-container'}).find_all('p') ])
+    
     assert query_text == human_query_string
-
-    #parse_html(result_docs)
-
     assert num_docs==num_expected_results
 
     teardown_stuff(browser)
-
-
 
 def test_examine_results_1():
     browser = prep()
@@ -81,14 +75,13 @@ def test_examine_results_1():
 
     teardown_stuff(browser)
 
-
 def test_examine_results_2():
     browser = prep()
 
     browser.get(base_url+'/search')
 
     # 'measurement.results.isotope equals K-40\nAND\nmeasurement.results.unit equals ppm\nAND\nmeasurement.results.value is greater than 0.1\nAND\nmeasurement.results.value is less than or equal to 1.0'
-    q_elements = [{'field':'measurement.results.isotope', 'comparison':'eq', 'value':'K-40', 'append':'and'}, {'field':'measurement.results.unit', 'comparison':'eq', 'value':'ppm', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'0.1', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1', 'append':''}]
+    q_elements = [{'field':'measurement.results.isotope', 'comparison':'eq', 'value':'K-40', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'gt', 'value':'0.1', 'append':'and'}, {'field':'measurement.results.value', 'comparison':'lte', 'value':'1', 'append':''}]
     browser = do_query(browser, q_elements)
 
     results = browser.page_source
@@ -101,7 +94,7 @@ def test_examine_results_2():
         assert 'results' in list(doc['measurement'].keys())
         found = False
         for meas_ele in doc['measurement']['results']:
-            if meas_ele['isotope'] == 'K-40' and meas_ele['unit'] == 'ppm':
+            if meas_ele['isotope'] == 'K-40': # and meas_ele['unit'] == 'ppm':
                 if meas_ele['type'] == 'measurement':
                     val = meas_ele['value'][0]
                     if val > 0.1 and val <= 1.0:
@@ -115,7 +108,6 @@ def test_examine_results_2():
 
     teardown_stuff(browser)
 
-    
 def do_query(browser, query_elements):
     for query_element_parts in query_elements:
         field = query_element_parts['field']
@@ -155,87 +147,93 @@ def parse_html(soup_results):
     for doc in soup_results:
         doc_info = {}
         section_name = ''
-        for line_ele in doc.find_all('div', {'class':'collapsible-line'}):
-            keys = [ ele.get_text().replace(':', '').replace(' info', '') for ele in line_ele.find_all('p', {'class':'collapsible-field'}) ]
-            values = [ ele.get_text() for ele in line_ele.find_all('p', {'class':'collapsible-value'}) ]
-            #print(keys)
-            #print(values)
-            if (len(keys) > 0 and keys[0] == 'data input') or (len(values) == 0 and len(keys) == 1 and keys[0] in ['grouping', 'sample', 'measurement', 'measurement values']):
+        for line_ele in doc.find_all('tr'):
+            keys = [ ele.get_text().replace(':', '').replace(' info', '') for ele in line_ele.find_all('p', {'class':'collapsible-field'}) if ele.get_text().replace(':', '').replace(' info', '') != '']
+            values = [ ele.get_text() for ele in line_ele.find_all('p', {'class':'collapsible-value'}) if ele.get_text() != '']
+
+            if (len(values) == 0 and len(keys) == 1 and keys[0] in ["sample", "measurement", "measurement practitioner", "measurement requestor", "data input"]) or (len(keys) == 1 and keys[0] == "values"):
                 section_name = keys[0]
-            
+                continue
+            if len(values) > 0 and len(keys) == 1 and keys[0] in ["grouping", "data reference (publication)"]:
+                section_name = keys[0]
+
             if 'grouping' in keys:
-                #print('found grouping', keys)
                 doc_info['grouping'] = values[keys.index('grouping')]
-            elif 'sample' in keys:
-                #print('found sample',keys)
-                doc_info['sample'] = {}
-            elif section_name == 'sample' and 'sample' in list(doc_info.keys()):
-                #print('found sample subsec',keys)
+            elif "data reference (publication)" in keys:
+                if 'data_source' not in list(doc_info.keys()):
+                    doc_info['data_source'] = {}
+                doc_info["data_source"]["reference"] = values[keys.index('data reference (publication)')]
+            elif section_name == 'sample':
+                if "sample" not in list(doc_info.keys()):
+                    doc_info['sample'] = {}
                 if 'name' in keys:
                     doc_info['sample']['name'] = values[keys.index('name')]
-                elif 'description' in keys:
+                if 'description' in keys:
                     doc_info['sample']['description'] = values[keys.index('description')]
-                elif 'source' in keys:
+                if 'id' in keys:
+                    doc_info['sample']['id'] = values[keys.index('id')]
+                if 'source' in keys:
                     doc_info['sample']['source'] = values[keys.index('source')]
-            elif 'measurement' in keys:
-                #print('found meas',keys)
-                doc_info['measurement'] = {}
-            elif section_name == 'measurement' and 'measurement' in list(doc_info.keys()):
-                #print('found meas subsec',keys)
+            elif 'measurement' in section_name:
+                if 'measurement' not in list(doc_info.keys()):
+                    doc_info['measurement'] = {}
                 if 'technique' in keys:
                     doc_info['measurement']['technique'] = values[keys.index('technique')]
-                elif 'institution' in keys:
+                if 'institution' in keys:
                     doc_info['measurement']['institution'] = values[keys.index('institution')]
-                elif 'description' in keys:
+                if 'description' in keys:
                     doc_info['measurement']['description'] = values[keys.index('description')]
-            elif 'measurement values' in keys:
-                #print('found meas values',keys)
-                doc_info['measurement']['results'] = []
-            elif section_name == 'measurement values' and 'measurement' in list(doc_info.keys()) and 'results' in list(doc_info['measurement'].keys()) and ('value' in keys or 'less than' in keys or 
-'greater than' in keys):
-                #print('found meas values subsec',keys)
-                meas_results_ele = {'isotope':values[0]}
-                if keys[0] == 'value':
-                    meas_results_ele['type'] = 'measurement'
-                    val_eles = values[keys.index('value')+1].split()
-                    meas_results_ele['value'] = [float(val_eles[0])]
-                    meas_results_ele['unit'] = val_eles[-1]
-                elif keys[0] == 'less than':
-                    meas_results_ele['type'] = 'limit'
-                    val_eles = values[keys.index('less than')+1].split()
-                    meas_results_ele['value'] = [float(val_eles[0])]
-                    meas_results_ele['unit'] = val_eles[-1]
-                elif keys[0] == 'greater than':
-                    meas_results_ele['type'] = 'range'
-                    gt_eles = values[keys.index('greater than')+1].split()
-                    lt_eles = values[keys.index('less than')+1].split()
-                    meas_results_ele['value'] = [float(gt_eles[0]), int(lt_eles[0])]
-                    meas_results_ele['unit'] = gt_eles[-1]
-
+                if section_name == "measurement requestor":
+                    if "requestor" not in list(doc_info["measurement"].keys()):
+                        doc_info["measurement"]["requestor"] = {}
+                    doc_info["measurement"]["requestor"][keys[0]] = values[0]
+                if section_name == "measurement practitioner":
+                    if "practitioner" not in list(doc_info["measurement"].keys()):
+                        doc_info["measurement"]["practitioner"] = {}
+                    doc_info["measurement"]["practitioner"][keys[0]] = values[0]
+            elif section_name == 'values':
+                if 'measurement' not in list(doc_info.keys()):
+                    doc_info['measurement'] = {}
+                if "results" not in list(doc_info["measurement"].keys()):
+                    doc_info['measurement']['results'] = []
+                meas_results_ele = {}
+                if values[1] == '=':
+                    meas_results_ele["type"] = "measurement"
+                    meas_results_ele['isotope'] = values[0]
+                    meas_results_ele["value"] = [float(values[2])]
+                    meas_results_ele["unit"] = values[3]
+                    if len(values) > 4:
+                        meas_results_ele["value"].append(float(values[5])) # asymmetric error
+                    if len(values) > 7:
+                        meas_results_ele["value"].append(float(values[8])) # symmetric error
+                elif values[1] == "<":
+                    meas_results_ele["type"] = "limit"
+                    meas_results_ele['isotope'] = values[0]
+                    meas_results_ele["value"] = [float(values[2])]
+                    meas_results_ele["unit"] = values[3]
+                    if len(values) > 4:
+                        meas_results_ele["value"].append(float(values[5].replace("%",""))) # confidence level
+                elif values[0].replace(".","").replace(",","").isnumeric():
+                    meas_results_ele["type"] = "range"
+                    meas_results_ele["isotope"] = values[2]
+                    meas_results_ele["value"] = [float(values[0])]
+                    if len(values) == 4:
+                        meas_results_ele["unit"] = values[3]
+                    if len(values) > 3: 
+                        meas_results_ele["unit"] = values[5]
+                        meas_results_ele["value"].append(float(values[4]))
+                    if len(values) > 6:
+                        meas_results_ele["value"].append(float(values[7]))
                 doc_info['measurement']['results'].append(meas_results_ele)
-            #elif 'data input' in keys:
-            #    doc_info['data_input'] = {'name':values[keys.index('data input')]}
-            #elif 'data_input' in list(doc_info).keys()):
+            elif 'data input' in keys:
+                if 'data_source' not in list(doc_info.keys()):
+                    doc_info['data_source'] = {}
+                doc_info["data_source"][keys[0]] = values[0]
             else:
                 #print('OTHER',keys)
                 pass
-            #print(doc_info)
-            #print()
-        #print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-
-        '''
-        print(doc_info)
-        print(query_elements)
-
-        for query_element in query_elements:
-            field = query_element['field']
-            comparison = query_element['comparison']
-            value = 
-        '''
         all_doc_info.append(doc_info)
-
     return all_doc_info
-
 
 def teardown_stuff(browser):
     teardown_browser(browser)
@@ -248,7 +246,6 @@ def prep():
     set_up_db_for_test(docs)
     
     browser = setup_browser()
-    logout(browser)
     
     return browser
  
@@ -301,4 +298,5 @@ def _get_docs():
         {'_id': ObjectId('5f18a7020a51fbd22bb862a3'), 'specification': '3.00', 'data_source': {'input': {'name': 'James Loach', 'contact': 'james.loach@gmail.com', 'notes': '', 'date': [datetime.datetime(2016, 7, 14, 0, 0)]}, 'reference': 'N. Abgrall et al., Nucl. Instr. and Meth. A 828 (2016) (doi:10.1016/j.nima.2016.04.070)'}, 'grouping': 'Majorana (2016)', 'sample': {'name': 'Copper, C10100, bar stock, machined surfaces', 'source': '', 'description': 'Copper, C10100, 1 in. x 2 in. bar stock, machined surfaces', 'owner': {'name': '', 'contact': ''}, 'id': 'Table 3. (metals) #020'}, 'type': 'measurement', 'measurement': {'description': '', 'technique': 'ICP-MS', 'requestor': {'name': '', 'contact': ''}, 'date': [], 'institution': '', 'results': [{'type': 'measurement', 'value': [2.12, 0.39], 'isotope': 'Th-232', 'unit': 'ppt'}, {'type': 'measurement', 'value': [2.25, 0.15], 'isotope': 'U-238', 'unit': 'ppt'}], 'practitioner': {'name': '', 'contact': ''}}, '_version': 1}
     ]
     return docs
+
 
