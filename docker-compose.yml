@@ -2,20 +2,29 @@ version: "2"
 services:
   flask:
     build: .
-    ports:
-      - "5000:5000"
+    expose:
+      - "5000"
     depends_on:
-      - "mongo"
+      - "mongoservice"
     links:
-      - mongo
-  mongo:
-    image: mongo
+      - "mongoservice"
+  mongoservice:
+    image: mongo:latest
     container_name: duneui_mongodb
     restart: unless-stopped
+    ports:
+      # Exposing here makes for easier management but more open
+      - 27017:27017
     environment:
       MONGODB_DATA_DIR: /data/db
     volumes:
       - mongodb_data:/data/db
+  nginx:
+    build: ./nginx
+    ports:
+      - 1337:80
+    depends_on:
+      - "flask"
 volumes:
   mongodb_data:
     driver: local

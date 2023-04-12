@@ -1,7 +1,7 @@
 {
-    "mongodb_host": "localhost",
+    "mongodb_host": "mongoservice",
     "mongodb_port": 27017,
-    "database": "localdune",
+    "database": "radiopurity-mongodb-dev",
     "secret_key": "testkey",
     "salt": "default"
 }
