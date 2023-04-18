@@ -24,8 +24,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       # Cert and key generated on host with letsencrypt
-      - /root/.acme.sh/radiopurity.net/radiopurity.net.cer:/root/ssl/radiopurity.net.cer;
-      - /root/.acme.sh/radiopurity.net/radiopurity.net.key:/root/ssl/radiopurity.net.key;
+      - /home/ec2-user/.sslradiopurity.net.cer:/root/ssl/radiopurity.net.cer;
+      - /home/ec2-user/.sslradiopurity.net.key:/root/ssl/radiopurity.net.key;
     ports:
       - "443:443"
     depends_on:
