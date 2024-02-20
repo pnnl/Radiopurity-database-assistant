@@ -1,23 +1,23 @@
-FROM ubuntu:18.04
+FROM python:3.8
 
 # install python3.8
-RUN apt-get update && apt-get install -y \
-  software-properties-common build-essential git curl
+# RUN apt-get update && apt-get install -y \
+#   software-properties-common build-essential git curl
 
-RUN add-apt-repository 'ppa:deadsnakes/ppa' 
-RUN apt-get update && apt-get -y install \
-  python3.8 python3.8-dev python3.8-venv && \
-  apt-get update && \
-  apt-get clean && \
-  apt-get autoremove
+# RUN add-apt-repository 'ppa:deadsnakes/ppa' 
+# RUN apt-get update && apt-get -y install \
+#   python3.8 python3.8-dev python3-venv python3.8-venv && \
+#   apt-get update && \
+#   apt-get clean && \
+#   apt-get autoremove
 
 # make python3.8 the default version for the python3 command
-RUN rm -f /usr/bin/python3 && ln -s /usr/bin/python3.8 /usr/bin/python3
+# RUN rm -f /usr/bin/python3 && ln -s /usr/bin/python3.8 /usr/bin/python3
 
 # Use a virtualenv - CREATE VENV BEFORE BUILDING - here we named it dune-venv
-ENV VIRTUAL_ENV=/dune-venv
-RUN python3 -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# ENV VIRTUAL_ENV=/dune-venv
+# RUN python3 -m venv $VIRTUAL_ENV
+# ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Set env for configs
 ENV DUNE_API_CONFIG_NAME=/home/Radiopurity-database-assistant/user_interface/app_config_docker_test.json
@@ -28,7 +28,7 @@ COPY . /home/Radiopurity-database-assistant/
 WORKDIR /home/Radiopurity-database-assistant/
 
 # Python dependencies
-RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3.8 get-pip.py
+# RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3.8 get-pip.py
 RUN pip install -r ./user_interface/requirements.txt 
 RUN pip install -e .
 
