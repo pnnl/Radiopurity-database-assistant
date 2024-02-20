@@ -17,6 +17,7 @@ setuptools.setup(
     install_requires=[
         'jsonschema==3.2.0',
         'pymongo',
-        'importlib'
+        'importlib',
+        
     ],
 )
