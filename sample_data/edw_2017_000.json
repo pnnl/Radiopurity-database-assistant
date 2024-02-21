@@ -1,0 +1,93 @@
+{
+  "type": "measurement",
+  "grouping": "EDELWEISS-III (2017)",
+  "sample": {
+    "name": "Mill-Max conn. Brass pins(1)",
+    "description": "Mill-Max conn. Brass pins(1), 7.39 g",
+    "id": "",
+    "source": "Mill Max",
+    "owner": {
+      "contact": "dejesus@in2p3.fr",
+      "name": "Maryvonne De Jesus"
+    }
+  },
+  "measurement": {
+    "institution": "ENS-Lyon",
+    "technique": "ICP-MS",
+    "date": [
+      "2015-06-06"
+    ],
+    "requestor": {
+      "name": "Maryvonne De Jesus",
+      "contact": "dejesus@in2p3.fr"
+    },
+    "practitioner": {
+      "name": "",
+      "contact": ""
+    },
+    "description": "",
+    "results": [
+      {
+        "isotope": "Pb-210",
+        "type": "measurement",
+        "value": [
+          11000.0,
+          1000.0
+        ],
+        "unit": "mBq/kg"
+      },
+      {
+        "isotope": "U-238",
+        "type": "limit",
+        "value": [
+          62.0
+        ],
+        "unit": "mBq/kg"
+      },
+      {
+        "isotope": "Th-232",
+        "type": "limit",
+        "value": [
+          20.0
+        ],
+        "unit": "mBq/kg"
+      },
+      {
+        "isotope": "K-40",
+        "type": "measurement",
+        "value": [
+          675.0,
+          221.0
+        ],
+        "unit": "mBq/kg"
+      },
+      {
+        "isotope": "Co-60",
+        "type": "limit",
+        "value": [
+          36.0
+        ],
+        "unit": "mBq/kg"
+      },
+      {
+        "isotope": "Cs-137",
+        "type": "limit",
+        "value": [
+          47.0
+        ],
+        "unit": "mBq/kg"
+      }
+    ]
+  },
+  "data_source": {
+    "reference": "E. Armengaud et al., Performance of the EDELWEISS-III experiment for direct dark\\matter searches (2017), JINST 12 (2017) 08, P08010",
+    "input": {
+      "name": "Gwyn Armstrong",
+      "contact": "silvia.scorza@snolab.ca",
+      "date": [
+        "2022-06-03"
+      ]
+    }
+  },
+  "specification": "5.00"
+}
