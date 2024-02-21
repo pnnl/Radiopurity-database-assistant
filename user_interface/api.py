@@ -6,31 +6,31 @@
 """
 
 import os
-import sys
-import json
 import time
 import logging
-import argparse
 import datetime
 from pymongo import MongoClient
-from flask import Flask, request, session, url_for, redirect, render_template
+from flask import Flask, request, session, render_template
 from dunetoolkit import search_by_id, convert_date_to_str
 from frontend_helpers import do_q_append, parse_update, perform_search, perform_insert, perform_update
 from frontend_helpers import add_protected_groupings_term_to_query, make_experiment_public
 from frontend_helpers import _log_in_experiment, _get_httprequest_username, _get_date_now, _convert_logged_in_users_to_unique_experiment_names
 
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 
-config_name = os.getenv('DUNE_API_CONFIG_NAME')
-if config_name is None:
-    config_name = 'app_config.txt'
-config_dict = None
+MONGO_HOST = os.getenv("MONGO_HOST")
+MONGO_PORT = int(os.getenv("MONGO_PORT"))
+DATABASE_NAME = os.getenv("DATABASE_NAME")
+SECRET_KEY = os.getenv("SECRET_KEY")
+SALT = os.getenv("SALT")
+print(MONGO_HOST, MONGO_PORT, DATABASE_NAME, SECRET_KEY, SALT)
+if all((MONGO_HOST, MONGO_PORT, DATABASE_NAME, SECRET_KEY, SALT)) == False:
+    logger.error("API cannot properly run without the necessary environment variables. Make sure all environment variables are properly configured")
+    raise RuntimeError
 
-with open(config_name, 'r') as config:
-    config_dict = json.load(config)
-app.config['SECRET_KEY'] = config_dict['secret_key']
-salt = config_dict['salt']
-db_obj = MongoClient(config_dict['mongodb_host'], config_dict['mongodb_port'])[config_dict['database']]
+db_obj = MongoClient(MONGO_HOST, MONGO_PORT)[DATABASE_NAME]
 
 app.permanent_session_lifetime = datetime.timedelta(hours=24)
 
@@ -82,7 +82,7 @@ def add_experiment_credentials_endpoint():
         plaintext_password = request.form.get('password', '').strip()
 
         # try logging user in
-        if _log_in_experiment(experiment_name, plaintext_password, salt, db_obj):
+        if _log_in_experiment(experiment_name, plaintext_password, SALT, db_obj):
             # update or create session variable "logged_in_list" with the newly logged-in credential on the list
             if session.get('logged_in_experiments', None) != None:
                 logged_in_list = session.get('logged_in_experiments', [])

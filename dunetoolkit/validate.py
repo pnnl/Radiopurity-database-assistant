@@ -5,11 +5,9 @@
 .. moduleauthor:: Elise Saxon
 """
 
-import os
 from datetime import datetime
-import json
 import jsonschema
-from jsonschema import validate, ValidationError
+from jsonschema import ValidationError
 import importlib.resources as pkg_resources
 import dunetoolkit
 

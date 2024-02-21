@@ -8,7 +8,6 @@
 import os
 import argparse
 import json
-import re
 from datetime import datetime
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -29,15 +28,8 @@ def _configure():
         * str. The port number that can be used to connect to MongoDB on the host.
         * str. The name of the MongoDB database to use for queries.
     """
-    config_name = os.getenv('TOOLKIT_CONFIG_NAME')
-    if config_name is None:
-        config_name = os.path.dirname(os.path.abspath(__file__)) + '/toolkit_config.json'
-    config_dict = None
 
-    with open(config_name, 'r') as config:
-        config_dict = json.load(config)
-
-    return config_dict['mongodb_host'], config_dict['mongodb_port'], config_dict['database']
+    return os.getnev("MONGO_HOST"), int(os.getnev("MONGO_PORT")), os.getnev("DATABASE_NAME")
 
 def _create_db_obj():
     """This function is useful when the python toolkit is being used directly by the user, instead of in conjunction with the UI. The UI is responsible for creating a persisting, shared database connection and passing it to functions as needed. When the search, insert, and update python functions are being called directly, no existing database connection is required, so this function gets called to set one up.

@@ -18,6 +18,6 @@ setuptools.setup(
         'jsonschema==3.2.0',
         'pymongo',
         'importlib',
-        
+        "scrypt",
     ],
 )

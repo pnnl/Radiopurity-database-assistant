@@ -5,7 +5,6 @@
 .. moduleauthor:: Elise Saxon
 """
 
-import re
 import scrypt
 import base64
 import logging
@@ -13,7 +12,7 @@ import binascii
 import datetime
 from dunetoolkit import Query, add_to_query, search, insert, update, convert_date_to_str
 
-logger = logging.getLogger('dune_ui')
+logger = logging.getLogger(__name__)
 
 def _get_httprequest_username(http_auth):
     """Parses the http_authentication portion of an HTTP request's header to extract the logged in user's username. The username should be within the string, encoded as base64.
