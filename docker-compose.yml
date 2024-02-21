@@ -1,18 +1,25 @@
-version: "2"
 services:
-  flask:
+  dune:
     build: .
+    container_name: dune_service
     ports:
       - "5000:5000"
     expose:
       - "5000"
     depends_on:
-      - "mongoservice"
+      - "dune_mongodb"
     links:
-      - "mongoservice"
-  mongoservice:
+      - "dune_mongodb"
+    environment:
+      - MONGO_HOST=dune_mongodb
+      - MONGO_PORT=27017
+      - DATABASE_NAME=radiopurity-mongodb-dev
+      - SECRET_KEY=testkey
+      - SALT=default
+  
+  mongodb:
     image: mongo:latest
-    container_name: duneui_mongodb
+    container_name: dune_mongodb
     restart: unless-stopped
     ports:
       # Exposing here makes for easier management but more open
@@ -21,16 +28,7 @@ services:
       MONGODB_DATA_DIR: /data/db
     volumes:
       - mongodb_data:/data/db
-  # nginx:
-  #   image: nginx
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf
-  #     # Cert and key generated on host with letsencrypt
-  #     - ./certs:/etc/nginx/certs
-  #   ports:
-  #     - "443:443"
-  #   depends_on:
-  #     - "flask"
+    command: ["executable", "arg"]
 volumes:
   mongodb_data:
     driver: local
