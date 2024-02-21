@@ -1,7 +1,0 @@
-{
-    "mongodb_host": "localhost",
-    "mongodb_port": 27017,
-    "database": "localdune",
-    "secret_key": "testkey",
-    "salt": "default"
-}

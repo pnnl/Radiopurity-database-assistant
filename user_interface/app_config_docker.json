@@ -1,7 +1,0 @@
-{
-    "mongodb_host": "mongoservice",
-    "mongodb_port": 27017,
-    "database": "radiopurity-mongodb-dev",
-    "secret_key": "testkey",
-    "salt": "default"
-}
