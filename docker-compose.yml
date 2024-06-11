@@ -3,9 +3,9 @@ services:
     build: .
     container_name: dune_service
     ports:
-      - "5000:5000"
+      - "443:5000"
     expose:
-      - "5000"
+      - "443"
     depends_on:
       - "dune_mongodb"
     links:
@@ -17,7 +17,7 @@ services:
       - SECRET_KEY=testkey
       - SALT=default
   
-  mongodb:
+  dune_mongodb:
     image: mongo:latest
     container_name: dune_mongodb
     restart: unless-stopped
